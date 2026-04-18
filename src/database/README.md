@@ -5,7 +5,7 @@ Esta pasta é destinada à organização da camada de dados do projeto.
 ## Conteúdo esperado
 - estrutura do banco
 - scripts de criação
-- scripts de carga
+- scripts de cargas
 - dados de teste
 - definições relacionadas aos produtos e suas informações
 

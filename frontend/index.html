@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Totem Inteligente</title>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0d0d0d;
+            color: white;
+            font-family: Arial, Helvetica, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            text-align: center;
+            width: 900px;
+            max-width: 90%;
+        }
+
+        h1 {
+            font-size: 56px;
+            margin-bottom: 40px;
+        }
+
+        button {
+            background: #00c853;
+            color: white;
+            border: none;
+            padding: 24px 60px;
+            font-size: 30px;
+            border-radius: 14px;
+            cursor: pointer;
+        }
+
+        button.ativo {
+            background: #d50000;
+        }
+
+        #status {
+            margin-top: 25px;
+            font-size: 28px;
+            color: #bdbdbd;
+        }
+
+        #transcricao {
+            margin-top: 25px;
+            font-size: 24px;
+            color: #9e9e9e;
+        }
+
+        #resposta {
+            margin-top: 45px;
+            font-size: 42px;
+            min-height: 100px;
+        }
+
+        #produto {
+            margin-top: 20px;
+            font-size: 28px;
+            color: #d0d0d0;
+            white-space: pre-line;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>Totem de Produtos</h1>
+
+        <button id="botao" onclick="iniciarSessao()">Iniciar Atendimento</button>
+
+        <div id="status"></div>
+        <div id="transcricao"></div>
+        <div id="resposta"></div>
+        <div id="produto"></div>
+
+    </div>
+
+    <script>
+
+        let sessaoAtiva = false;
+        let botao = document.getElementById("botao");
+        let streamGlobal = null;
+
+        // TODO: Quando você subir na nuvem, mude esta URL para a URL do seu backend no Render
+        // Exemplo: const BACKEND_URL = "https://totem-acessivel.onrender.com";
+        const BACKEND_URL = "https://totem-acessivel.onrender.com";
+
+        function encerrarSessao() {
+
+            sessaoAtiva = false;
+
+            botao.innerText = "Iniciar Atendimento";
+            botao.classList.remove("ativo");
+
+            document.getElementById("status").innerText = "Sessão encerrada";
+
+            if (streamGlobal) {
+                streamGlobal.getTracks().forEach(track => track.stop());
+                streamGlobal = null;
+            }
+        }
+
+        async function iniciarSessao() {
+
+            if (sessaoAtiva) {
+                encerrarSessao();
+                return;
+            }
+
+            sessaoAtiva = true;
+
+            botao.innerText = "Encerrar";
+            botao.classList.add("ativo");
+
+            streamGlobal = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+            document.getElementById("status").innerText = "Ouvindo...";
+
+            conversar();
+        }
+
+        async function conversar() {
+
+            if (!sessaoAtiva) return;
+
+            const stream = streamGlobal;
+
+            const recorder = new MediaRecorder(stream);
+            const chunks = [];
+
+            recorder.ondataavailable = e => chunks.push(e.data);
+
+            recorder.onstop = async () => {
+
+                const blob = new Blob(chunks, { type: 'audio/webm' });
+
+                if (blob.size < 1000) {
+                    encerrarSessao();
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append("audio", blob, "audio.webm");
+
+                document.getElementById("status").innerText = "Processando...";
+
+                try {
+
+                    const resposta = await fetch(`${BACKEND_URL}/query-audio`, {
+                        method: "POST",
+                        body: formData
+                    });
+
+                    const data = await resposta.json();
+
+                    document.getElementById("status").innerText = "Respondendo...";
+                    document.getElementById("transcricao").innerText =
+                        "Você disse: " + data.transcricao;
+
+                    document.getElementById("resposta").innerText =
+                        data.resposta;
+
+                    if (data.resultados && data.resultados.length > 0) {
+
+                        let lista = "";
+
+                        data.resultados.forEach(p => {
+                            lista += p.nome + " - R$ " +
+                                Number(p.preco).toFixed(2) + "\n";
+                        });
+
+                        document.getElementById("produto").innerText = lista;
+                    }
+
+                    const texto = data.transcricao.toLowerCase();
+
+                    let encerrarAposAudio = false;
+
+                    if (
+                        texto.includes("tchau") ||
+                        texto.includes("obrigado") ||
+                        texto.includes("valeu") ||
+                        texto.includes("encerrar")
+                    ) {
+                        encerrarAposAudio = true;
+                    }
+
+                    if (data.audio) {
+
+                        const audio = new Audio(
+                            `${BACKEND_URL}/` + data.audio
+                        );
+
+                        audio.onended = () => {
+                            if (encerrarAposAudio) {
+                                encerrarSessao();
+                            } else if (sessaoAtiva) {
+                                document.getElementById("status").innerText = "Ouvindo...";
+                                conversar();
+                            }
+                        };
+
+                        audio.play();
+
+                    } else {
+                        if (encerrarAposAudio) {
+                            encerrarSessao();
+                        } else {
+                            conversar();
+                        }
+                    }
+
+                } catch (error) {
+
+                    console.error(error);
+                    encerrarSessao();
+                }
+
+            };
+
+            recorder.start();
+
+            const audioContext = new AudioContext();
+            const source = audioContext.createMediaStreamSource(stream);
+            const analyser = audioContext.createAnalyser();
+
+            source.connect(analyser);
+
+            const dataArray = new Uint8Array(analyser.fftSize);
+
+            let silencioInicio = null;
+
+            function detectarSilencio() {
+
+                analyser.getByteTimeDomainData(dataArray);
+
+                let soma = 0;
+
+                for (let i = 0; i < dataArray.length; i++) {
+
+                    const valor = (dataArray[i] - 128) / 128;
+                    soma += valor * valor;
+                }
+
+                const volume = Math.sqrt(soma / dataArray.length);
+
+                if (volume < 0.02) {
+
+                    if (!silencioInicio) {
+                        silencioInicio = Date.now();
+                    }
+
+                    if (Date.now() - silencioInicio > 1500) {
+
+                        recorder.stop();
+                        return;
+                    }
+
+                } else {
+                    silencioInicio = null;
+                }
+
+                if (sessaoAtiva) {
+                    requestAnimationFrame(detectarSilencio);
+                }
+            }
+
+            detectarSilencio();
+        }
+
+    </script>
+
+</body>
+
+</html>

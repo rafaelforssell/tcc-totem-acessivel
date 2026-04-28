@@ -1,0 +1,20 @@
+# Ambiente Virtual
+venv/
+env/
+.venv/
+
+# Variáveis de ambiente
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Arquivos de áudio gerados
+backend/audios/*.mp3
+backend/audios/*.wav
+
+# IDE
+.vscode/
+.idea/

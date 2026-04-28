@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>Totem de Voz</h2>
+
+<button onclick="gravar()">Falar</button>
+
+<script>
+async function gravar() {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const recorder = new MediaRecorder(stream);
+    let chunks = [];
+
+    recorder.ondataavailable = e => chunks.push(e.data);
+
+    recorder.onstop = async () => {
+        const blob = new Blob(chunks, { type: 'audio/wav' });
+
+        const formData = new FormData();
+        formData.append("audio", blob, "audio.wav");
+
+        const res = await fetch("http://127.0.0.1:8000/query-audio", {
+            method: "POST",
+            body: formData
+        });
+
+        const data = await res.json();
+
+        console.log(data);
+        alert(data.resposta);
+    };
+
+    recorder.start();
+
+    setTimeout(() => recorder.stop(), 3000);
+}
+</script>
+
+</body>
+</html>

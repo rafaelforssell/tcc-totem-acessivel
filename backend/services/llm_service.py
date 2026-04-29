@@ -18,17 +18,23 @@ async def classificar_intencao(pergunta):
     }
 
     prompt_sistema = """
-Você é o analisador de intenções de um totem interativo de uma loja de roupas.
-Responda APENAS com um JSON válido, sem formatação markdown (sem blocos ```json), no seguinte formato:
+Você é o classificador de intenções de um totem de loja de roupas.
+Responda APENAS com JSON válido no formato:
 {
   "intencao": "NOVA_BUSCA" ou "SOBRE_PRODUTO" ou "OUTROS",
-  "palavras_chave": ["produto", "marca", "cor"] // Lista de palavras-chave. Preencher APENAS se for NOVA_BUSCA.
+  "palavras_chave": ["palavra1", "palavra2"]
 }
 
-Regras:
-- NOVA_BUSCA: O usuário quer procurar um produto novo (ex: "tem leite?", "quero uma camisa nike").
-- SOBRE_PRODUTO: O usuário quer detalhes do produto atual do contexto (ex: "onde fica isso?", "qual o preço?", "tem azul?").
-- OUTROS: Saudações, despedidas ou perguntas totalmente aleatórias.
+REGRAS:
+- NOVA_BUSCA: Usuário busca produto novo ("quero uma camisa", "tem calça?", "quero saber sobre a calça jeans slim").
+  Preencha palavras_chave com os termos do produto.
+- SOBRE_PRODUTO: Usuário pergunta sobre produto JÁ mostrado usando pronomes ou referências diretas
+  ("essa calça, qual a cor?", "onde ela fica?", "qual o tamanho dela?").
+  SOMENTE use quando há pronomes claros como "essa", "ela", "ele", "aquela".
+- OUTROS: Saudações, despedidas, agradecimentos ou perguntas aleatórias.
+
+DICA: Se a pergunta menciona o nome de um produto diretamente (ex: "calça jeans slim"),
+provavelmente é NOVA_BUSCA, não SOBRE_PRODUTO.
 """
 
     payload = {
@@ -47,7 +53,6 @@ Regras:
             response = await client.post(url, headers=headers, json=payload, timeout=20.0)
             data = response.json()
             content = data["choices"][0]["message"]["content"]
-            # Limpar crases caso o LLM ainda as envie, mesmo com o aviso
             content = content.replace('```json', '').replace('```', '').strip()
             return json.loads(content)
     except Exception as e:
@@ -64,20 +69,20 @@ async def perguntar_llm(pergunta, contexto_produtos=None):
     }
 
     if contexto_produtos:
-        info_produtos = f"Produtos no contexto:\n{contexto_produtos}"
+        info_produtos = f"DADOS DO BANCO DE DADOS (use APENAS estes para responder):\n{contexto_produtos}"
     else:
-        info_produtos = "Nenhum produto no contexto atual."
+        info_produtos = "Nenhum produto no contexto."
 
     prompt_sistema = f"""
 Você é o assistente virtual de um totem de uma loja de roupas.
 
-Regras:
-- Responda em frases curtas e diretas.
-- Máximo 3 linhas.
-- Fale preços no formato R$ 00,00.
-- Linguagem natural, simpática e clara (ideal para resposta por voz).
-- IMPORTANTE: Se o usuário perguntar algo totalmente aleatório fora do contexto de compras de roupas (ex: "quem descobriu o Brasil?", "piadas"), você DEVE educadamente desviar o assunto de volta para os produtos da loja de roupas.
-- NUNCA use emojis ou asteriscos na resposta. O texto será lido por um sistema de voz.
+REGRAS OBRIGATÓRIAS:
+1. Responda em no máximo 3 frases curtas e diretas.
+2. Use APENAS as informações dos produtos listados abaixo. NUNCA invente preços, cores, locais ou nomes.
+3. Se o contexto contiver o produto perguntado, FORNEÇA as informações. Não diga que não tem info.
+4. Se o contexto indicar despedida, responda SÓ com despedida gentil. NUNCA diga "Bem-vindo" numa despedida.
+5. Se o produto NÃO estiver no contexto abaixo, diga que não encontrou esse item no momento.
+6. NUNCA use emojis, asteriscos ou formatação markdown. O texto será lido em voz alta.
 
 {info_produtos}
 """
@@ -88,7 +93,7 @@ Regras:
             {"role": "system", "content": prompt_sistema},
             {"role": "user", "content": pergunta}
         ],
-        "temperature": 0.2,
+        "temperature": 0.0,
         "max_tokens": 150
     }
 

@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forssell Store - Totem Inteligente</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        :root {
+            --primary-red: #e60012;
+            --secondary-red: #ff3b30;
+            --bg-light: #f9f9f9;
+            --bg-white: #ffffff;
+            --text-dark: #1a1a1a;
+            --text-muted: #666666;
+            --bubble-totem: #f1f1f1;
+            --bubble-user: #e60012;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header */
+        header {
+            background-color: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #eee;
+            z-index: 100;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--primary-red);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+
+        .btn-end {
+            background-color: transparent;
+            border: 1px solid var(--primary-red);
+            color: var(--primary-red);
+            padding: 0.5rem 1.2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-end:hover {
+            background-color: var(--primary-red);
+            color: white;
+        }
+
+        /* Chat Area */
+        #chat-container {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            scroll-behavior: smooth;
+        }
+
+        .message-row {
+            display: flex;
+            gap: 0.8rem;
+            max-width: 80%;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .message-row.totem {
+            align-self: flex-start;
+        }
+
+        .message-row.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .totem .avatar {
+            background-color: #eee;
+            color: var(--text-dark);
+        }
+
+        .user .avatar {
+            background-color: var(--primary-red);
+            color: white;
+        }
+
+        .bubble {
+            padding: 1rem 1.2rem;
+            border-radius: 18px;
+            font-size: 1rem;
+            line-height: 1.5;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .totem .bubble {
+            background-color: var(--bg-white);
+            border-top-left-radius: 2px;
+            color: var(--text-dark);
+        }
+
+        .user .bubble {
+            background-color: var(--bubble-user);
+            border-top-right-radius: 2px;
+            color: white;
+        }
+
+        /* Product Cards */
+        .product-list {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.5rem;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+            scrollbar-width: none;
+        }
+
+        .product-list::-webkit-scrollbar {
+            display: none;
+        }
+
+        .product-card {
+            background: white;
+            border-radius: 12px;
+            min-width: 200px;
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+            border: 1px solid #eee;
+        }
+
+        .product-info {
+            padding: 1rem;
+        }
+
+        .product-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .product-price {
+            color: var(--primary-red);
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        /* Footer / Input */
+        footer {
+            padding: 1.5rem 2rem;
+            background-color: var(--bg-white);
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .input-wrapper {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            align-items: center;
+            background-color: #f1f1f1;
+            padding: 0.5rem 1.5rem;
+            border-radius: 30px;
+            gap: 1rem;
+        }
+
+        input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            padding: 0.8rem 0;
+            font-size: 1rem;
+            outline: none;
+            color: var(--text-dark);
+        }
+
+        .mic-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: var(--primary-red);
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 15px rgba(230, 0, 18, 0.3);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: absolute;
+            right: 2rem;
+            bottom: 1.5rem;
+        }
+
+        .mic-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .mic-btn.active {
+            background-color: #d50000;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(230, 0, 18, 0.4); }
+            70% { box-shadow: 0 0 0 20px rgba(230, 0, 18, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(230, 0, 18, 0); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .status-badge {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+            text-align: center;
+            width: 100%;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand">
+            <i class="ph-bold ph-storefront"></i>
+            <span>Forssell Store</span>
+        </div>
+        <div class="header-actions">
+            <i class="ph-bold ph-globe"></i>
+            <i class="ph-bold ph-shopping-bag"></i>
+            <button class="btn-end" onclick="encerrarSessao()">Encerrar Sessão</button>
+        </div>
+    </header>
+
+    <main id="chat-container">
+        <!-- Boas vindas -->
+        <div class="message-row totem">
+            <div class="avatar"><i class="ph-bold ph-robot"></i></div>
+            <div class="bubble">Olá! Sou o assistente da Forssell Store. Como posso te ajudar hoje?</div>
+        </div>
+    </main>
+
+    <div id="status" class="status-badge">Pronto para ouvir</div>
+
+    <footer>
+        <div class="input-wrapper">
+            <input type="text" placeholder="Digite sua mensagem ou toque no microfone..." id="texto-input">
+            <i class="ph-bold ph-paper-plane-right" style="color: #999; cursor: pointer;"></i>
+        </div>
+        <button id="mic-btn" class="mic-btn" onclick="iniciarSessao()">
+            <i class="ph-bold ph-microphone" id="mic-icon"></i>
+        </button>
+    </footer>
+
+    <script>
+        let sessaoAtiva = false;
+        let streamGlobal = null;
+        const BACKEND_URL = "https://totem-acessivel.onrender.com";
+
+        const chatContainer = document.getElementById("chat-container");
+        const statusElement = document.getElementById("status");
+        const micBtn = document.getElementById("mic-btn");
+        const micIcon = document.getElementById("mic-icon");
+
+        function appendMessage(text, sender, results = []) {
+            const row = document.createElement("div");
+            row.className = `message-row ${sender}`;
+            
+            const avatar = document.createElement("div");
+            avatar.className = "avatar";
+            avatar.innerHTML = sender === 'totem' ? '<i class="ph-bold ph-robot"></i>' : '<i class="ph-bold ph-user"></i>';
+            
+            const bubbleContent = document.createElement("div");
+            bubbleContent.style.display = "flex";
+            bubbleContent.style.flexDirection = "column";
+            bubbleContent.style.gap = "10px";
+
+            const bubble = document.createElement("div");
+            bubble.className = "bubble";
+            bubble.innerText = text;
+            
+            bubbleContent.appendChild(bubble);
+
+            if (results && results.length > 0) {
+                const list = document.createElement("div");
+                list.className = "product-list";
+                results.forEach(p => {
+                    const card = document.createElement("div");
+                    card.className = "product-card";
+                    card.innerHTML = `
+                        <div class="product-info">
+                            <div class="product-name">${p.nome}</div>
+                            <div class="product-price">R$ ${Number(p.preco).toFixed(2)}</div>
+                        </div>
+                    `;
+                    list.appendChild(card);
+                });
+                bubbleContent.appendChild(list);
+            }
+
+            row.appendChild(avatar);
+            row.appendChild(bubbleContent);
+            chatContainer.appendChild(row);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function encerrarSessao() {
+            sessaoAtiva = false;
+            micBtn.classList.remove("active");
+            micIcon.className = "ph-bold ph-microphone";
+            statusElement.innerText = "Sessão encerrada";
+
+            if (streamGlobal) {
+                streamGlobal.getTracks().forEach(track => track.stop());
+                streamGlobal = null;
+            }
+        }
+
+        async function iniciarSessao() {
+            if (sessaoAtiva) {
+                encerrarSessao();
+                return;
+            }
+
+            try {
+                streamGlobal = await navigator.mediaDevices.getUserMedia({ audio: true });
+                sessaoAtiva = true;
+                micBtn.classList.add("active");
+                statusElement.innerText = "Ouvindo...";
+                conversar();
+            } catch (err) {
+                console.error("Erro ao acessar microfone:", err);
+                statusElement.innerText = "Erro ao acessar microfone";
+            }
+        }
+
+        async function conversar() {
+            if (!sessaoAtiva) return;
+
+            const recorder = new MediaRecorder(streamGlobal);
+            const chunks = [];
+
+            recorder.ondataavailable = e => chunks.push(e.data);
+            recorder.onstop = async () => {
+                const blob = new Blob(chunks, { type: 'audio/webm' });
+                if (blob.size < 1000) {
+                    if (sessaoAtiva) conversar(); // Tenta ouvir de novo se o áudio foi muito curto
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append("audio", blob, "audio.webm");
+
+                statusElement.innerText = "Processando...";
+
+                try {
+                    const resposta = await fetch(`${BACKEND_URL}/query-audio`, {
+                        method: "POST",
+                        body: formData
+                    });
+
+                    const data = await resposta.json();
+                    
+                    // Adiciona mensagem do usuário
+                    appendMessage(data.transcricao, 'user');
+                    
+                    statusElement.innerText = "Respondendo...";
+
+                    // Adiciona mensagem do totem
+                    setTimeout(() => {
+                        appendMessage(data.resposta, 'totem', data.resultados);
+                    }, 500);
+
+                    if (data.audio) {
+                        const audio = new Audio(`${BACKEND_URL}/${data.audio}`);
+                        audio.onended = () => {
+                            if (sessaoAtiva) {
+                                statusElement.innerText = "Ouvindo...";
+                                conversar();
+                            }
+                        };
+                        audio.play();
+                    } else if (sessaoAtiva) {
+                        conversar();
+                    }
+
+                } catch (error) {
+                    console.error(error);
+                    statusElement.innerText = "Erro na conexão";
+                }
+            };
+
+            recorder.start();
+
+            // Lógica de detecção de silêncio
+            const audioContext = new AudioContext();
+            const source = audioContext.createMediaStreamSource(streamGlobal);
+            const analyser = audioContext.createAnalyser();
+            source.connect(analyser);
+            const dataArray = new Uint8Array(analyser.fftSize);
+            let silencioInicio = null;
+
+            function detectarSilencio() {
+                if (!sessaoAtiva) return;
+                analyser.getByteTimeDomainData(dataArray);
+                let soma = 0;
+                for (let i = 0; i < dataArray.length; i++) {
+                    const valor = (dataArray[i] - 128) / 128;
+                    soma += valor * valor;
+                }
+                const volume = Math.sqrt(soma / dataArray.length);
+
+                if (volume < 0.02) {
+                    if (!silencioInicio) silencioInicio = Date.now();
+                    if (Date.now() - silencioInicio > 1500) {
+                        recorder.stop();
+                        return;
+                    }
+                } else {
+                    silencioInicio = null;
+                }
+                requestAnimationFrame(detectarSilencio);
+            }
+            detectarSilencio();
+        }
+    </script>
+</body>
+</html>

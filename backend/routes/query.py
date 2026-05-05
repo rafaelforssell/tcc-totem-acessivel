@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File
+from fastapi import APIRouter, UploadFile, File, Form
 from services.pipeline_service import pipeline_processar
 from services.stt_service import transcrever_audio
 from services.tts_service import falar
@@ -14,7 +14,7 @@ async def query_text(q: str):
 
 
 @router.post("/query-audio")
-async def query_audio(audio: UploadFile = File(...)):
+async def query_audio(audio: UploadFile = File(...), idioma: str = Form("pt")):
 
     inicio_total = time.time()
 
@@ -45,7 +45,7 @@ async def query_audio(audio: UploadFile = File(...)):
 
     # IA / Pipeline
     inicio_ia = time.time()
-    resultado = await pipeline_processar(texto)
+    resultado = await pipeline_processar(texto, idioma)
     fim_ia = time.time()
 
     print("IA concluída:", round(fim_ia - inicio_ia, 2), "seg")
@@ -70,6 +70,7 @@ async def query_audio(audio: UploadFile = File(...)):
     return {
         "transcricao": texto,
         "resposta": resposta_texto,
-        "resultados": resultado["resultados"],
+        "resultados": resultado.get("resultados", []),
+        "acao": resultado.get("acao", "NENHUM"),
         "audio": arquivo_audio
     }

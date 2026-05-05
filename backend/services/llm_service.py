@@ -10,7 +10,7 @@ load_dotenv(ENV_PATH)
 API_KEY = os.getenv("GROQ_API_KEY")
 
 
-async def classificar_intencao(pergunta):
+async def classificar_intencao(pergunta, idioma="pt"):
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {API_KEY}",
@@ -21,20 +21,16 @@ async def classificar_intencao(pergunta):
 Você é o classificador de intenções de um totem de loja de roupas.
 Responda APENAS com JSON válido no formato:
 {
-  "intencao": "NOVA_BUSCA" ou "SOBRE_PRODUTO" ou "OUTROS",
+  "intencao": "NOVA_BUSCA" ou "SOBRE_PRODUTO" ou "IR_PARA_MAPA" ou "OUTROS",
   "palavras_chave": ["palavra1", "palavra2"]
 }
 
 REGRAS:
 - NOVA_BUSCA: Usuário busca produto novo ("quero uma camisa", "tem calça?", "quero saber sobre a calça jeans slim").
   Preencha palavras_chave com os termos do produto.
-- SOBRE_PRODUTO: Usuário pergunta sobre produto JÁ mostrado usando pronomes ou referências diretas
-  ("essa calça, qual a cor?", "onde ela fica?", "qual o tamanho dela?").
-  SOMENTE use quando há pronomes claros como "essa", "ela", "ele", "aquela".
+- SOBRE_PRODUTO: Usuário pergunta sobre produto JÁ mostrado usando pronomes ou referências diretas ("essa calça, qual a cor?").
+- IR_PARA_MAPA: Usuário aceita a sugestão de ir até o produto ou pede para ver o mapa ("sim", "quero", "me mostre o caminho", "onde fica o corredor?").
 - OUTROS: Saudações, despedidas, agradecimentos ou perguntas aleatórias.
-
-DICA: Se a pergunta menciona o nome de um produto diretamente (ex: "calça jeans slim"),
-provavelmente é NOVA_BUSCA, não SOBRE_PRODUTO.
 """
 
     payload = {
@@ -60,7 +56,7 @@ provavelmente é NOVA_BUSCA, não SOBRE_PRODUTO.
         return {"intencao": "OUTROS", "palavras_chave": []}
 
 
-async def perguntar_llm(pergunta, contexto_produtos=None):
+async def perguntar_llm(pergunta, contexto_produtos=None, idioma="pt"):
     url = "https://api.groq.com/openai/v1/chat/completions"
 
     headers = {
@@ -73,15 +69,17 @@ async def perguntar_llm(pergunta, contexto_produtos=None):
     else:
         info_produtos = "Nenhum produto no contexto."
 
+    lang_instruction = "Responda em Português do Brasil." if idioma == "pt" else "Responda em Inglês."
+
     prompt_sistema = f"""
 Você é o assistente virtual de um totem de uma loja de roupas.
 
 REGRAS OBRIGATÓRIAS:
-1. Responda em no máximo 3 frases curtas e diretas.
-2. Use APENAS as informações dos produtos listados abaixo. NUNCA invente preços, cores, locais ou nomes.
-3. Se o contexto contiver o produto perguntado, FORNEÇA as informações. Não diga que não tem info.
-4. Se o contexto indicar despedida, responda SÓ com despedida gentil. NUNCA diga "Bem-vindo" numa despedida.
-5. Se o produto NÃO estiver no contexto abaixo, diga que não encontrou esse item no momento.
+1. {lang_instruction}
+2. Responda em no máximo 3 frases curtas e diretas.
+3. Ao falar de um produto, NUNCA informe o corredor, prateleira ou localização física. Guarde segredo sobre a localização.
+4. Ao mostrar ou falar sobre um produto, OBRIGATORIAMENTE termine a frase perguntando se a pessoa quer saber onde fica. (Exemplo: "Posso te informar onde encontrar, você deseja?")
+5. NUNCA invente preços, cores, locais ou nomes. Use APENAS as informações abaixo.
 6. NUNCA use emojis, asteriscos ou formatação markdown. O texto será lido em voz alta.
 
 {info_produtos}

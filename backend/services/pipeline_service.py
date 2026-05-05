@@ -33,7 +33,6 @@ def formatar_produto(produto):
 def formatar_produto_para_contexto(p):
     return (
         f"Nome: {p['nome']} | Preço: R${p['preco']:.2f} | "
-        f"Setor: {p['setor']} | Corredor: {p['corredor']} | Prateleira: {p['prateleira']} | "
         f"Estoque: {p['estoque']} | Descrição: {p['descricao']} | "
         f"Cor: {p['cor']} | Tamanho: {p['tamanho']} | Marca: {p['marca']}"
     )
@@ -79,9 +78,9 @@ def buscar_produtos_sql(palavras_chave):
     return [formatar_produto(p) for p in produtos]
 
 
-async def pipeline_processar(pergunta):
-    print(f"\n--- Nova Requisição: {pergunta} ---")
-    analise = await classificar_intencao(pergunta)
+async def pipeline_processar(pergunta, idioma="pt"):
+    print(f"\n--- Nova Requisição: {pergunta} --- Idioma: {idioma}")
+    analise = await classificar_intencao(pergunta, idioma)
     intencao = analise.get("intencao", "OUTROS")
     palavras = analise.get("palavras_chave", [])
 
@@ -108,15 +107,13 @@ async def pipeline_processar(pergunta):
             contexto = "Produtos encontrados no banco de dados:\n" + "\n---\n".join(
                 [formatar_produto_para_contexto(p) for p in resultados[:3]]
             )
-            resposta = await perguntar_llm(pergunta, contexto)
-            return {"resposta": resposta, "resultados": resultados[:3]}
+            resposta = await perguntar_llm(pergunta, contexto, idioma)
+            return {"resposta": resposta, "resultados": resultados[:3], "acao": "MOSTRAR_PRODUTOS"}
         else:
             memoria["ultimos_produtos"] = []
-            resposta = await perguntar_llm(
-                pergunta,
-                "Nenhum produto encontrado no banco de dados com esses termos. Informe ao usuário."
-            )
-            return {"resposta": resposta, "resultados": []}
+            resposta_base = "Nenhum produto encontrado no banco de dados com esses termos. Informe ao usuário."
+            resposta = await perguntar_llm(pergunta, resposta_base, idioma)
+            return {"resposta": resposta, "resultados": [], "acao": "NENHUM"}
 
     # ========================
     # SOBRE_PRODUTO
@@ -137,17 +134,31 @@ async def pipeline_processar(pergunta):
         contexto = "O usuário está perguntando sobre estes produtos:\n" + "\n---\n".join(
             [formatar_produto_para_contexto(p) for p in final_context]
         )
-        resposta = await perguntar_llm(pergunta, contexto)
-        return {"resposta": resposta, "resultados": final_context}
+        resposta = await perguntar_llm(pergunta, contexto, idioma)
+        return {"resposta": resposta, "resultados": final_context, "acao": "MOSTRAR_PRODUTOS"}
+
+    # ========================
+    # IR_PARA_MAPA
+    # ========================
+    elif intencao == "IR_PARA_MAPA":
+        produtos_atuais = memoria.get("ultimos_produtos", [])
+        if produtos_atuais:
+            # We assume the user wants to go to the first product in memory
+            resposta_texto = "Ótimo! Vou te mostrar o caminho no mapa agora." if idioma == "pt" else "Great! I'll show you the way on the map now."
+            return {"resposta": resposta_texto, "resultados": [produtos_atuais[0]], "acao": "ABRIR_MAPA"}
+        else:
+            resposta_texto = "Qual produto você gostaria de ver no mapa?" if idioma == "pt" else "Which product would you like to see on the map?"
+            return {"resposta": resposta_texto, "resultados": [], "acao": "NENHUM"}
 
     # ========================
     # OUTROS
     # ========================
     else:
-        if any(w in texto_baixo for w in ["tchau", "obrigado", "valeu", "encerrar", "até logo", "boa noite", "boa tarde", "bom dia"]):
+        if any(w in texto_baixo for w in ["tchau", "obrigado", "valeu", "encerrar", "até logo", "boa noite", "boa tarde", "bom dia", "bye", "thanks"]):
             # Resposta fixa de despedida — sem passar pela IA para evitar improviso
-            return {"resposta": "Muito obrigado e volte sempre!", "resultados": []}
+            msg = "Muito obrigado e volte sempre!" if idioma == "pt" else "Thank you very much and come back soon!"
+            return {"resposta": msg, "resultados": [], "acao": "ENCERRAR"}
         else:
             contexto = "Conversa casual ou dúvida geral. Responda naturalmente como assistente de uma loja de roupas."
-            resposta = await perguntar_llm(pergunta, contexto)
-            return {"resposta": resposta, "resultados": []}
+            resposta = await perguntar_llm(pergunta, contexto, idioma)
+            return {"resposta": resposta, "resultados": [], "acao": "NENHUM"}

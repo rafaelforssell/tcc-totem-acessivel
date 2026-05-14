@@ -98,6 +98,16 @@ async def pipeline_processar(pergunta, idioma="pt"):
     print(f"Intenção: {intencao} | Palavras: {palavras}")
 
     # ========================
+    # ENCERRAR
+    # ========================
+    despedidas = ["tchau", "obrigado", "obrigada", "valeu", "encerrar", "até logo", "bye", "thanks", "falou"]
+    is_despedida = any(w in texto_baixo.split() for w in despedidas) and len(texto_baixo.split()) <= 4
+    
+    if intencao == "ENCERRAR" or is_despedida:
+        msg = "Muito obrigado e volte sempre!" if idioma == "pt" else "Thank you very much and come back soon!"
+        return {"resposta": msg, "resultados": [], "acao": "ENCERRAR"}
+
+    # ========================
     # NOVA_BUSCA
     # ========================
     if intencao == "NOVA_BUSCA":
@@ -154,11 +164,6 @@ async def pipeline_processar(pergunta, idioma="pt"):
     # OUTROS
     # ========================
     else:
-        if any(w in texto_baixo for w in ["tchau", "obrigado", "valeu", "encerrar", "até logo", "boa noite", "boa tarde", "bom dia", "bye", "thanks"]):
-            # Resposta fixa de despedida — sem passar pela IA para evitar improviso
-            msg = "Muito obrigado e volte sempre!" if idioma == "pt" else "Thank you very much and come back soon!"
-            return {"resposta": msg, "resultados": [], "acao": "ENCERRAR"}
-        else:
-            contexto = "Conversa casual ou dúvida geral. Responda naturalmente como assistente de uma loja de roupas."
-            resposta = await perguntar_llm(pergunta, contexto, idioma)
-            return {"resposta": resposta, "resultados": [], "acao": "NENHUM"}
+        contexto = "Conversa casual ou dúvida geral. Responda naturalmente como assistente de uma loja de roupas."
+        resposta = await perguntar_llm(pergunta, contexto, idioma)
+        return {"resposta": resposta, "resultados": [], "acao": "NENHUM"}

@@ -724,6 +724,7 @@
                         if(data.resultados && data.resultados.length > 0) {
                             loadProductData(data.resultados[0]);
                         }
+                        navigateTo('screen4'); // Navigate immediately!
                     }
 
                     if (data.audio) {
@@ -739,7 +740,6 @@
                                 voltarDoChat();
                             } else if (abrirMapaAposAudio) {
                                 encerrarSessao();
-                                navigateTo('screen4');
                             } else if (sessaoAtiva) {
                                 if (statusEl) statusEl.innerText = "Ouvindo";
                                 if (indicatorEl) indicatorEl.classList.add("listening-indicator");
@@ -749,7 +749,15 @@
                         audio.onerror = () => {
                             totemFalando = false;
                             audioAtual = null;
-                            if (sessaoAtiva && !encerrarAposAudio && !abrirMapaAposAudio) conversar();
+                            if (encerrarAposAudio) {
+                                voltarDoChat();
+                            } else if (abrirMapaAposAudio) {
+                                encerrarSessao();
+                            } else if (sessaoAtiva) {
+                                if (statusEl) statusEl.innerText = "Ouvindo";
+                                if (indicatorEl) indicatorEl.classList.add("listening-indicator");
+                                conversar();
+                            }
                         };
                         audio.addEventListener('canplaythrough', () => audio.play(), { once: true });
                         audio.load();
@@ -758,7 +766,6 @@
                             voltarDoChat();
                         } else if (abrirMapaAposAudio) {
                             encerrarSessao();
-                            navigateTo('screen4');
                         } else if (sessaoAtiva) {
                             if (statusEl) statusEl.innerText = "Ouvindo";
                             if (indicatorEl) indicatorEl.classList.add("listening-indicator");

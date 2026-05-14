@@ -6,8 +6,11 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <title>Kiosk Project - Integrado</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700;900&family=Public+Sans:wght@400;600&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700;900&family=Public+Sans:wght@400;600&display=swap"
+        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet">
 
     <script id="tailwind-config">
         tailwind.config = {
@@ -51,7 +54,9 @@
             font-family: 'Public Sans', sans-serif;
         }
 
-        .font-lexend { font-family: 'Lexend', sans-serif; }
+        .font-lexend {
+            font-family: 'Lexend', sans-serif;
+        }
 
         .page {
             display: none;
@@ -69,24 +74,49 @@
         }
 
         @keyframes pulse {
-            0% { transform: scaleY(0.5); opacity: 0.5; }
-            100% { transform: scaleY(1); opacity: 1; }
+            0% {
+                transform: scaleY(0.5);
+                opacity: 0.5;
+            }
+
+            100% {
+                transform: scaleY(1);
+                opacity: 1;
+            }
         }
 
         @keyframes soundWave {
-            0%, 100% { height: 32px; opacity: 0.7; }
-            50% { height: 80px; opacity: 1; }
+
+            0%,
+            100% {
+                height: 32px;
+                opacity: 0.7;
+            }
+
+            50% {
+                height: 80px;
+                opacity: 1;
+            }
         }
-        
+
         .animate-sound {
             animation: soundWave 1s ease-in-out infinite;
         }
-        
+
         @keyframes listenPulse {
-            0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4); }
-            70% { box-shadow: 0 0 0 15px rgba(255, 215, 0, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
+            0% {
+                box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 15px rgba(255, 215, 0, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(255, 215, 0, 0);
+            }
         }
+
         .listening-indicator {
             animation: listenPulse 2s infinite;
         }
@@ -95,14 +125,16 @@
             background-image: radial-gradient(circle, #333 1px, transparent 1px);
             background-size: 40px 40px;
         }
-        
+
         /* Custom scrollbar for chat */
         .chat-scroll::-webkit-scrollbar {
             width: 8px;
         }
+
         .chat-scroll::-webkit-scrollbar-track {
             background: #1a1a1a;
         }
+
         .chat-scroll::-webkit-scrollbar-thumb {
             background: #333;
             border-radius: 4px;
@@ -114,8 +146,10 @@
 
     <!-- Screen 1: Start -->
     <section id="screen1" class="page active">
-        <header class="fixed top-0 left-0 w-full flex justify-between items-center px-4 md:px-12 z-50 bg-black border-b-2 border-zinc-800 h-20 md:h-32">
-            <div class="text-2xl md:text-4xl font-black text-yellow-400 font-lexend uppercase tracking-wider">KIOSK</div>
+        <header
+            class="fixed top-0 left-0 w-full flex justify-between items-center px-4 md:px-12 z-50 bg-black border-b-2 border-zinc-800 h-20 md:h-32">
+            <div class="text-2xl md:text-4xl font-black text-yellow-400 font-lexend uppercase tracking-wider">KIOSK
+            </div>
         </header>
         <main class="flex-1 flex flex-col items-center justify-center bg-black px-4 mt-20 md:mt-32 mb-24 md:mb-32">
             <div class="flex items-end justify-center gap-2 h-10 md:h-[80px] mb-12">
@@ -124,18 +158,24 @@
                 <div class="w-3 md:w-4 bg-yellow-400 rounded-t-full animate-sound" style="animation-delay: 0.0s"></div>
                 <div class="w-3 md:w-4 bg-yellow-400 rounded-t-full animate-sound" style="animation-delay: 0.2s"></div>
             </div>
-            <button onclick="iniciarSessaoEIrParaChat()" class="w-full max-w-[400px] bg-yellow-400 text-black font-lexend font-bold text-4xl md:text-6xl px-8 md:px-24 py-8 md:py-12 rounded-2xl border-4 border-transparent hover:border-white shadow-[0_0_0_4px_#333333] transition-all" data-i18n="start_btn">START</button>
+            <button onclick="iniciarSessaoEIrParaChat()"
+                class="w-full max-w-[400px] bg-yellow-400 text-black font-lexend font-bold text-4xl md:text-6xl px-8 md:px-24 py-8 md:py-12 rounded-2xl border-4 border-transparent hover:border-white shadow-[0_0_0_4px_#333333] transition-all"
+                data-i18n="start_btn">START</button>
         </main>
-        <nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-2 md:px-10 h-24 md:h-32 border-t-2 border-zinc-800 bg-black gap-2">
-            <button class="flex flex-col items-center justify-center text-zinc-500 border-2 border-zinc-800 rounded-xl flex-1 md:max-w-[200px] h-16 md:h-20 opacity-50 cursor-not-allowed">
+        <nav
+            class="fixed bottom-0 left-0 w-full flex justify-around items-center px-2 md:px-10 h-24 md:h-32 border-t-2 border-zinc-800 bg-black gap-2">
+            <button
+                class="flex flex-col items-center justify-center text-zinc-500 border-2 border-zinc-800 rounded-xl flex-1 md:max-w-[200px] h-16 md:h-20 opacity-50 cursor-not-allowed">
                 <span class="material-symbols-outlined text-xl md:text-3xl">arrow_back</span>
                 <span class="text-xs md:text-sm font-bold" data-i18n="back_btn">Voltar</span>
             </button>
-            <button class="flex flex-col items-center justify-center bg-zinc-900 border-2 border-yellow-400 rounded-xl flex-1 md:max-w-[200px] h-16 md:h-20 text-yellow-400">
+            <button
+                class="flex flex-col items-center justify-center bg-zinc-900 border-2 border-yellow-400 rounded-xl flex-1 md:max-w-[200px] h-16 md:h-20 text-yellow-400">
                 <span class="material-symbols-outlined text-2xl md:text-3xl">home</span>
                 <span class="text-xs md:text-sm font-bold" data-i18n="home_btn">Início</span>
             </button>
-            <button onclick="navigateTo('screen-language')" class="flex flex-col items-center justify-center text-white border-2 border-zinc-700 rounded-xl flex-1 md:max-w-[200px] h-16 md:h-20 hover:bg-zinc-800 transition-colors">
+            <button onclick="navigateTo('screen-language')"
+                class="flex flex-col items-center justify-center text-white border-2 border-zinc-700 rounded-xl flex-1 md:max-w-[200px] h-16 md:h-20 hover:bg-zinc-800 transition-colors">
                 <span class="material-symbols-outlined text-xl md:text-3xl">language</span>
                 <span class="text-xs md:text-sm font-bold" data-i18n="access_btn">Idiomas</span>
             </button>
@@ -144,31 +184,44 @@
 
     <!-- Screen 2: Chat -->
     <section id="screen2" class="page">
-        <header class="fixed top-0 left-0 w-full flex justify-between items-center px-4 md:px-12 z-50 bg-black border-b-2 border-zinc-800 h-20 md:h-32">
-            <div class="text-2xl md:text-4xl font-black text-yellow-400 font-lexend uppercase tracking-wider">KIOSK</div>
+        <header
+            class="fixed top-0 left-0 w-full flex justify-between items-center px-4 md:px-12 z-50 bg-black border-b-2 border-zinc-800 h-20 md:h-32">
+            <div class="text-2xl md:text-4xl font-black text-yellow-400 font-lexend uppercase tracking-wider">KIOSK
+            </div>
             <div class="flex items-center gap-3">
-                <div class="flex items-center gap-3 bg-zinc-900 border-2 border-yellow-400/50 rounded-full px-4 md:px-6 py-2 hidden md:flex">
-                    <div id="header-mic-indicator" class="w-3 h-3 md:w-4 md:h-4 bg-yellow-400 rounded-full shrink-0"></div>
-                    <span id="header-status" class="font-lexend font-bold text-xs md:text-lg text-yellow-400 uppercase tracking-widest" data-i18n="listening">Pronto</span>
+                <div
+                    class="flex items-center gap-3 bg-zinc-900 border-2 border-yellow-400/50 rounded-full px-4 md:px-6 py-2 hidden md:flex">
+                    <div id="header-mic-indicator" class="w-3 h-3 md:w-4 md:h-4 bg-yellow-400 rounded-full shrink-0">
+                    </div>
+                    <span id="header-status"
+                        class="font-lexend font-bold text-xs md:text-lg text-yellow-400 uppercase tracking-widest"
+                        data-i18n="listening">Pronto</span>
                 </div>
-                <button onclick="voltarDoChat()" class="bg-red-600 text-white font-bold px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm md:text-base border border-red-500 shadow-md" data-i18n="end_session_btn">Encerrar</button>
+                <button onclick="voltarDoChat()"
+                    class="bg-red-600 text-white font-bold px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm md:text-base border border-red-500 shadow-md"
+                    data-i18n="end_session_btn">Encerrar</button>
             </div>
         </header>
-        <main id="chat-container" class="flex-grow mt-20 md:mt-32 mb-24 md:mb-32 bg-black flex flex-col p-4 md:p-12 overflow-y-auto chat-scroll overflow-x-hidden">
+        <main id="chat-container"
+            class="flex-grow mt-20 md:mt-32 mb-24 md:mb-32 bg-black flex flex-col p-4 md:p-12 overflow-y-auto chat-scroll overflow-x-hidden">
             <div id="chat-messages" class="flex flex-col gap-6 w-full max-w-4xl mx-auto mt-auto">
                 <!-- Messages will be injected here dynamically -->
             </div>
         </main>
-        <nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-2 md:px-10 h-24 md:h-32 border-t-2 border-zinc-800 bg-black gap-2">
-            <button onclick="voltarDoChat()" class="flex flex-col items-center justify-center text-white border-2 border-zinc-700 rounded-xl flex-1 md:max-w-[200px] h-16 md:h-20 hover:bg-zinc-800 transition-colors">
+        <nav
+            class="fixed bottom-0 left-0 w-full flex justify-around items-center px-2 md:px-10 h-24 md:h-32 border-t-2 border-zinc-800 bg-black gap-2">
+            <button onclick="voltarDoChat()"
+                class="flex flex-col items-center justify-center text-white border-2 border-zinc-700 rounded-xl flex-1 md:max-w-[200px] h-16 md:h-20 hover:bg-zinc-800 transition-colors">
                 <span class="material-symbols-outlined text-xl md:text-3xl">arrow_back</span>
                 <span class="text-xs md:text-sm font-bold" data-i18n="back_btn">Voltar</span>
             </button>
-            <button onclick="voltarDoChat()" class="flex flex-col items-center justify-center text-white border-2 border-zinc-700 rounded-xl flex-1 md:max-w-[200px] h-16 md:h-20 hover:bg-zinc-800 transition-colors">
+            <button onclick="voltarDoChat()"
+                class="flex flex-col items-center justify-center text-white border-2 border-zinc-700 rounded-xl flex-1 md:max-w-[200px] h-16 md:h-20 hover:bg-zinc-800 transition-colors">
                 <span class="material-symbols-outlined text-xl md:text-3xl">home</span>
                 <span class="text-xs md:text-sm font-bold" data-i18n="home_btn">Início</span>
             </button>
-            <button onclick="navigateTo('screen-language')" class="flex flex-col items-center justify-center text-white border-2 border-zinc-700 rounded-xl flex-1 md:max-w-[200px] h-16 md:h-20 hover:bg-zinc-800 transition-colors">
+            <button onclick="navigateTo('screen-language')"
+                class="flex flex-col items-center justify-center text-white border-2 border-zinc-700 rounded-xl flex-1 md:max-w-[200px] h-16 md:h-20 hover:bg-zinc-800 transition-colors">
                 <span class="material-symbols-outlined text-xl md:text-3xl">language</span>
                 <span class="text-xs md:text-sm font-bold" data-i18n="access_btn">Idiomas</span>
             </button>
@@ -177,45 +230,66 @@
 
     <!-- Screen 3: Product -->
     <section id="screen3" class="page">
-        <header class="fixed top-0 left-0 w-full flex justify-between items-center px-4 md:px-12 z-50 bg-black border-b-2 border-zinc-800 h-20 md:h-32">
-            <div class="text-2xl md:text-4xl font-black text-yellow-400 font-lexend uppercase tracking-wider">KIOSK</div>
+        <header
+            class="fixed top-0 left-0 w-full flex justify-between items-center px-4 md:px-12 z-50 bg-black border-b-2 border-zinc-800 h-20 md:h-32">
+            <div class="text-2xl md:text-4xl font-black text-yellow-400 font-lexend uppercase tracking-wider">KIOSK
+            </div>
             <div class="flex items-center gap-2 md:gap-3">
-                 <span class="font-lexend text-zinc-400 uppercase font-bold text-xs md:text-lg" data-i18n="search_result">Resultado da Busca</span>
-                 <span class="material-symbols-outlined text-yellow-400 text-xl md:text-4xl">search_check</span>
+                <span class="font-lexend text-zinc-400 uppercase font-bold text-xs md:text-lg"
+                    data-i18n="search_result">Resultado da Busca</span>
+                <span class="material-symbols-outlined text-yellow-400 text-xl md:text-4xl">search_check</span>
             </div>
         </header>
-        <main class="flex-grow mt-20 md:mt-32 mb-24 md:mb-32 p-4 md:p-12 flex flex-col md:flex-row gap-6 md:gap-12 overflow-y-auto overflow-x-hidden justify-center items-center md:items-stretch max-w-6xl mx-auto w-full">
-            <div id="product-image-container" class="w-full md:w-1/2 min-h-[250px] md:min-h-0 bg-zinc-900 border-2 border-zinc-800 rounded-2xl flex items-center justify-center overflow-hidden shrink-0 relative">
-                <div class="absolute top-4 left-4 bg-red-600 text-white font-bold px-4 py-1 rounded-full text-xs md:text-sm uppercase tracking-wide" data-i18n="offer">Oferta</div>
-                <img id="product-image" class="w-3/4 h-3/4 object-contain" src="https://prezunic.vtexassets.com/arquivos/ids/180742-800-auto?v=638368812869870000" alt="Produto">
+        <main
+            class="flex-grow mt-20 md:mt-32 mb-24 md:mb-32 p-4 md:p-12 flex flex-col md:flex-row gap-6 md:gap-12 overflow-y-auto overflow-x-hidden justify-center items-center md:items-stretch max-w-6xl mx-auto w-full">
+            <div id="product-image-container"
+                class="w-full md:w-1/2 min-h-[250px] md:min-h-0 bg-zinc-900 border-2 border-zinc-800 rounded-2xl flex items-center justify-center overflow-hidden shrink-0 relative">
+                <div class="absolute top-4 left-4 bg-red-600 text-white font-bold px-4 py-1 rounded-full text-xs md:text-sm uppercase tracking-wide"
+                    data-i18n="offer">Oferta</div>
+                <img id="product-image" class="w-3/4 h-3/4 object-contain"
+                    src="https://prezunic.vtexassets.com/arquivos/ids/180742-800-auto?v=638368812869870000"
+                    alt="Produto">
             </div>
             <div class="w-full md:w-1/2 flex flex-col justify-center gap-4 md:gap-8">
                 <div>
-                    <p class="text-zinc-400 uppercase font-bold text-xs md:text-sm tracking-widest mb-1 md:mb-2" data-i18n="basic_foods">Alimentos Básicos</p>
-                    <h1 id="product-name" class="font-lexend font-bold text-3xl md:text-5xl leading-tight text-white mb-2 md:mb-4" data-i18n="product_name_demo">Arroz 5KG</h1>
-                    <p id="product-price" class="font-lexend font-bold text-4xl md:text-6xl text-yellow-400" data-i18n="product_price_demo">R$ 22,90</p>
+                    <p class="text-zinc-400 uppercase font-bold text-xs md:text-sm tracking-widest mb-1 md:mb-2"
+                        data-i18n="basic_foods">Alimentos Básicos</p>
+                    <h1 id="product-name"
+                        class="font-lexend font-bold text-3xl md:text-5xl leading-tight text-white mb-2 md:mb-4"
+                        data-i18n="product_name_demo">Arroz 5KG</h1>
+                    <p id="product-price" class="font-lexend font-bold text-4xl md:text-6xl text-yellow-400"
+                        data-i18n="product_price_demo">R$ 22,90</p>
                 </div>
-                
-                <div id="product-description" class="bg-zinc-900 border-l-4 border-yellow-400 p-4 md:p-6 rounded-r-lg text-zinc-300 text-base md:text-xl leading-relaxed" data-i18n="product_desc_demo">
-                    O arroz tipo 1 está com um ótimo preço. Encontre este produto facilmente no <b class="text-white font-bold text-lg md:text-xl">corredor 3</b>.
+
+                <div id="product-description"
+                    class="bg-zinc-900 border-l-4 border-yellow-400 p-4 md:p-6 rounded-r-lg text-zinc-300 text-base md:text-xl leading-relaxed"
+                    data-i18n="product_desc_demo">
+                    O arroz tipo 1 está com um ótimo preço. Encontre este produto facilmente no <b
+                        class="text-white font-bold text-lg md:text-xl">corredor 3</b>.
                 </div>
-                
-                <button onclick="navigateTo('screen4')" class="w-full bg-yellow-400 text-black font-lexend font-bold hover:bg-yellow-300 h-16 md:h-24 rounded-xl flex items-center justify-center gap-4 transition-colors mt-auto shadow-lg shrink-0">
+
+                <button onclick="navigateTo('screen4')"
+                    class="w-full bg-yellow-400 text-black font-lexend font-bold hover:bg-yellow-300 h-16 md:h-24 rounded-xl flex items-center justify-center gap-4 transition-colors mt-auto shadow-lg shrink-0">
                     <span class="material-symbols-outlined text-2xl md:text-4xl">location_on</span>
-                    <span class="text-lg md:text-2xl uppercase tracking-wide" data-i18n="see_map_btn">Ver Localização no Mapa</span>
+                    <span class="text-lg md:text-2xl uppercase tracking-wide" data-i18n="see_map_btn">Ver Localização no
+                        Mapa</span>
                 </button>
             </div>
         </main>
-        <nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-2 md:px-10 h-24 md:h-32 border-t-2 border-zinc-800 bg-black gap-2">
-            <button onclick="navigateTo('screen2')" class="flex flex-col items-center justify-center text-white border-2 border-zinc-700 rounded-xl flex-1 md:max-w-[200px] h-16 md:h-20 hover:bg-zinc-800 transition-colors">
+        <nav
+            class="fixed bottom-0 left-0 w-full flex justify-around items-center px-2 md:px-10 h-24 md:h-32 border-t-2 border-zinc-800 bg-black gap-2">
+            <button onclick="navigateTo('screen2')"
+                class="flex flex-col items-center justify-center text-white border-2 border-zinc-700 rounded-xl flex-1 md:max-w-[200px] h-16 md:h-20 hover:bg-zinc-800 transition-colors">
                 <span class="material-symbols-outlined text-xl md:text-3xl">arrow_back</span>
                 <span class="text-xs md:text-sm font-bold" data-i18n="back_chat_btn">Voltar (Chat)</span>
             </button>
-            <button onclick="navigateTo('screen1')" class="flex flex-col items-center justify-center text-white border-2 border-zinc-700 rounded-xl flex-1 md:max-w-[200px] h-16 md:h-20 hover:bg-zinc-800 transition-colors">
+            <button onclick="navigateTo('screen1')"
+                class="flex flex-col items-center justify-center text-white border-2 border-zinc-700 rounded-xl flex-1 md:max-w-[200px] h-16 md:h-20 hover:bg-zinc-800 transition-colors">
                 <span class="material-symbols-outlined text-xl md:text-3xl">home</span>
                 <span class="text-xs md:text-sm font-bold" data-i18n="home_btn">Início</span>
             </button>
-            <button onclick="navigateTo('screen-language')" class="flex flex-col items-center justify-center text-white border-2 border-zinc-700 rounded-xl flex-1 md:max-w-[200px] h-16 md:h-20 hover:bg-zinc-800 transition-colors">
+            <button onclick="navigateTo('screen-language')"
+                class="flex flex-col items-center justify-center text-white border-2 border-zinc-700 rounded-xl flex-1 md:max-w-[200px] h-16 md:h-20 hover:bg-zinc-800 transition-colors">
                 <span class="material-symbols-outlined text-xl md:text-3xl">language</span>
                 <span class="text-xs md:text-sm font-bold" data-i18n="access_btn">Idiomas</span>
             </button>
@@ -224,57 +298,79 @@
 
     <!-- Screen 4: Map -->
     <section id="screen4" class="page">
-        <header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-4 md:px-12 bg-black border-b-2 border-zinc-800 h-20 md:h-32">
-            <h1 class="font-lexend font-bold text-lg md:text-3xl uppercase text-yellow-400 truncate max-w-[50%]" data-i18n="store_map_title">MAPA DA LOJA</h1>
+        <header
+            class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-4 md:px-12 bg-black border-b-2 border-zinc-800 h-20 md:h-32">
+            <h1 class="font-lexend font-bold text-lg md:text-3xl uppercase text-yellow-400 truncate max-w-[50%]"
+                data-i18n="store_map_title">MAPA DA LOJA</h1>
             <div class="text-right flex items-center gap-4 md:gap-8">
                 <div>
-                    <p class="font-lexend font-bold text-lg md:text-3xl text-white leading-none" id="header-product-name" data-i18n="product_name_demo">Arroz 5KG</p>
-                    <p class="text-[10px] md:text-sm text-yellow-400 uppercase mt-1 md:mt-2 font-bold tracking-wider"><span data-i18n="aisle_prefix">Corredor</span> <span id="header-map-aisle">3</span></p>
+                    <p class="font-lexend font-bold text-lg md:text-3xl text-white leading-none"
+                        id="header-product-name" data-i18n="product_name_demo">Arroz 5KG</p>
+                    <p class="text-[10px] md:text-sm text-yellow-400 uppercase mt-1 md:mt-2 font-bold tracking-wider">
+                        <span data-i18n="aisle_prefix">Corredor</span> <span id="header-map-aisle">3</span></p>
                 </div>
             </div>
         </header>
-        <main class="relative flex-grow mt-20 md:mt-32 mb-24 md:mb-32 bg-black flex flex-col items-center justify-center p-4 md:p-8 overflow-y-auto overflow-x-hidden">
-            <div class="w-full h-full flex flex-col md:flex-row gap-4 md:gap-8 max-w-[1600px] items-center md:items-stretch">
-                
+        <main
+            class="relative flex-grow mt-20 md:mt-32 mb-24 md:mb-32 bg-black flex flex-col items-center justify-center p-4 md:p-8 overflow-y-auto overflow-x-hidden">
+            <div
+                class="w-full h-full flex flex-col md:flex-row gap-4 md:gap-8 max-w-[1600px] items-center md:items-stretch">
+
                 <!-- Side Panel Info -->
                 <div class="w-full md:w-1/4 flex flex-col gap-4 shrink-0">
-                    <div class="bg-zinc-900 border-2 border-zinc-800 p-4 md:p-8 rounded-2xl h-full flex flex-col justify-center">
+                    <div
+                        class="bg-zinc-900 border-2 border-zinc-800 p-4 md:p-8 rounded-2xl h-full flex flex-col justify-center">
                         <div class="flex items-center gap-4 mb-4 md:mb-8 pb-4 md:pb-8 border-b border-zinc-800">
-                            <span class="material-symbols-outlined text-yellow-400 text-3xl md:text-5xl" style="font-variation-settings: 'FILL' 1">directions_walk</span>
+                            <span class="material-symbols-outlined text-yellow-400 text-3xl md:text-5xl"
+                                style="font-variation-settings: 'FILL' 1">directions_walk</span>
                             <div>
-                                <p class="text-zinc-400 text-xs md:text-sm uppercase font-bold tracking-wider" data-i18n="your_route">Sua Rota</p>
-                                <p class="text-white font-bold text-base md:text-xl mt-1" data-i18n="route_desc">Entrada -> Corredor <span id="route-desc-corredor">3</span></p>
+                                <p class="text-zinc-400 text-xs md:text-sm uppercase font-bold tracking-wider"
+                                    data-i18n="your_route">Sua Rota</p>
+                                <p class="text-white font-bold text-base md:text-xl mt-1" data-i18n="route_desc">Entrada
+                                    -> Corredor <span id="route-desc-corredor">3</span></p>
                             </div>
                         </div>
                         <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 md:w-16 md:h-16 bg-yellow-400 rounded-xl flex items-center justify-center text-black font-lexend font-black text-2xl md:text-3xl shrink-0" id="map-pin-number">3</div>
+                            <div class="w-12 h-12 md:w-16 md:h-16 bg-yellow-400 rounded-xl flex items-center justify-center text-black font-lexend font-black text-2xl md:text-3xl shrink-0"
+                                id="map-pin-number">3</div>
                             <div>
-                                <p class="text-zinc-400 text-xs md:text-sm uppercase font-bold tracking-wider" data-i18n="destination">Destino</p>
-                                <p id="map-product-name" class="text-white font-bold text-base md:text-xl mt-1 line-clamp-2" data-i18n="product_name_demo">Arroz 5KG</p>
+                                <p class="text-zinc-400 text-xs md:text-sm uppercase font-bold tracking-wider"
+                                    data-i18n="destination">Destino</p>
+                                <p id="map-product-name"
+                                    class="text-white font-bold text-base md:text-xl mt-1 line-clamp-2"
+                                    data-i18n="product_name_demo">Arroz 5KG</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- SVG Map Container -->
-                <div id="map-svg-container" class="w-full md:w-3/4 bg-zinc-900 border-2 border-zinc-800 rounded-2xl relative map-grid overflow-hidden min-h-[350px] md:min-h-0 flex-1">
-                    <svg class="absolute inset-0 w-full h-full p-4 md:p-8" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet">
-                        
+                <div id="map-svg-container"
+                    class="w-full md:w-3/4 bg-zinc-900 border-2 border-zinc-800 rounded-2xl relative map-grid overflow-hidden min-h-[350px] md:min-h-0 flex-1">
+                    <svg class="absolute inset-0 w-full h-full p-4 md:p-8" viewBox="0 0 1000 600"
+                        preserveAspectRatio="xMidYMid meet">
+
                         <!-- Caixas -->
-                        <rect x="800" y="500" width="150" height="80" rx="8" fill="#1a1a1a" stroke="#444" stroke-width="2"/>
-                        <text x="875" y="545" fill="#888" font-size="20" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-i18n="checkouts">CAIXAS</text>
+                        <rect x="800" y="500" width="150" height="80" rx="8" fill="#1a1a1a" stroke="#444"
+                            stroke-width="2" />
+                        <text x="875" y="545" fill="#888" font-size="20" font-family="sans-serif" font-weight="bold"
+                            text-anchor="middle" data-i18n="checkouts">CAIXAS</text>
 
                         <!-- Entrada -->
-                        <rect x="50" y="500" width="150" height="80" rx="8" fill="#1a1a1a" stroke="#444" stroke-width="2"/>
-                        <text x="125" y="545" fill="#888" font-size="20" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-i18n="entrance">ENTRADA</text>
-                        <circle cx="125" cy="480" r="12" fill="#3b82f6" class="animate-pulse"/>
-                        <text x="125" y="455" fill="#3b82f6" font-size="14" font-weight="bold" text-anchor="middle" data-i18n="you">VOCÊ</text>
+                        <rect x="50" y="500" width="150" height="80" rx="8" fill="#1a1a1a" stroke="#444"
+                            stroke-width="2" />
+                        <text x="125" y="545" fill="#888" font-size="20" font-family="sans-serif" font-weight="bold"
+                            text-anchor="middle" data-i18n="entrance">ENTRADA</text>
+                        <circle cx="125" cy="480" r="12" fill="#3b82f6" class="animate-pulse" />
+                        <text x="125" y="455" fill="#3b82f6" font-size="14" font-weight="bold" text-anchor="middle"
+                            data-i18n="you">VOCÊ</text>
 
                         <!-- Aisles (Corredores) 1 to 5 -->
                         <g fill="#131313" stroke="#333" stroke-width="2">
                             <rect id="rect-corredor-1" x="250" y="50" width="80" height="350" rx="4" />
                             <rect id="rect-corredor-2" x="400" y="50" width="80" height="350" rx="4" />
-                            <rect id="rect-corredor-3" x="550" y="50" width="80" height="350" rx="4" stroke="#ffd700" stroke-width="4"/> <!-- Highlighted Aisle -->
+                            <rect id="rect-corredor-3" x="550" y="50" width="80" height="350" rx="4" stroke="#ffd700"
+                                stroke-width="4" /> <!-- Highlighted Aisle -->
                             <rect id="rect-corredor-4" x="700" y="50" width="80" height="350" rx="4" />
                             <rect id="rect-corredor-5" x="850" y="50" width="80" height="350" rx="4" />
                         </g>
@@ -289,8 +385,10 @@
                         </g>
 
                         <!-- Path -->
-                        <path id="map-svg-path" d="M 125,480 L 125,430 L 590,430 L 590,200" fill="none" stroke="#FFD700" stroke-dasharray="15,10" stroke-width="6">
-                            <animate attributeName="stroke-dashoffset" from="100" to="0" dur="2s" repeatCount="indefinite" />
+                        <path id="map-svg-path" d="M 125,480 L 125,430 L 590,430 L 590,200" fill="none" stroke="#FFD700"
+                            stroke-dasharray="15,10" stroke-width="6">
+                            <animate attributeName="stroke-dashoffset" from="100" to="0" dur="2s"
+                                repeatCount="indefinite" />
                         </path>
 
                         <!-- Target Pin -->
@@ -302,16 +400,20 @@
                 </div>
             </div>
         </main>
-        <nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-2 md:px-10 h-24 md:h-32 border-t-2 border-zinc-800 bg-black gap-2">
-            <button onclick="navigateTo('screen3')" class="flex flex-col items-center justify-center text-white border-2 border-zinc-700 rounded-xl flex-1 md:max-w-[200px] h-16 md:h-20 hover:bg-zinc-800 transition-colors">
+        <nav
+            class="fixed bottom-0 left-0 w-full flex justify-around items-center px-2 md:px-10 h-24 md:h-32 border-t-2 border-zinc-800 bg-black gap-2">
+            <button onclick="navigateTo('screen3')"
+                class="flex flex-col items-center justify-center text-white border-2 border-zinc-700 rounded-xl flex-1 md:max-w-[200px] h-16 md:h-20 hover:bg-zinc-800 transition-colors">
                 <span class="material-symbols-outlined text-xl md:text-3xl">arrow_back</span>
                 <span class="text-xs md:text-sm font-bold" data-i18n="back_prod_btn">Voltar (Prod)</span>
             </button>
-            <button onclick="navigateTo('screen1')" class="flex flex-col items-center justify-center text-white border-2 border-zinc-700 rounded-xl flex-1 md:max-w-[200px] h-16 md:h-20 hover:bg-zinc-800 transition-colors">
+            <button onclick="navigateTo('screen1')"
+                class="flex flex-col items-center justify-center text-white border-2 border-zinc-700 rounded-xl flex-1 md:max-w-[200px] h-16 md:h-20 hover:bg-zinc-800 transition-colors">
                 <span class="material-symbols-outlined text-xl md:text-3xl">home</span>
                 <span class="text-xs md:text-sm font-bold" data-i18n="home_btn">Início</span>
             </button>
-            <button onclick="navigateTo('screen-language')" class="flex flex-col items-center justify-center text-white border-2 border-zinc-700 rounded-xl flex-1 md:max-w-[200px] h-16 md:h-20 hover:bg-zinc-800 transition-colors">
+            <button onclick="navigateTo('screen-language')"
+                class="flex flex-col items-center justify-center text-white border-2 border-zinc-700 rounded-xl flex-1 md:max-w-[200px] h-16 md:h-20 hover:bg-zinc-800 transition-colors">
                 <span class="material-symbols-outlined text-xl md:text-3xl">language</span>
                 <span class="text-xs md:text-sm font-bold" data-i18n="access_btn">Idiomas</span>
             </button>
@@ -320,23 +422,30 @@
 
     <!-- Screen 5: Language Selection -->
     <section id="screen-language" class="page">
-        <header class="fixed top-0 left-0 w-full flex justify-center items-center px-4 md:px-12 z-50 bg-black border-b-2 border-zinc-800 h-20 md:h-32">
-            <div class="text-2xl md:text-4xl font-black text-yellow-400 font-lexend uppercase tracking-wider text-center" data-i18n="lang_title">IDIOMA / LANGUAGE</div>
+        <header
+            class="fixed top-0 left-0 w-full flex justify-center items-center px-4 md:px-12 z-50 bg-black border-b-2 border-zinc-800 h-20 md:h-32">
+            <div class="text-2xl md:text-4xl font-black text-yellow-400 font-lexend uppercase tracking-wider text-center"
+                data-i18n="lang_title">IDIOMA / LANGUAGE</div>
         </header>
-        <main class="flex-grow mt-20 md:mt-32 mb-24 md:mb-32 bg-black flex flex-col items-center justify-center p-4 md:p-12">
+        <main
+            class="flex-grow mt-20 md:mt-32 mb-24 md:mb-32 bg-black flex flex-col items-center justify-center p-4 md:p-12">
             <div class="flex flex-col md:flex-row gap-8 w-full max-w-4xl justify-center">
-                <button id="btn-lang-pt" onclick="setLanguage('pt')" class="flex flex-col items-center justify-center bg-zinc-900 border-4 border-yellow-400 hover:bg-zinc-800 text-white rounded-3xl w-full md:w-1/2 h-48 md:h-64 transition-colors">
+                <button id="btn-lang-pt" onclick="setLanguage('pt')"
+                    class="flex flex-col items-center justify-center bg-zinc-900 border-4 border-yellow-400 hover:bg-zinc-800 text-white rounded-3xl w-full md:w-1/2 h-48 md:h-64 transition-colors">
                     <span class="text-5xl md:text-6xl mb-4">🇧🇷</span>
                     <span class="font-lexend font-bold text-3xl md:text-4xl">Português</span>
                 </button>
-                <button id="btn-lang-en" onclick="setLanguage('en')" class="flex flex-col items-center justify-center bg-zinc-900 border-4 border-zinc-700 hover:border-yellow-400 hover:bg-zinc-800 text-white rounded-3xl w-full md:w-1/2 h-48 md:h-64 transition-colors">
+                <button id="btn-lang-en" onclick="setLanguage('en')"
+                    class="flex flex-col items-center justify-center bg-zinc-900 border-4 border-zinc-700 hover:border-yellow-400 hover:bg-zinc-800 text-white rounded-3xl w-full md:w-1/2 h-48 md:h-64 transition-colors">
                     <span class="text-5xl md:text-6xl mb-4">🇺🇸</span>
                     <span class="font-lexend font-bold text-3xl md:text-4xl">English</span>
                 </button>
             </div>
         </main>
-        <nav class="fixed bottom-0 left-0 w-full flex justify-center items-center px-2 md:px-10 h-24 md:h-32 border-t-2 border-zinc-800 bg-black gap-2">
-            <button onclick="goBack()" class="flex flex-col items-center justify-center text-white border-2 border-zinc-700 rounded-xl max-w-[200px] w-full h-16 md:h-20 hover:bg-zinc-800 transition-colors">
+        <nav
+            class="fixed bottom-0 left-0 w-full flex justify-center items-center px-2 md:px-10 h-24 md:h-32 border-t-2 border-zinc-800 bg-black gap-2">
+            <button onclick="goBack()"
+                class="flex flex-col items-center justify-center text-white border-2 border-zinc-700 rounded-xl max-w-[200px] w-full h-16 md:h-20 hover:bg-zinc-800 transition-colors">
                 <span class="material-symbols-outlined text-xl md:text-3xl">close</span>
                 <span class="text-xs md:text-sm font-bold" data-i18n="cancel_btn">Cancelar</span>
             </button>
@@ -417,7 +526,7 @@
 
         function navigateTo(screenId) {
             // Se estiver indo para a tela de idiomas, guarda a tela atual
-            if(screenId === 'screen-language') {
+            if (screenId === 'screen-language') {
                 previousScreenId = currentScreenId;
             } else {
                 currentScreenId = screenId;
@@ -425,21 +534,21 @@
 
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById(screenId).classList.add('active');
-            
+
             // Rolar automaticamente para a base do chat caso a tela seja a 2
-            if(screenId === 'screen2') {
+            if (screenId === 'screen2') {
                 const chatMain = document.getElementById('chat-container');
-                if(chatMain) chatMain.scrollTop = chatMain.scrollHeight;
+                if (chatMain) chatMain.scrollTop = chatMain.scrollHeight;
             }
         }
-        
+
         function goBack() {
             navigateTo(previousScreenId);
         }
 
         function setLanguage(lang) {
             currentLang = lang;
-            
+
             // Atualiza os textos
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.getAttribute('data-i18n');
@@ -447,15 +556,15 @@
                     el.innerHTML = translations[lang][key];
                 }
             });
-            
+
             // Atualiza a borda amarela do botão selecionado
             const ptBtn = document.getElementById('btn-lang-pt');
             const enBtn = document.getElementById('btn-lang-en');
-            
+
             const activeClass = "flex flex-col items-center justify-center bg-zinc-900 border-4 border-yellow-400 hover:bg-zinc-800 text-white rounded-3xl w-full md:w-1/2 h-48 md:h-64 transition-colors";
             const inactiveClass = "flex flex-col items-center justify-center bg-zinc-900 border-4 border-zinc-700 hover:border-yellow-400 hover:bg-zinc-800 text-white rounded-3xl w-full md:w-1/2 h-48 md:h-64 transition-colors";
-            
-            if(lang === 'pt') {
+
+            if (lang === 'pt') {
                 ptBtn.className = activeClass;
                 enBtn.className = inactiveClass;
             } else {
@@ -477,7 +586,7 @@
         // ====== INTEGRAÇÃO DE PRODUTO ======
         function loadProductData(data) {
             if (!data) return;
-            
+
             // data.nome, data.preco, data.corredor, data.descricao, data.imagem (se houver)
             if (data.nome) {
                 document.getElementById('product-name').textContent = data.nome;
@@ -491,7 +600,7 @@
                 document.getElementById('header-map-aisle').textContent = data.corredor;
                 document.getElementById('map-pin-number').textContent = data.corredor;
                 document.getElementById('route-desc-corredor').textContent = data.corredor;
-                
+
                 // Lógica simples para atualizar o mapa: iluminar o corredor correto (1 a 5)
                 const aisleNum = parseInt(data.corredor);
                 if (!isNaN(aisleNum) && aisleNum >= 1 && aisleNum <= 5) {
@@ -505,7 +614,7 @@
                     document.getElementById('rect-corredor-' + aisleNum).setAttribute('stroke', '#ffd700');
                     document.getElementById('rect-corredor-' + aisleNum).setAttribute('stroke-width', '4');
                     document.getElementById('text-corredor-' + aisleNum).setAttribute('fill', '#ffd700');
-                    
+
                     // Move the path target
                     // Map x coords for aisles 1-5: 290, 440, 590, 740, 890
                     const targetX = 290 + (aisleNum - 1) * 150;
@@ -516,13 +625,13 @@
             if (data.descricao && data.corredor) {
                 const prefix = currentLang === 'pt' ? "Encontre este produto facilmente no" : "Easily find this product in";
                 const aisleStr = currentLang === 'pt' ? "corredor" : "aisle";
-                
+
                 document.getElementById('product-description').innerHTML = `${data.descricao} <br><br> ${prefix} <b class="text-white font-bold text-lg md:text-xl">${aisleStr} ${data.corredor}</b>.`;
             }
-            
+
             const imgEl = document.getElementById('product-image');
             if (imgEl) {
-                 imgEl.src = data.imagem || "https://prezunic.vtexassets.com/arquivos/ids/180742-800-auto?v=638368812869870000";
+                imgEl.src = data.imagem || "https://prezunic.vtexassets.com/arquivos/ids/180742-800-auto?v=638368812869870000";
             }
         }
 
@@ -545,9 +654,9 @@
 
         function appendMessage(text, sender, results = [], acao = "NENHUM") {
             const chatMessages = document.getElementById("chat-messages");
-            
+
             const div = document.createElement("div");
-            
+
             if (sender === 'user') {
                 div.className = "flex items-end gap-3 self-end w-[90%] md:w-3/4 justify-end";
                 div.innerHTML = `
@@ -560,7 +669,7 @@
                 `;
             } else {
                 div.className = "flex items-end gap-3 self-start w-[90%] md:w-3/4";
-                
+
                 let productsHtml = '';
                 if (results && results.length > 0 && acao === "MOSTRAR_PRODUTOS") {
                     windowResults = results;
@@ -574,14 +683,14 @@
                             <p class="text-yellow-400 font-bold text-sm md:text-base mt-1">${price}</p>
                         </div>`;
                     }).join('');
-                    
+
                     productsHtml = `
                         <div class="flex gap-4 mt-4 overflow-x-auto pb-2 chat-scroll">
                             ${cards}
                         </div>
                     `;
                 }
-                
+
                 div.innerHTML = `
                     <div class="w-10 h-10 md:w-14 md:h-14 rounded-full bg-zinc-800 flex items-center justify-center border-2 border-zinc-700 shrink-0">
                         <span class="material-symbols-outlined text-yellow-400 text-xl md:text-3xl">smart_toy</span>
@@ -592,18 +701,18 @@
                     </div>
                 `;
             }
-            
+
             chatMessages.appendChild(div);
-            
+
             // Scroll to bottom
             const chatMain = document.getElementById('chat-container');
-            if(chatMain) chatMain.scrollTop = chatMain.scrollHeight;
+            if (chatMain) chatMain.scrollTop = chatMain.scrollHeight;
         }
 
         function encerrarSessao() {
             sessaoAtiva = false;
             totemFalando = false;
-            
+
             const statusEl = document.getElementById("header-status");
             if (statusEl) statusEl.innerText = "Parado";
             const indicatorEl = document.getElementById("header-mic-indicator");
@@ -635,7 +744,7 @@
             try {
                 streamGlobal = await navigator.mediaDevices.getUserMedia({ audio: true });
                 sessaoAtiva = true;
-                
+
                 const statusEl = document.getElementById("header-status");
                 if (statusEl) statusEl.innerText = "Ouvindo";
                 const indicatorEl = document.getElementById("header-mic-indicator");
@@ -660,16 +769,16 @@
                 // Clear chat
                 const chatMessages = document.getElementById("chat-messages");
                 if (chatMessages) chatMessages.innerHTML = '';
-                
-                const welcomeText = currentLang === 'pt' ? 
-                    "Olá! Sou o assistente virtual do Kiosk. Como posso ajudar você hoje?" : 
+
+                const welcomeText = currentLang === 'pt' ?
+                    "Olá! Sou o assistente virtual do Kiosk. Como posso ajudar você hoje?" :
                     "Hello! I'm the Kiosk virtual assistant. How can I help you today?";
-                
+
                 appendMessage(welcomeText, "totem");
                 iniciarSessao();
             }
         }
-        
+
         function voltarDoChat() {
             encerrarSessao();
             navigateTo('screen1');
@@ -685,7 +794,7 @@
             recorder.onstop = async () => {
                 const blob = new Blob(chunks, { type: 'audio/webm' });
                 if (blob.size < 1000) {
-                    if (sessaoAtiva) conversar(); 
+                    if (sessaoAtiva) conversar();
                     return;
                 }
 
@@ -695,7 +804,7 @@
 
                 const statusEl = document.getElementById("header-status");
                 if (statusEl) statusEl.innerText = "Pensando";
-                
+
                 const indicatorEl = document.getElementById("header-mic-indicator");
                 if (indicatorEl) indicatorEl.classList.remove("listening-indicator");
 
@@ -706,9 +815,9 @@
                     });
 
                     const data = await resposta.json();
-                    
+
                     appendMessage(data.transcricao, 'user');
-                    
+
                     if (statusEl) statusEl.innerText = "Falando";
 
                     setTimeout(() => {
@@ -721,7 +830,7 @@
                     if (data.acao === "ENCERRAR") encerrarAposAudio = true;
                     if (data.acao === "ABRIR_MAPA") {
                         abrirMapaAposAudio = true;
-                        if(data.resultados && data.resultados.length > 0) {
+                        if (data.resultados && data.resultados.length > 0) {
                             loadProductData(data.resultados[0]);
                         }
                         navigateTo('screen4'); // Navigate immediately!

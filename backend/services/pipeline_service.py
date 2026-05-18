@@ -1,16 +1,56 @@
-import sqlite3
 import os
+import sqlite3
+
 from services.llm_service import classificar_intencao, perguntar_llm
+
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "..", "..", "database", "produtos.db")
 
 memoria = {
     "ultimos_produtos": [],
+    "assunto_ativo": None,
 }
+
+CLOTHING_IMAGES = {
+    "camiseta": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=500&q=80",
+    "camisa": "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=500&q=80",
+    "calca": "https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&w=500&q=80",
+    "jaqueta": "https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=500&q=80",
+    "vestido": "https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=500&q=80",
+    "blusa": "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=500&q=80",
+    "bermuda": "https://images.unsplash.com/photo-1591195853828-11db59a44f6b?auto=format&fit=crop&w=500&q=80",
+    "legging": "https://images.unsplash.com/photo-1506629905607-d9d297d644c0?auto=format&fit=crop&w=500&q=80",
+    "default": "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=500&q=80",
+}
+
 
 def conectar_bd():
     return sqlite3.connect(DB_PATH)
+
+
+def normalizar_texto(texto):
+    return (
+        texto.lower()
+        .replace("á", "a")
+        .replace("ã", "a")
+        .replace("â", "a")
+        .replace("é", "e")
+        .replace("ê", "e")
+        .replace("í", "i")
+        .replace("ó", "o")
+        .replace("ô", "o")
+        .replace("ú", "u")
+        .replace("ç", "c")
+    )
+
+
+def escolher_imagem_produto(nome, tipo):
+    texto = normalizar_texto(f"{nome} {tipo}")
+    for chave, imagem in CLOTHING_IMAGES.items():
+        if chave != "default" and chave in texto:
+            return imagem
+    return CLOTHING_IMAGES["default"]
 
 
 def formatar_produto(produto):
@@ -27,15 +67,18 @@ def formatar_produto(produto):
         "setor": produto[9],
         "corredor": produto[10],
         "prateleira": produto[11],
-        "descricao": produto[12]
+        "descricao": produto[12],
+        "imagem": escolher_imagem_produto(produto[1], produto[3]),
     }
+
 
 def formatar_produto_para_contexto(p):
     return (
-        f"Nome: {p['nome']} | Preço: R${p['preco']:.2f} | "
-        f"Estoque: {p['estoque']} | Descrição: {p['descricao']} | "
+        f"Nome: {p['nome']} | Preco: R${p['preco']:.2f} | "
+        f"Estoque: {p['estoque']} | Descricao: {p['descricao']} | "
         f"Cor: {p['cor']} | Tamanho: {p['tamanho']} | Marca: {p['marca']}"
     )
+
 
 def buscar_produtos_sql(palavras_chave):
     if not palavras_chave:
@@ -45,7 +88,6 @@ def buscar_produtos_sql(palavras_chave):
     cursor = conn.cursor()
     colunas = ["nome", "categoria", "tipo", "cor", "marca", "descricao"]
 
-    # 1. Tenta AND (todos os termos presentes no produto)
     clausulas_and = []
     parametros_and = []
     for palavra in palavras_chave:
@@ -57,7 +99,6 @@ def buscar_produtos_sql(palavras_chave):
     cursor.execute(query_and, parametros_and)
     produtos = cursor.fetchall()
 
-    # 2. Fallback OR com ranqueamento por relevância
     if not produtos:
         contagem = {}
         for palavra in palavras_chave:
@@ -78,92 +119,126 @@ def buscar_produtos_sql(palavras_chave):
     return [formatar_produto(p) for p in produtos]
 
 
+def is_encerramento(texto_baixo):
+    palavras = texto_baixo.split()
+    despedidas = {"tchau", "obrigado", "obrigada", "valeu", "encerrar", "bye", "thanks", "falou"}
+    return (any(w in palavras for w in despedidas) or "ate logo" in normalizar_texto(texto_baixo)) and len(palavras) <= 4
+
+
+def is_pedido_mapa(texto_baixo):
+    texto = normalizar_texto(texto_baixo).replace(",", "").replace(".", "").replace("?", "").strip()
+    afirmacoes = {
+        "sim",
+        "sim por favor",
+        "por favor",
+        "pode",
+        "pode sim",
+        "quero",
+        "quero sim",
+        "claro",
+        "mostra",
+        "mostre",
+        "mostrar",
+        "me mostra",
+    }
+    return (
+        texto in afirmacoes
+        or "mapa" in texto
+        or "onde" in texto
+        or "caminho" in texto
+        or "corredor" in texto
+        or "localizacao" in texto
+    )
+
+
+def extrair_palavras_busca(texto_baixo):
+    stopwords = {
+        "eu", "quero", "queria", "saber", "mais", "sobre", "a", "o", "as", "os",
+        "de", "da", "do", "tem", "ha", "me", "fale", "uma", "um", "por", "favor",
+    }
+    return [
+        normalizar_texto(w.strip(".,?!"))
+        for w in texto_baixo.split()
+        if len(w.strip(".,?!")) > 2 and normalizar_texto(w.strip(".,?!")) not in stopwords
+    ]
+
+
+async def responder_sobre_produtos(pergunta, produtos, idioma):
+    contexto = "Mantenha o assunto nestes produtos ja apresentados:\n" + "\n---\n".join(
+        [formatar_produto_para_contexto(p) for p in produtos]
+    )
+    resposta = await perguntar_llm(pergunta, contexto, idioma)
+    return {"resposta": resposta, "resultados": produtos, "acao": "MOSTRAR_PRODUTOS"}
+
+
 async def pipeline_processar(pergunta, idioma="pt"):
-    print(f"\n--- Nova Requisição: {pergunta} --- Idioma: {idioma}")
+    print(f"\n--- Nova Requisicao: {pergunta} --- Idioma: {idioma}")
+    texto_baixo = pergunta.lower()
+    produtos_memoria = memoria.get("ultimos_produtos", [])
+
+    if is_encerramento(texto_baixo):
+        memoria["ultimos_produtos"] = []
+        memoria["assunto_ativo"] = None
+        return {"resposta": "", "resultados": [], "acao": "ENCERRAR"}
+
     analise = await classificar_intencao(pergunta, idioma)
     intencao = analise.get("intencao", "OUTROS")
     palavras = analise.get("palavras_chave", [])
 
-    texto_baixo = pergunta.lower()
+    if intencao == "ENCERRAR":
+        memoria["ultimos_produtos"] = []
+        memoria["assunto_ativo"] = None
+        return {"resposta": "", "resultados": [], "acao": "ENCERRAR"}
 
-    # --- Correção de Intenção ---
-    # Se veio como SOBRE_PRODUTO mas não há memória, force nova busca
-    if intencao == "SOBRE_PRODUTO" and not memoria["ultimos_produtos"]:
-        print("SOBRE_PRODUTO sem memória → forçando NOVA_BUSCA")
+    if produtos_memoria and (intencao == "IR_PARA_MAPA" or is_pedido_mapa(texto_baixo)):
+        resposta_texto = "Mostrando o caminho no mapa." if idioma == "pt" else "Showing the route on the map."
+        return {"resposta": resposta_texto, "resultados": [produtos_memoria[0]], "acao": "ABRIR_MAPA"}
+
+    if intencao == "SOBRE_PRODUTO" and not produtos_memoria:
         intencao = "NOVA_BUSCA"
-        # Extrai palavras da pergunta como palavras-chave
-        stopwords = {"eu", "quero", "saber", "mais", "sobre", "a", "o", "as", "os", "de", "da", "do", "tem", "há", "me", "fale"}
-        palavras = [w for w in texto_baixo.split() if len(w) > 2 and w not in stopwords]
+        palavras = extrair_palavras_busca(texto_baixo)
 
-    print(f"Intenção: {intencao} | Palavras: {palavras}")
+    print(f"Intencao: {intencao} | Palavras: {palavras}")
 
-    # ========================
-    # ENCERRAR
-    # ========================
-    despedidas = ["tchau", "obrigado", "obrigada", "valeu", "encerrar", "até logo", "bye", "thanks", "falou"]
-    is_despedida = any(w in texto_baixo.split() for w in despedidas) and len(texto_baixo.split()) <= 4
-    
-    if intencao == "ENCERRAR" or is_despedida:
-        msg = "Muito obrigado e volte sempre!" if idioma == "pt" else "Thank you very much and come back soon!"
-        return {"resposta": msg, "resultados": [], "acao": "ENCERRAR"}
-
-    # ========================
-    # NOVA_BUSCA
-    # ========================
     if intencao == "NOVA_BUSCA":
         resultados = buscar_produtos_sql(palavras)
         if resultados:
             memoria["ultimos_produtos"] = resultados[:3]
+            memoria["assunto_ativo"] = "produto"
             contexto = "Produtos encontrados no banco de dados:\n" + "\n---\n".join(
                 [formatar_produto_para_contexto(p) for p in resultados[:3]]
             )
             resposta = await perguntar_llm(pergunta, contexto, idioma)
             return {"resposta": resposta, "resultados": resultados[:3], "acao": "MOSTRAR_PRODUTOS"}
-        else:
-            memoria["ultimos_produtos"] = []
-            resposta_base = "Nenhum produto encontrado no banco de dados com esses termos. Informe ao usuário."
-            resposta = await perguntar_llm(pergunta, resposta_base, idioma)
-            return {"resposta": resposta, "resultados": [], "acao": "NENHUM"}
 
-    # ========================
-    # SOBRE_PRODUTO
-    # ========================
-    elif intencao == "SOBRE_PRODUTO":
-        produtos_atuais = memoria["ultimos_produtos"]
+        memoria["ultimos_produtos"] = []
+        memoria["assunto_ativo"] = None
+        resposta_base = "Nenhum produto encontrado no banco de dados com esses termos. Informe ao usuario."
+        resposta = await perguntar_llm(pergunta, resposta_base, idioma)
+        return {"resposta": resposta, "resultados": [], "acao": "NENHUM"}
 
-        # Filtro inteligente: verifica se o usuário citou um produto específico da memória
+    if intencao == "SOBRE_PRODUTO":
         produtos_relevantes = []
         palavras_pergunta = texto_baixo.split()
-        for p in produtos_atuais:
-            nome_partes = p['nome'].lower().split()
+        for produto in produtos_memoria:
+            nome_partes = produto["nome"].lower().split()
             if any(parte in palavras_pergunta for parte in nome_partes):
-                produtos_relevantes.append(p)
+                produtos_relevantes.append(produto)
 
-        final_context = produtos_relevantes if produtos_relevantes else produtos_atuais
+        final_context = produtos_relevantes if produtos_relevantes else produtos_memoria
+        return await responder_sobre_produtos(pergunta, final_context, idioma)
 
-        contexto = "O usuário está perguntando sobre estes produtos:\n" + "\n---\n".join(
-            [formatar_produto_para_contexto(p) for p in final_context]
-        )
-        resposta = await perguntar_llm(pergunta, contexto, idioma)
-        return {"resposta": resposta, "resultados": final_context, "acao": "MOSTRAR_PRODUTOS"}
+    if intencao == "IR_PARA_MAPA":
+        if produtos_memoria:
+            resposta_texto = "Mostrando o caminho no mapa." if idioma == "pt" else "Showing the route on the map."
+            return {"resposta": resposta_texto, "resultados": [produtos_memoria[0]], "acao": "ABRIR_MAPA"}
 
-    # ========================
-    # IR_PARA_MAPA
-    # ========================
-    elif intencao == "IR_PARA_MAPA":
-        produtos_atuais = memoria.get("ultimos_produtos", [])
-        if produtos_atuais:
-            # We assume the user wants to go to the first product in memory
-            resposta_texto = "Ótimo! Vou te mostrar o caminho no mapa agora." if idioma == "pt" else "Great! I'll show you the way on the map now."
-            return {"resposta": resposta_texto, "resultados": [produtos_atuais[0]], "acao": "ABRIR_MAPA"}
-        else:
-            resposta_texto = "Qual produto você gostaria de ver no mapa?" if idioma == "pt" else "Which product would you like to see on the map?"
-            return {"resposta": resposta_texto, "resultados": [], "acao": "NENHUM"}
+        resposta_texto = "Qual produto voce gostaria de ver no mapa?" if idioma == "pt" else "Which product would you like to see on the map?"
+        return {"resposta": resposta_texto, "resultados": [], "acao": "NENHUM"}
 
-    # ========================
-    # OUTROS
-    # ========================
-    else:
-        contexto = "Conversa casual ou dúvida geral. Responda naturalmente como assistente de uma loja de roupas."
-        resposta = await perguntar_llm(pergunta, contexto, idioma)
-        return {"resposta": resposta, "resultados": [], "acao": "NENHUM"}
+    if produtos_memoria:
+        return await responder_sobre_produtos(pergunta, produtos_memoria, idioma)
+
+    contexto = "Conversa casual ou duvida geral. Responda naturalmente como assistente de uma loja de roupas."
+    resposta = await perguntar_llm(pergunta, contexto, idioma)
+    return {"resposta": resposta, "resultados": [], "acao": "NENHUM"}

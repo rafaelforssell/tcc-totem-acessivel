@@ -279,7 +279,7 @@
                 <div class="absolute top-4 left-4 bg-red-600 text-white font-bold px-4 py-1 rounded-full text-xs md:text-sm uppercase tracking-wide"
                     data-i18n="offer">Oferta</div>
                 <img id="product-image" class="w-3/4 h-3/4 object-contain"
-                    src="https://prezunic.vtexassets.com/arquivos/ids/180742-800-auto?v=638368812869870000"
+                    src="https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=500&q=80"
                     alt="Produto">
             </div>
             <div class="w-full md:w-1/2 flex flex-col justify-center gap-4 md:gap-8">
@@ -555,6 +555,7 @@
         let previousScreenId = 'screen1';
         let currentScreenId = 'screen1';
         let windowResults = [];
+        const DEFAULT_PRODUCT_IMAGE = "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=500&q=80";
 
         function applyHighContrast(enabled) {
             document.documentElement.classList.toggle("high-contrast", enabled);
@@ -697,7 +698,7 @@
 
             const imgEl = document.getElementById('product-image');
             if (imgEl) {
-                imgEl.src = data.imagem || "https://prezunic.vtexassets.com/arquivos/ids/180742-800-auto?v=638368812869870000";
+                imgEl.src = data.imagem || DEFAULT_PRODUCT_IMAGE;
             }
         }
 
@@ -776,7 +777,7 @@
                         card.onclick = () => visualizarProduto(index);
 
                         const img = document.createElement("img");
-                        img.src = p.imagem || "https://prezunic.vtexassets.com/arquivos/ids/180742-800-auto?v=638368812869870000";
+                        img.src = p.imagem || DEFAULT_PRODUCT_IMAGE;
                         img.alt = p.nome || "Produto";
                         img.className = "w-full h-24 md:h-32 object-contain mb-2 rounded bg-white p-2";
 
@@ -920,16 +921,22 @@
 
                     appendMessage(data.transcricao, 'user');
 
+                    if (data.acao === "ENCERRAR") {
+                        voltarDoChat();
+                        return;
+                    }
+
                     if (statusEl) statusEl.innerText = "Falando";
 
-                    setTimeout(() => {
-                        appendMessage(data.resposta, 'totem', data.resultados, data.acao);
-                    }, 500);
+                    if (data.resposta) {
+                        setTimeout(() => {
+                            appendMessage(data.resposta, 'totem', data.resultados, data.acao);
+                        }, 500);
+                    }
 
                     // Check actions to perform after audio
                     let encerrarAposAudio = false;
                     let abrirMapaAposAudio = false;
-                    if (data.acao === "ENCERRAR") encerrarAposAudio = true;
                     if (data.acao === "ABRIR_MAPA") {
                         abrirMapaAposAudio = true;
                         if (data.resultados && data.resultados.length > 0) {

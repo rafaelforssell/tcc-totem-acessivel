@@ -57,6 +57,19 @@ async def query_audio(audio: UploadFile = File(...), idioma: str = Form("pt")):
 
     resposta_texto = resultado["resposta"]
 
+    if resultado.get("acao") == "ENCERRAR":
+        if os.path.exists(caminho):
+            os.remove(caminho)
+        fim_total = time.time()
+        print("TOTAL:", round(fim_total - inicio_total, 2), "seg")
+        return {
+            "transcricao": texto,
+            "resposta": "",
+            "resultados": [],
+            "acao": "ENCERRAR",
+            "audio": ""
+        }
+
     # TTS
     inicio_tts = time.time()
     arquivo_audio = await falar(resposta_texto)

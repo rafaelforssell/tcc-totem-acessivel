@@ -48,3 +48,43 @@ def test_pipeline_ir_para_mapa_usa_memoria(monkeypatch):
 
     assert resposta["acao"] == "ABRIR_MAPA"
     assert resposta["resultados"][0]["corredor"] == "7"
+
+
+def test_pipeline_sim_abre_mapa_quando_tem_produto_em_memoria(monkeypatch):
+    async def fake_classificar_intencao(pergunta, idioma="pt"):
+        return {"intencao": "OUTROS", "palavras_chave": []}
+
+    monkeypatch.setattr(pipeline_service, "classificar_intencao", fake_classificar_intencao)
+    pipeline_service.memoria["ultimos_produtos"] = [
+        {
+            "nome": "Camiseta Basica",
+            "categoria": "Roupa",
+            "tipo": "Camiseta",
+            "cor": "Preta",
+            "tamanho": "M",
+            "marca": "Hering",
+            "preco": 49.90,
+            "estoque": 15,
+            "setor": "Masculino",
+            "corredor": "1",
+            "prateleira": "Arara 1",
+            "descricao": "Camiseta 100% algodao",
+        }
+    ]
+
+    resposta = asyncio.run(pipeline_service.pipeline_processar("Sim, por favor"))
+
+    assert resposta["acao"] == "ABRIR_MAPA"
+    assert resposta["resultados"][0]["nome"] == "Camiseta Basica"
+
+
+def test_pipeline_encerrar_nao_responde_com_fala(monkeypatch):
+    async def fake_classificar_intencao(pergunta, idioma="pt"):
+        return {"intencao": "OUTROS", "palavras_chave": []}
+
+    monkeypatch.setattr(pipeline_service, "classificar_intencao", fake_classificar_intencao)
+    pipeline_service.memoria["ultimos_produtos"] = [{"nome": "Camiseta Basica"}]
+
+    resposta = asyncio.run(pipeline_service.pipeline_processar("encerrar"))
+
+    assert resposta == {"resposta": "", "resultados": [], "acao": "ENCERRAR"}

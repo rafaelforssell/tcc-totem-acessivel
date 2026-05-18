@@ -1,19 +1,23 @@
+import asyncio
+
 from services.pipeline_service import pipeline_processar
 
-print("--- TESTE 1: Saudação e pergunta aleatória ---")
-res1 = pipeline_processar("Olá, quem descobriu o Brasil?")
-print("Res:", res1["resposta"])
 
-print("\n--- TESTE 2: Nova busca ---")
-res2 = pipeline_processar("Eu queria comprar uma camisa dry fit preta")
-print("Res:", res2["resposta"])
-if res2["resultados"]:
-    print("Produto retornado:", res2["resultados"][0]["nome"])
+async def main():
+    cenarios = [
+        ("Saudacao e pergunta aleatoria", "Ola, quem descobriu o Brasil?"),
+        ("Nova busca", "Eu queria comprar uma camisa dry fit preta"),
+        ("Pergunta de contexto", "Onde fica?"),
+        ("Pergunta de contexto 2", "E tem estoque disso?"),
+    ]
 
-print("\n--- TESTE 3: Pergunta de contexto ---")
-res3 = pipeline_processar("Onde fica?")
-print("Res:", res3["resposta"])
+    for titulo, pergunta in cenarios:
+        print(f"\n--- {titulo} ---")
+        resposta = await pipeline_processar(pergunta)
+        print("Resposta:", resposta["resposta"])
+        if resposta.get("resultados"):
+            print("Produto retornado:", resposta["resultados"][0]["nome"])
 
-print("\n--- TESTE 4: Pergunta de contexto 2 ---")
-res4 = pipeline_processar("E tem estoque disso?")
-print("Res:", res4["resposta"])
+
+if __name__ == "__main__":
+    asyncio.run(main())

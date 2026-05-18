@@ -10,10 +10,13 @@ env/
 __pycache__/
 *.py[cod]
 *$py.class
+.pytest_cache/
+.uv-cache/
 
 # Arquivos de áudio gerados
 backend/audios/*.mp3
 backend/audios/*.wav
+backend/*.log
 
 # IDE
 .vscode/

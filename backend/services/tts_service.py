@@ -2,7 +2,8 @@ import edge_tts
 import uuid
 import os
 
-PASTA_AUDIO = "audios"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PASTA_AUDIO = os.path.join(BASE_DIR, "audios")
 
 if not os.path.exists(PASTA_AUDIO):
     os.makedirs(PASTA_AUDIO)
@@ -20,4 +21,4 @@ async def falar(texto):
 
     await communicate.save(caminho)
 
-    return caminho
+    return f"audios/{nome}"

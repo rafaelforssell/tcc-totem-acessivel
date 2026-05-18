@@ -11,6 +11,9 @@ API_KEY = os.getenv("GROQ_API_KEY")
 
 
 async def classificar_intencao(pergunta, idioma="pt"):
+    if not API_KEY:
+        return {"intencao": "OUTROS", "palavras_chave": []}
+
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {API_KEY}",
@@ -47,6 +50,7 @@ REGRAS:
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(url, headers=headers, json=payload, timeout=20.0)
+            response.raise_for_status()
             data = response.json()
             content = data["choices"][0]["message"]["content"]
             content = content.replace('```json', '').replace('```', '').strip()
@@ -57,6 +61,9 @@ REGRAS:
 
 
 async def perguntar_llm(pergunta, contexto_produtos=None, idioma="pt"):
+    if not API_KEY:
+        return "Desculpe, a chave da IA nao esta configurada no momento."
+
     url = "https://api.groq.com/openai/v1/chat/completions"
 
     headers = {
@@ -99,6 +106,7 @@ REGRAS OBRIGATÓRIAS:
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(url, headers=headers, json=payload, timeout=20.0)
+            response.raise_for_status()
             data = response.json()
             return data["choices"][0]["message"]["content"]
     except Exception as e:

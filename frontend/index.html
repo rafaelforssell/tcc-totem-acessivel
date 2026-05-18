@@ -139,10 +139,41 @@
             background: #333;
             border-radius: 4px;
         }
+
+        .high-contrast body {
+            background: #000000;
+            color: #ffffff;
+        }
+
+        .high-contrast .bg-zinc-800,
+        .high-contrast .bg-zinc-900,
+        .high-contrast .bg-black {
+            background-color: #000000 !important;
+        }
+
+        .high-contrast .text-zinc-300,
+        .high-contrast .text-zinc-400,
+        .high-contrast .text-zinc-500 {
+            color: #ffffff !important;
+        }
+
+        .high-contrast .border-zinc-700,
+        .high-contrast .border-zinc-800 {
+            border-color: #ffd700 !important;
+        }
+
+        .high-contrast button:focus-visible {
+            outline: 4px solid #ffffff;
+            outline-offset: 4px;
+        }
     </style>
 </head>
 
 <body class="antialiased">
+    <button id="contrast-toggle" type="button" onclick="toggleHighContrast()" aria-label="Alternar alto contraste"
+        class="fixed right-4 top-24 md:top-36 z-[60] w-12 h-12 md:w-14 md:h-14 rounded-xl bg-black border-2 border-yellow-400 text-yellow-400 flex items-center justify-center hover:bg-zinc-900 transition-colors">
+        <span class="material-symbols-outlined text-2xl md:text-3xl">contrast</span>
+    </button>
 
     <!-- Screen 1: Start -->
     <section id="screen1" class="page active">
@@ -204,7 +235,8 @@
         </header>
         <main id="chat-container"
             class="flex-grow mt-20 md:mt-32 mb-24 md:mb-32 bg-black flex flex-col p-4 md:p-12 overflow-y-auto chat-scroll overflow-x-hidden">
-            <div id="chat-messages" class="flex flex-col gap-6 w-full max-w-4xl mx-auto mt-auto">
+            <div id="chat-messages" class="flex flex-col gap-6 w-full max-w-4xl mx-auto mt-auto" role="log"
+                aria-live="polite" aria-relevant="additions">
                 <!-- Messages will be injected here dynamically -->
             </div>
         </main>
@@ -524,6 +556,31 @@
         let currentScreenId = 'screen1';
         let windowResults = [];
 
+        function applyHighContrast(enabled) {
+            document.documentElement.classList.toggle("high-contrast", enabled);
+            localStorage.setItem("totemHighContrast", enabled ? "1" : "0");
+            const contrastButton = document.getElementById("contrast-toggle");
+            if (contrastButton) {
+                contrastButton.setAttribute(
+                    "aria-pressed",
+                    enabled ? "true" : "false"
+                );
+            }
+        }
+
+        function toggleHighContrast() {
+            applyHighContrast(!document.documentElement.classList.contains("high-contrast"));
+        }
+
+        function enhanceButtonLabels() {
+            document.querySelectorAll("button").forEach(button => {
+                if (!button.getAttribute("aria-label")) {
+                    const label = button.textContent.replace(/\s+/g, " ").trim();
+                    if (label) button.setAttribute("aria-label", label);
+                }
+            });
+        }
+
         function navigateTo(screenId) {
             // Se estiver indo para a tela de idiomas, guarda a tela atual
             if (screenId === 'screen-language') {
@@ -625,8 +682,17 @@
             if (data.descricao && data.corredor) {
                 const prefix = currentLang === 'pt' ? "Encontre este produto facilmente no" : "Easily find this product in";
                 const aisleStr = currentLang === 'pt' ? "corredor" : "aisle";
-
-                document.getElementById('product-description').innerHTML = `${data.descricao} <br><br> ${prefix} <b class="text-white font-bold text-lg md:text-xl">${aisleStr} ${data.corredor}</b>.`;
+                const descriptionEl = document.getElementById('product-description');
+                descriptionEl.textContent = "";
+                descriptionEl.append(document.createTextNode(data.descricao));
+                descriptionEl.append(document.createElement("br"));
+                descriptionEl.append(document.createElement("br"));
+                descriptionEl.append(document.createTextNode(`${prefix} `));
+                const aisleEl = document.createElement("b");
+                aisleEl.className = "text-white font-bold text-lg md:text-xl";
+                aisleEl.textContent = `${aisleStr} ${data.corredor}`;
+                descriptionEl.append(aisleEl);
+                descriptionEl.append(document.createTextNode("."));
             }
 
             const imgEl = document.getElementById('product-image');
@@ -640,7 +706,12 @@
         let totemFalando = false;
         let streamGlobal = null;
         let audioAtual = null;
-        const BACKEND_URL = "https://totem-acessivel.onrender.com";
+        const params = new URLSearchParams(window.location.search);
+        const BACKEND_URL = params.get("backend") ||
+            window.TOTEM_BACKEND_URL ||
+            ((location.hostname === "localhost" || location.hostname === "127.0.0.1")
+                ? "http://localhost:8000"
+                : "https://totem-acessivel.onrender.com");
 
         let audioCtxGlobal = null;
         let analyserGlobal = null;
@@ -654,52 +725,83 @@
 
         function appendMessage(text, sender, results = [], acao = "NENHUM") {
             const chatMessages = document.getElementById("chat-messages");
-
             const div = document.createElement("div");
 
             if (sender === 'user') {
                 div.className = "flex items-end gap-3 self-end w-[90%] md:w-3/4 justify-end";
-                div.innerHTML = `
-                    <div class="bg-yellow-400 text-black p-4 md:p-6 rounded-2xl rounded-br-sm shadow-lg">
-                        <p class="font-semibold text-base md:text-2xl leading-relaxed">${text}</p>
-                    </div>
-                    <div class="w-10 h-10 md:w-14 md:h-14 rounded-full bg-zinc-900 flex items-center justify-center border-2 border-yellow-400 shrink-0">
-                        <span class="material-symbols-outlined text-yellow-400 text-xl md:text-3xl">person</span>
-                    </div>
-                `;
+
+                const bubble = document.createElement("div");
+                bubble.className = "bg-yellow-400 text-black p-4 md:p-6 rounded-2xl rounded-br-sm shadow-lg";
+                const paragraph = document.createElement("p");
+                paragraph.className = "font-semibold text-base md:text-2xl leading-relaxed";
+                paragraph.textContent = text;
+                bubble.appendChild(paragraph);
+
+                const avatar = document.createElement("div");
+                avatar.className = "w-10 h-10 md:w-14 md:h-14 rounded-full bg-zinc-900 flex items-center justify-center border-2 border-yellow-400 shrink-0";
+                const icon = document.createElement("span");
+                icon.className = "material-symbols-outlined text-yellow-400 text-xl md:text-3xl";
+                icon.textContent = "person";
+                avatar.appendChild(icon);
+
+                div.append(bubble, avatar);
             } else {
                 div.className = "flex items-end gap-3 self-start w-[90%] md:w-3/4";
 
-                let productsHtml = '';
+                const avatar = document.createElement("div");
+                avatar.className = "w-10 h-10 md:w-14 md:h-14 rounded-full bg-zinc-800 flex items-center justify-center border-2 border-zinc-700 shrink-0";
+                const icon = document.createElement("span");
+                icon.className = "material-symbols-outlined text-yellow-400 text-xl md:text-3xl";
+                icon.textContent = "smart_toy";
+                avatar.appendChild(icon);
+
+                const bubble = document.createElement("div");
+                bubble.className = "bg-zinc-800 border-2 border-zinc-700 p-4 md:p-6 rounded-2xl rounded-bl-sm w-full max-w-[85%]";
+
+                const paragraph = document.createElement("p");
+                paragraph.className = "text-white text-base md:text-2xl leading-relaxed";
+                paragraph.textContent = text;
+                bubble.appendChild(paragraph);
+
                 if (results && results.length > 0 && acao === "MOSTRAR_PRODUTOS") {
                     windowResults = results;
-                    let cards = results.map(p => {
-                        const img = p.imagem || "https://prezunic.vtexassets.com/arquivos/ids/180742-800-auto?v=638368812869870000";
-                        const price = 'R$ ' + Number(p.preco).toFixed(2).replace('.', ',');
-                        return `
-                        <div class="bg-zinc-900 border-2 border-zinc-700 p-3 rounded-xl min-w-[160px] md:min-w-[200px] flex-shrink-0">
-                            <img src="${img}" class="w-full h-24 md:h-32 object-contain mb-2 rounded bg-white p-2">
-                            <h3 class="text-white font-bold text-xs md:text-sm line-clamp-2">${p.nome}</h3>
-                            <p class="text-yellow-400 font-bold text-sm md:text-base mt-1">${price}</p>
-                        </div>`;
-                    }).join('');
+                    const cards = document.createElement("div");
+                    cards.className = "flex gap-4 mt-4 overflow-x-auto pb-2 chat-scroll";
 
-                    productsHtml = `
-                        <div class="flex gap-4 mt-4 overflow-x-auto pb-2 chat-scroll">
-                            ${cards}
-                        </div>
-                    `;
+                    results.forEach((p, index) => {
+                        const card = document.createElement("button");
+                        card.type = "button";
+                        card.className = "text-left bg-zinc-900 border-2 border-zinc-700 p-3 rounded-xl min-w-[160px] md:min-w-[200px] flex-shrink-0 hover:border-yellow-400 transition-colors";
+                        card.setAttribute("aria-label", `Ver produto ${p.nome || ""}`);
+                        card.onclick = () => visualizarProduto(index);
+
+                        const img = document.createElement("img");
+                        img.src = p.imagem || "https://prezunic.vtexassets.com/arquivos/ids/180742-800-auto?v=638368812869870000";
+                        img.alt = p.nome || "Produto";
+                        img.className = "w-full h-24 md:h-32 object-contain mb-2 rounded bg-white p-2";
+
+                        const name = document.createElement("h3");
+                        name.className = "text-white font-bold text-xs md:text-sm line-clamp-2";
+                        name.textContent = p.nome || "Produto";
+
+                        const price = document.createElement("p");
+                        price.className = "text-yellow-400 font-bold text-sm md:text-base mt-1";
+                        price.textContent = 'R$ ' + Number(p.preco || 0).toFixed(2).replace('.', ',');
+
+                        const detail = document.createElement("p");
+                        detail.className = "text-zinc-300 text-xs mt-1";
+                        detail.textContent = [p.cor, p.tamanho, p.estoque !== undefined ? `${p.estoque} em estoque` : ""]
+                            .filter(Boolean)
+                            .join(" | ");
+
+                        card.append(img, name, price, detail);
+                        cards.appendChild(card);
+                    });
+
+                    bubble.appendChild(cards);
                 }
 
-                div.innerHTML = `
-                    <div class="w-10 h-10 md:w-14 md:h-14 rounded-full bg-zinc-800 flex items-center justify-center border-2 border-zinc-700 shrink-0">
-                        <span class="material-symbols-outlined text-yellow-400 text-xl md:text-3xl">smart_toy</span>
-                    </div>
-                    <div class="bg-zinc-800 border-2 border-zinc-700 p-4 md:p-6 rounded-2xl rounded-bl-sm w-full max-w-[85%]">
-                        <p class="text-white text-base md:text-2xl leading-relaxed">${text}</p>
-                        ${productsHtml}
-                    </div>
-                `;
+                div.append(avatar, bubble);
             }
 
             chatMessages.appendChild(div);
@@ -917,6 +1019,9 @@
             }
             detectarSilencio();
         }
+
+        applyHighContrast(localStorage.getItem("totemHighContrast") === "1");
+        enhanceButtonLabels();
     </script>
 </body>
 

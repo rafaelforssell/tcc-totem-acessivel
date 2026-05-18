@@ -4,8 +4,12 @@ from services.stt_service import transcrever_audio
 from services.tts_service import falar
 import os
 import time
+import uuid
 
 router = APIRouter()
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+AUDIO_DIR = os.path.join(BASE_DIR, "audios")
+os.makedirs(AUDIO_DIR, exist_ok=True)
 
 
 @router.get("/query-text")
@@ -18,7 +22,8 @@ async def query_audio(audio: UploadFile = File(...), idioma: str = Form("pt")):
 
     inicio_total = time.time()
 
-    caminho = f"temp_{audio.filename}"
+    extensao = os.path.splitext(audio.filename or "audio.webm")[1] or ".webm"
+    caminho = os.path.join(AUDIO_DIR, f"entrada_{uuid.uuid4()}{extensao}")
 
     with open(caminho, "wb") as f:
         f.write(await audio.read())

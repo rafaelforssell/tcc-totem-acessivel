@@ -286,7 +286,7 @@ async def pipeline_processar(pergunta, idioma="pt"):
         memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
         return {"resposta": resposta_texto, "resultados": [], "acao": "NENHUM"}
 
-    if produtos_memoria:
+    if intencao != "OUTROS" and produtos_memoria:
         return await responder_sobre_produtos(pergunta, produtos_memoria, idioma)
 
     contexto = "Conversa casual ou duvida geral. Responda naturalmente como assistente de uma loja de roupas."

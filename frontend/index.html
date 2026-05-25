@@ -992,6 +992,7 @@
                     });
 
                     const data = await resposta.json();
+                    if (!sessaoAtiva) return;
 
                     appendMessage(data.transcricao, 'user');
 

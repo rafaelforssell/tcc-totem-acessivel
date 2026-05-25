@@ -10,7 +10,17 @@ DB_PATH = os.path.join(BASE_DIR, "..", "..", "database", "produtos.db")
 memoria = {
     "ultimos_produtos": [],
     "assunto_ativo": None,
+    "historico_conversas": [],
+    "produtos_mencionados": {},
 }
+
+
+def limpar_memoria():
+    memoria["ultimos_produtos"] = []
+    memoria["assunto_ativo"] = None
+    memoria["historico_conversas"] = []
+    memoria["produtos_mencionados"] = {}
+
 
 CLOTHING_IMAGES = {
     "camiseta": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=500&q=80",
@@ -167,18 +177,35 @@ async def responder_sobre_produtos(pergunta, produtos, idioma):
     contexto = "Mantenha o assunto nestes produtos ja apresentados:\n" + "\n---\n".join(
         [formatar_produto_para_contexto(p) for p in produtos]
     )
-    resposta = await perguntar_llm(pergunta, contexto, idioma)
+    todos_prods = list(memoria["produtos_mencionados"].values())
+    resposta = await perguntar_llm(
+        pergunta,
+        contexto_produtos=contexto,
+        idioma=idioma,
+        historico=memoria["historico_conversas"][:-1],
+        todos_produtos=todos_prods
+    )
+    memoria["historico_conversas"].append({"role": "assistant", "content": resposta})
     return {"resposta": resposta, "resultados": produtos, "acao": "MOSTRAR_PRODUTOS"}
+
 
 
 async def pipeline_processar(pergunta, idioma="pt"):
     print(f"\n--- Nova Requisicao: {pergunta} --- Idioma: {idioma}")
     texto_baixo = pergunta.lower()
+    
+    # Garante a inicialização do histórico e adiciona a pergunta do usuário
+    if "historico_conversas" not in memoria:
+        memoria["historico_conversas"] = []
+    if "produtos_mencionados" not in memoria:
+        memoria["produtos_mencionados"] = {}
+        
+    memoria["historico_conversas"].append({"role": "user", "content": pergunta})
+    
     produtos_memoria = memoria.get("ultimos_produtos", [])
 
     if is_encerramento(texto_baixo):
-        memoria["ultimos_produtos"] = []
-        memoria["assunto_ativo"] = None
+        limpar_memoria()
         return {"resposta": "", "resultados": [], "acao": "ENCERRAR"}
 
     analise = await classificar_intencao(pergunta, idioma)
@@ -186,12 +213,12 @@ async def pipeline_processar(pergunta, idioma="pt"):
     palavras = analise.get("palavras_chave", [])
 
     if intencao == "ENCERRAR":
-        memoria["ultimos_produtos"] = []
-        memoria["assunto_ativo"] = None
+        limpar_memoria()
         return {"resposta": "", "resultados": [], "acao": "ENCERRAR"}
 
     if produtos_memoria and (intencao == "IR_PARA_MAPA" or is_pedido_mapa(texto_baixo)):
         resposta_texto = "Mostrando o caminho no mapa." if idioma == "pt" else "Showing the route on the map."
+        memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
         return {"resposta": resposta_texto, "resultados": [produtos_memoria[0]], "acao": "ABRIR_MAPA"}
 
     if intencao == "SOBRE_PRODUTO" and not produtos_memoria:
@@ -205,16 +232,37 @@ async def pipeline_processar(pergunta, idioma="pt"):
         if resultados:
             memoria["ultimos_produtos"] = resultados[:3]
             memoria["assunto_ativo"] = "produto"
+            
+            # Adiciona ao dicionário de produtos mencionados
+            for p in resultados[:3]:
+                memoria["produtos_mencionados"][p["id"]] = p
+                
             contexto = "Produtos encontrados no banco de dados:\n" + "\n---\n".join(
                 [formatar_produto_para_contexto(p) for p in resultados[:3]]
             )
-            resposta = await perguntar_llm(pergunta, contexto, idioma)
+            todos_prods = list(memoria["produtos_mencionados"].values())
+            resposta = await perguntar_llm(
+                pergunta,
+                contexto_produtos=contexto,
+                idioma=idioma,
+                historico=memoria["historico_conversas"][:-1],
+                todos_produtos=todos_prods
+            )
+            memoria["historico_conversas"].append({"role": "assistant", "content": resposta})
             return {"resposta": resposta, "resultados": resultados[:3], "acao": "MOSTRAR_PRODUTOS"}
 
         memoria["ultimos_produtos"] = []
         memoria["assunto_ativo"] = None
         resposta_base = "Nenhum produto encontrado no banco de dados com esses termos. Informe ao usuario."
-        resposta = await perguntar_llm(pergunta, resposta_base, idioma)
+        todos_prods = list(memoria["produtos_mencionados"].values())
+        resposta = await perguntar_llm(
+            pergunta,
+            contexto_produtos=resposta_base,
+            idioma=idioma,
+            historico=memoria["historico_conversas"][:-1],
+            todos_produtos=todos_prods
+        )
+        memoria["historico_conversas"].append({"role": "assistant", "content": resposta})
         return {"resposta": resposta, "resultados": [], "acao": "NENHUM"}
 
     if intencao == "SOBRE_PRODUTO":
@@ -231,14 +279,25 @@ async def pipeline_processar(pergunta, idioma="pt"):
     if intencao == "IR_PARA_MAPA":
         if produtos_memoria:
             resposta_texto = "Mostrando o caminho no mapa." if idioma == "pt" else "Showing the route on the map."
+            memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
             return {"resposta": resposta_texto, "resultados": [produtos_memoria[0]], "acao": "ABRIR_MAPA"}
 
         resposta_texto = "Qual produto voce gostaria de ver no mapa?" if idioma == "pt" else "Which product would you like to see on the map?"
+        memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
         return {"resposta": resposta_texto, "resultados": [], "acao": "NENHUM"}
 
     if produtos_memoria:
         return await responder_sobre_produtos(pergunta, produtos_memoria, idioma)
 
     contexto = "Conversa casual ou duvida geral. Responda naturalmente como assistente de uma loja de roupas."
-    resposta = await perguntar_llm(pergunta, contexto, idioma)
+    todos_prods = list(memoria["produtos_mencionados"].values())
+    resposta = await perguntar_llm(
+        pergunta,
+        contexto_produtos=contexto,
+        idioma=idioma,
+        historico=memoria["historico_conversas"][:-1],
+        todos_produtos=todos_prods
+    )
+    memoria["historico_conversas"].append({"role": "assistant", "content": resposta})
     return {"resposta": resposta, "resultados": [], "acao": "NENHUM"}
+

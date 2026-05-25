@@ -228,6 +228,11 @@
                         class="font-lexend font-bold text-xs md:text-lg text-yellow-400 uppercase tracking-widest"
                         data-i18n="listening">Pronto</span>
                 </div>
+                <button id="btn-pausar" onclick="togglePausarSessao()"
+                    class="bg-yellow-400 text-black font-bold px-4 py-2 rounded-lg hover:bg-yellow-300 transition-colors text-sm md:text-base border border-yellow-300 shadow-md flex items-center gap-2">
+                    <span class="material-symbols-outlined text-lg">pause</span>
+                    <span id="btn-pausar-text">Pausar</span>
+                </button>
                 <button onclick="voltarDoChat()"
                     class="bg-red-600 text-white font-bold px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm md:text-base border border-red-500 shadow-md"
                     data-i18n="end_session_btn">Encerrar</button>
@@ -300,7 +305,7 @@
                         class="text-white font-bold text-lg md:text-xl">corredor 3</b>.
                 </div>
 
-                <button onclick="navigateTo('screen4')"
+                <button onclick="verMapaDoProdutoAtual()"
                     class="w-full bg-yellow-400 text-black font-lexend font-bold hover:bg-yellow-300 h-16 md:h-24 rounded-xl flex items-center justify-center gap-4 transition-colors mt-auto shadow-lg shrink-0">
                     <span class="material-symbols-outlined text-2xl md:text-4xl">location_on</span>
                     <span class="text-lg md:text-2xl uppercase tracking-wide" data-i18n="see_map_btn">Ver Localização no
@@ -484,6 +489,37 @@
         </nav>
     </section>
 
+    <!-- Lightbox Modal -->
+    <div id="image-lightbox" class="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md hidden flex-col items-center justify-center p-4">
+        <!-- Close Button -->
+        <button onclick="closeLightbox()" class="absolute top-6 right-6 text-white hover:text-yellow-400 transition-colors focus:outline-none w-14 h-14 bg-zinc-900 border-2 border-zinc-800 rounded-full flex items-center justify-center">
+            <span class="material-symbols-outlined text-4xl">close</span>
+        </button>
+
+        <!-- Slide Area -->
+        <div class="relative w-full max-w-4xl max-h-[70vh] flex items-center justify-center">
+            <!-- Left Arrow -->
+            <button id="lightbox-prev" onclick="prevLightboxImage()" class="absolute left-4 z-10 text-white hover:text-yellow-400 transition-colors focus:outline-none w-14 h-14 bg-zinc-900/80 border-2 border-zinc-800 rounded-full flex items-center justify-center">
+                <span class="material-symbols-outlined text-4xl font-black">arrow_back_ios_new</span>
+            </button>
+
+            <!-- Image -->
+            <img id="lightbox-img" class="max-w-full max-h-[70vh] object-contain rounded-2xl shadow-2xl transition-all duration-300 ease-out transform scale-95 opacity-0" src="" alt="Imagem Zoom">
+
+            <!-- Right Arrow -->
+            <button id="lightbox-next" onclick="nextLightboxImage()" class="absolute right-4 z-10 text-white hover:text-yellow-400 transition-colors focus:outline-none w-14 h-14 bg-zinc-900/80 border-2 border-zinc-800 rounded-full flex items-center justify-center">
+                <span class="material-symbols-outlined text-4xl font-black">arrow_forward_ios</span>
+            </button>
+        </div>
+
+        <!-- Info / Caption -->
+        <div class="mt-6 text-center max-w-xl px-4">
+            <h3 id="lightbox-title" class="font-lexend font-bold text-2xl md:text-3xl text-white">Nome do Produto</h3>
+            <p id="lightbox-price" class="font-lexend text-xl md:text-2xl text-yellow-400 font-bold mt-2">R$ 0,00</p>
+            <p id="lightbox-index" class="text-zinc-500 text-sm md:text-base mt-4 font-bold tracking-wider">1 de 3</p>
+        </div>
+    </div>
+
     <script>
         // Dicionário de Traduções
         const translations = {
@@ -556,6 +592,11 @@
         let currentScreenId = 'screen1';
         let windowResults = [];
         const DEFAULT_PRODUCT_IMAGE = "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=500&q=80";
+
+        // Lightbox & Pause state variables
+        let lightboxImages = []; // List of {src: string, title: string, price: string}
+        let currentLightboxIndex = 0;
+        let sessaoPausada = false;
 
         function applyHighContrast(enabled) {
             document.documentElement.classList.toggle("high-contrast", enabled);
@@ -769,6 +810,13 @@
                     const cards = document.createElement("div");
                     cards.className = "flex gap-4 mt-4 overflow-x-auto pb-2 chat-scroll";
 
+                    // Pré-computa a lista de imagens para o Lightbox
+                    const lightboxItems = results.map(r => ({
+                        src: r.imagem || DEFAULT_PRODUCT_IMAGE,
+                        title: r.nome || "Produto",
+                        price: 'R$ ' + Number(r.preco || 0).toFixed(2).replace('.', ',')
+                    }));
+
                     results.forEach((p, index) => {
                         const card = document.createElement("button");
                         card.type = "button";
@@ -779,7 +827,11 @@
                         const img = document.createElement("img");
                         img.src = p.imagem || DEFAULT_PRODUCT_IMAGE;
                         img.alt = p.nome || "Produto";
-                        img.className = "w-full h-24 md:h-32 object-contain mb-2 rounded bg-white p-2";
+                        img.className = "w-full h-24 md:h-32 object-contain mb-2 rounded bg-white p-2 hover:opacity-85 transition-opacity cursor-zoom-in";
+                        img.onclick = (e) => {
+                            e.stopPropagation();
+                            openLightbox(lightboxItems, index);
+                        };
 
                         const name = document.createElement("h3");
                         name.className = "text-white font-bold text-xs md:text-sm line-clamp-2";
@@ -800,6 +852,11 @@
                     });
 
                     bubble.appendChild(cards);
+                } else if (results && results.length > 0 && acao === "ABRIR_MAPA") {
+                    const p = results[0];
+                    const mapDiv = document.createElement("div");
+                    mapDiv.innerHTML = createMapCardHtml(p.nome, p.corredor);
+                    bubble.appendChild(mapDiv.firstElementChild);
                 }
 
                 div.append(avatar, bubble);
@@ -815,6 +872,16 @@
         function encerrarSessao() {
             sessaoAtiva = false;
             totemFalando = false;
+            sessaoPausada = false;
+
+            const btnPausar = document.getElementById("btn-pausar");
+            if (btnPausar) {
+                const btnPausarText = document.getElementById("btn-pausar-text");
+                const icon = btnPausar.querySelector(".material-symbols-outlined");
+                if (btnPausarText) btnPausarText.textContent = currentLang === 'pt' ? "Pausar" : "Pause";
+                if (icon) icon.textContent = "pause";
+                btnPausar.className = "bg-yellow-400 text-black font-bold px-4 py-2 rounded-lg hover:bg-yellow-300 transition-colors text-sm md:text-base border border-yellow-300 shadow-md flex items-center gap-2";
+            }
 
             const statusEl = document.getElementById("header-status");
             if (statusEl) statusEl.innerText = "Parado";
@@ -868,6 +935,13 @@
 
         function iniciarSessaoEIrParaChat() {
             navigateTo('screen2');
+            
+            // Chamar API para limpar a memória no backend
+            fetch(`${BACKEND_URL}/reset`, { method: "POST" })
+                .then(r => r.json())
+                .then(d => console.log("Memory reset:", d))
+                .catch(e => console.error("Error resetting memory:", e));
+
             if (!sessaoAtiva) {
                 // Clear chat
                 const chatMessages = document.getElementById("chat-messages");
@@ -938,11 +1012,9 @@
                     let encerrarAposAudio = false;
                     let abrirMapaAposAudio = false;
                     if (data.acao === "ABRIR_MAPA") {
-                        abrirMapaAposAudio = true;
                         if (data.resultados && data.resultados.length > 0) {
                             loadProductData(data.resultados[0]);
                         }
-                        navigateTo('screen4'); // Navigate immediately!
                     }
 
                     if (data.audio) {
@@ -1004,7 +1076,7 @@
             let silencioInicio = null;
 
             function detectarSilencio() {
-                if (!sessaoAtiva || totemFalando) return;
+                if (!sessaoAtiva || totemFalando || sessaoPausada) return;
                 analyser.getByteTimeDomainData(dataArray);
                 let soma = 0;
                 for (let i = 0; i < dataArray.length; i++) {
@@ -1025,6 +1097,230 @@
                 requestAnimationFrame(detectarSilencio);
             }
             detectarSilencio();
+        }
+
+        // ====== IMAGES LIGHTBOX FUNCTIONS ======
+        function openLightbox(imagesList, startIndex) {
+            lightboxImages = imagesList;
+            currentLightboxIndex = startIndex;
+            
+            const lightbox = document.getElementById("image-lightbox");
+            lightbox.classList.remove("hidden");
+            lightbox.classList.add("flex");
+            
+            updateLightboxContent();
+            
+            // Add keyboard event listener
+            document.addEventListener("keydown", handleLightboxKeys);
+        }
+
+        function closeLightbox() {
+            const lightbox = document.getElementById("image-lightbox");
+            lightbox.classList.remove("flex");
+            lightbox.classList.add("hidden");
+            
+            document.removeEventListener("keydown", handleLightboxKeys);
+        }
+
+        function updateLightboxContent() {
+            if (lightboxImages.length === 0) return;
+            
+            const item = lightboxImages[currentLightboxIndex];
+            const img = document.getElementById("lightbox-img");
+            
+            // Apply a nice scale-up transition on change
+            img.classList.remove("scale-100", "opacity-100");
+            img.classList.add("scale-95", "opacity-0");
+            
+            setTimeout(() => {
+                img.src = item.src;
+                img.alt = item.title;
+                img.classList.remove("scale-95", "opacity-0");
+                img.classList.add("scale-100", "opacity-100");
+            }, 100);
+
+            document.getElementById("lightbox-title").textContent = item.title;
+            document.getElementById("lightbox-price").textContent = item.price;
+            
+            const indexEl = document.getElementById("lightbox-index");
+            indexEl.textContent = `${currentLightboxIndex + 1} de ${lightboxImages.length}`;
+
+            // Show/hide navigation arrows based on total count
+            const prevBtn = document.getElementById("lightbox-prev");
+            const nextBtn = document.getElementById("lightbox-next");
+            
+            if (lightboxImages.length > 1) {
+                prevBtn.classList.remove("hidden");
+                nextBtn.classList.remove("hidden");
+            } else {
+                prevBtn.classList.add("hidden");
+                nextBtn.classList.add("hidden");
+            }
+        }
+
+        function prevLightboxImage() {
+            if (lightboxImages.length <= 1) return;
+            currentLightboxIndex = (currentLightboxIndex - 1 + lightboxImages.length) % lightboxImages.length;
+            updateLightboxContent();
+        }
+
+        function nextLightboxImage() {
+            if (lightboxImages.length <= 1) return;
+            currentLightboxIndex = (currentLightboxIndex + 1) % lightboxImages.length;
+            updateLightboxContent();
+        }
+
+        function handleLightboxKeys(e) {
+            if (e.key === "Escape") closeLightbox();
+            if (e.key === "ArrowLeft") prevLightboxImage();
+            if (e.key === "ArrowRight") nextLightboxImage();
+        }
+
+        // ====== DIALOGUE PAUSE FUNCTIONS ======
+        function togglePausarSessao() {
+            if (!sessaoAtiva) return; // Só pode pausar se estiver ativa!
+            
+            const btnPausar = document.getElementById("btn-pausar");
+            const btnPausarText = document.getElementById("btn-pausar-text");
+            const icon = btnPausar.querySelector(".material-symbols-outlined");
+            const statusEl = document.getElementById("header-status");
+            const indicatorEl = document.getElementById("header-mic-indicator");
+
+            if (!sessaoPausada) {
+                // Pausar
+                sessaoPausada = true;
+                
+                // Mudar texto e ícone do botão
+                btnPausarText.textContent = currentLang === 'pt' ? "Retomar" : "Resume";
+                icon.textContent = "play_arrow";
+                btnPausar.className = "bg-green-600 text-white font-bold px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm md:text-base border border-green-500 shadow-md flex items-center gap-2";
+
+                // Atualizar status
+                if (statusEl) statusEl.innerText = currentLang === 'pt' ? "PAUSADO" : "PAUSED";
+                if (indicatorEl) indicatorEl.classList.remove("listening-indicator");
+
+                // Parar gravação e áudio atual
+                if (audioAtual) {
+                    audioAtual.pause();
+                }
+                
+                // Parar faixas de áudio temporariamente
+                if (streamGlobal) {
+                    streamGlobal.getTracks().forEach(track => track.stop());
+                    streamGlobal = null;
+                }
+            } else {
+                // Retomar
+                sessaoPausada = false;
+
+                // Restaurar botão
+                btnPausarText.textContent = currentLang === 'pt' ? "Pausar" : "Pause";
+                icon.textContent = "pause";
+                btnPausar.className = "bg-yellow-400 text-black font-bold px-4 py-2 rounded-lg hover:bg-yellow-300 transition-colors text-sm md:text-base border border-yellow-300 shadow-md flex items-center gap-2";
+
+                // Atualizar status
+                if (statusEl) statusEl.innerText = currentLang === 'pt' ? "Ouvindo" : "Listening";
+                if (indicatorEl) indicatorEl.classList.add("listening-indicator");
+
+                // Retomar microfone e gravação
+                navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+                    streamGlobal = stream;
+                    const ctx = getAudioContext();
+                    const source = ctx.createMediaStreamSource(streamGlobal);
+                    analyserGlobal = ctx.createAnalyser();
+                    source.connect(analyserGlobal);
+                    
+                    conversar();
+                }).catch(err => {
+                    console.error("Erro ao retomar microfone:", err);
+                    if (statusEl) statusEl.innerText = "Erro Mic";
+                });
+            }
+        }
+
+        // ====== INTEGRATED INLINE MAP FUNCTIONS ======
+        function createMapCardHtml(productName, aisle) {
+            const aisleNum = parseInt(aisle);
+            let targetX = 590;
+            if (!isNaN(aisleNum) && aisleNum >= 1 && aisleNum <= 5) {
+                targetX = 290 + (aisleNum - 1) * 150;
+            }
+            
+            const getStroke = (num) => num === aisleNum ? 'stroke="#ffd700" stroke-width="4"' : 'stroke="#333" stroke-width="2"';
+            const getFill = (num) => num === aisleNum ? '#ffd700' : '#555';
+
+            return `
+                <div class="bg-zinc-900 border-2 border-zinc-800 rounded-2xl p-4 mt-4 w-full flex flex-col gap-4">
+                    <div class="flex items-center justify-between pb-3 border-b border-zinc-800">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-yellow-400 text-3xl">directions_walk</span>
+                            <div>
+                                <p class="text-zinc-400 text-xs uppercase font-bold tracking-wider">Caminho para o Produto</p>
+                                <h4 class="text-white font-bold text-lg">${productName}</h4>
+                            </div>
+                        </div>
+                        <div class="bg-yellow-400 text-black font-lexend font-black px-3 py-1 rounded-lg text-lg">
+                            Corredor ${aisle}
+                        </div>
+                    </div>
+                    
+                    <div class="w-full bg-zinc-950 rounded-xl relative overflow-hidden map-grid aspect-[5/3] border border-zinc-800">
+                        <svg class="w-full h-full p-2" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet">
+                            <!-- Caixas -->
+                            <rect x="800" y="500" width="150" height="80" rx="8" fill="#1a1a1a" stroke="#444" stroke-width="2" />
+                            <text x="875" y="545" fill="#888" font-size="20" font-family="sans-serif" font-weight="bold" text-anchor="middle">CAIXAS</text>
+
+                            <!-- Entrada -->
+                            <rect x="50" y="500" width="150" height="80" rx="8" fill="#1a1a1a" stroke="#444" stroke-width="2" />
+                            <text x="125" y="545" fill="#888" font-size="20" font-family="sans-serif" font-weight="bold" text-anchor="middle">ENTRADA</text>
+                            <circle cx="125" cy="480" r="12" fill="#3b82f6" class="animate-pulse" />
+                            <text x="125" y="455" fill="#3b82f6" font-size="14" font-weight="bold" text-anchor="middle">VOCÊ</text>
+
+                            <!-- Aisles (Corredores) 1 to 5 -->
+                            <g fill="#131313">
+                                <rect x="250" y="50" width="80" height="350" rx="4" ${getStroke(1)} />
+                                <rect x="400" y="50" width="80" height="350" rx="4" ${getStroke(2)} />
+                                <rect x="550" y="50" width="80" height="350" rx="4" ${getStroke(3)} />
+                                <rect x="700" y="50" width="80" height="350" rx="4" ${getStroke(4)} />
+                                <rect x="850" y="50" width="80" height="350" rx="4" ${getStroke(5)} />
+                            </g>
+
+                            <!-- Aisle Numbers -->
+                            <g font-size="24" font-family="sans-serif" font-weight="bold" text-anchor="middle">
+                                <text x="290" y="35" fill="${getFill(1)}">1</text>
+                                <text x="440" y="35" fill="${getFill(2)}">2</text>
+                                <text x="590" y="35" fill="${getFill(3)}">3</text>
+                                <text x="740" y="35" fill="${getFill(4)}">4</text>
+                                <text x="890" y="35" fill="${getFill(5)}">5</text>
+                            </g>
+
+                            <!-- Path -->
+                            <path d="M 125,480 L 125,430 L ${targetX},430 L ${targetX},200" fill="none" stroke="#FFD700" stroke-dasharray="15,10" stroke-width="6">
+                                <animate attributeName="stroke-dashoffset" from="100" to="0" dur="2s" repeatCount="indefinite" />
+                            </path>
+
+                            <!-- Target Pin -->
+                            <g transform="translate(${targetX}, 200)">
+                                <circle cx="0" cy="0" fill="#ef4444" r="14" stroke="#fff" stroke-width="3"></circle>
+                                <path d="M 0,0 L -10,-30 L 10,-30 Z" fill="#ef4444" />
+                            </g>
+                        </svg>
+                    </div>
+                </div>
+            `;
+        }
+
+        function verMapaDoProdutoAtual() {
+            navigateTo('screen2');
+            const productName = document.getElementById('product-name').textContent;
+            const aisle = document.getElementById('header-map-aisle').textContent;
+            
+            appendMessage(
+                currentLang === 'pt' ? "Aqui está o caminho no mapa:" : "Here is the route on the map:",
+                'totem',
+                [{ nome: productName, corredor: aisle }],
+                'ABRIR_MAPA'
+            );
         }
 
         applyHighContrast(localStorage.getItem("totemHighContrast") === "1");

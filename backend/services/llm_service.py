@@ -60,7 +60,7 @@ REGRAS:
         return {"intencao": "OUTROS", "palavras_chave": []}
 
 
-async def perguntar_llm(pergunta, contexto_produtos=None, idioma="pt"):
+async def perguntar_llm(pergunta, contexto_produtos=None, idioma="pt", historico=None, todos_produtos=None):
     if not API_KEY:
         return "Desculpe, a chave da IA nao esta configurada no momento."
 
@@ -75,6 +75,13 @@ async def perguntar_llm(pergunta, contexto_produtos=None, idioma="pt"):
         info_produtos = f"DADOS DO BANCO DE DADOS (use APENAS estes para responder):\n{contexto_produtos}"
     else:
         info_produtos = "Nenhum produto no contexto."
+
+    info_todos_produtos = ""
+    if todos_produtos:
+        linhas_todos = []
+        for p in todos_produtos:
+            linhas_todos.append(f"- {p['nome']} (R$ {p['preco']:.2f})")
+        info_todos_produtos = "\nPRODUTOS JÁ CONVERSADOS/MENCIONADOS NESSA SESSÃO:\n" + "\n".join(linhas_todos)
 
     lang_instruction = "Responda em Português do Brasil." if idioma == "pt" else "Responda em Inglês."
 
@@ -91,14 +98,21 @@ REGRAS OBRIGATÓRIAS:
 7. NUNCA use emojis, asteriscos ou formatação markdown. O texto será lido em voz alta.
 
 {info_produtos}
+{info_todos_produtos}
 """
+
+    messages = [{"role": "system", "content": prompt_sistema}]
+    
+    if historico:
+        # Pega as últimas 10 interações para manter o contexto curto e otimizado
+        for msg in historico[-10:]:
+            messages.append({"role": msg["role"], "content": msg["content"]})
+            
+    messages.append({"role": "user", "content": pergunta})
 
     payload = {
         "model": "llama-3.3-70b-versatile",
-        "messages": [
-            {"role": "system", "content": prompt_sistema},
-            {"role": "user", "content": pergunta}
-        ],
+        "messages": messages,
         "temperature": 0.0,
         "max_tokens": 150
     }

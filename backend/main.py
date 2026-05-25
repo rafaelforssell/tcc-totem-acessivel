@@ -34,6 +34,14 @@ def home():
     return {"mensagem": "Totem funcionando"}
 
 
+@app.post("/reset")
+def reset_session():
+    from services.pipeline_service import limpar_memoria
+    limpar_memoria()
+    return {"status": "success", "mensagem": "Memória limpa"}
+
+
+
 @app.get("/health")
 def health():
     try:

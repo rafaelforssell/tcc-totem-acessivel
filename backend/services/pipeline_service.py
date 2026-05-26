@@ -130,7 +130,9 @@ def limpar_tokens_busca(palavras_chave):
     stopwords = {
         "eu", "quero", "queria", "saber", "mais", "sobre", "a", "o", "as", "os",
         "de", "da", "do", "tem", "ha", "me", "fale", "uma", "um", "por", "favor",
-        "voce", "voces", "disponivel", "disponiveis",
+        "voce", "voces", "disponivel", "disponiveis", "produto", "produtos", "outro",
+        "outros", "outra", "outras", "opcao", "opcoes", "qual", "quais",
+        "perfeito", "legal", "beleza", "certo", "ok", "entendi", "bom", "boa",
     }
     return [
         normalizar_texto(palavra.strip(".,?!"))
@@ -155,6 +157,8 @@ def buscar_produtos_sql(palavras_chave):
         token for token in tokens
         if token not in {"feminino", "feminina", "femininos", "femininas", "fem", "masculino", "masculina", "masculinos", "masculinas", "masc", "mas"}
     ]
+    if not tokens_sem_genero and not genero:
+        return []
 
     def produto_valido(produto, exigir_todos=True):
         texto = texto_produto(produto)
@@ -171,6 +175,33 @@ def buscar_produtos_sql(palavras_chave):
         produtos = [p for p in todos_produtos if produto_valido(p, exigir_todos=False)]
 
     return [formatar_produto(p) for p in produtos]
+
+
+def listar_amostra_catalogo(limite=6):
+    conn = conectar_bd()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT * FROM produtos
+        ORDER BY CAST(corredor AS INTEGER), nome
+        """
+    )
+    produtos = cursor.fetchall()
+    conn.close()
+    return produtos_por_secao([formatar_produto(p) for p in produtos])[:limite]
+
+
+def is_pedido_catalogo(texto_baixo):
+    texto = normalizar_texto(texto_baixo)
+    termos_catalogo = ["produto", "produtos", "opcao", "opcoes", "mais", "outro", "outros", "quais"]
+    return any(termo in texto for termo in termos_catalogo) and not is_pedido_mapa(texto_baixo)
+
+
+def is_pedido_catalogo_geral(texto_baixo):
+    if not is_pedido_catalogo(texto_baixo):
+        return False
+    tokens = limpar_tokens_busca(extrair_palavras_busca(texto_baixo))
+    return not tokens
 
 
 def is_encerramento(texto_baixo):
@@ -257,6 +288,7 @@ def extrair_palavras_busca(texto_baixo):
     stopwords = {
         "eu", "quero", "queria", "saber", "mais", "sobre", "a", "o", "as", "os",
         "de", "da", "do", "tem", "ha", "me", "fale", "uma", "um", "por", "favor",
+        "perfeito", "legal", "beleza", "certo", "ok", "entendi", "bom", "boa",
     }
     return [
         normalizar_texto(w.strip(".,?!"))
@@ -276,6 +308,31 @@ async def responder_sobre_produtos(pergunta, produtos, idioma):
         idioma=idioma,
         historico=memoria["historico_conversas"][:-1],
         todos_produtos=todos_prods
+    )
+    memoria["historico_conversas"].append({"role": "assistant", "content": resposta})
+    return {"resposta": resposta, "resultados": produtos, "acao": "MOSTRAR_PRODUTOS"}
+
+
+async def responder_catalogo_geral(pergunta, idioma):
+    produtos = listar_amostra_catalogo(7)
+    for produto in produtos:
+        memoria["produtos_mencionados"][produto["id"]] = produto
+    memoria["ultimos_produtos"] = produtos[:3]
+    memoria["assunto_ativo"] = "produto"
+
+    contexto = (
+        "O usuario fez uma pergunta geral ou mal formulada sobre quais produtos existem na loja. "
+        "Interprete como pedido de continuidade do catalogo. Responda naturalmente, mencione as secoes "
+        "disponiveis e alguns exemplos reais abaixo. Nao diga que nenhum produto foi encontrado.\n"
+        + "\n---\n".join([formatar_produto_para_contexto(p) for p in produtos])
+    )
+    todos_prods = list(memoria["produtos_mencionados"].values())
+    resposta = await perguntar_llm(
+        pergunta,
+        contexto_produtos=contexto,
+        idioma=idioma,
+        historico=memoria["historico_conversas"][:-1],
+        todos_produtos=todos_prods,
     )
     memoria["historico_conversas"].append({"role": "assistant", "content": resposta})
     return {"resposta": resposta, "resultados": produtos, "acao": "MOSTRAR_PRODUTOS"}
@@ -309,6 +366,9 @@ async def pipeline_processar(pergunta, idioma="pt"):
                 resposta_texto = f"I prepared a summary with {len(produtos_rota)} route(s) for the sections we discussed."
             memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
             return {"resposta": resposta_texto, "resultados": produtos_rota, "acao": "ABRIR_ROTAS"}
+
+    if is_pedido_catalogo_geral(texto_baixo):
+        return await responder_catalogo_geral(pergunta, idioma)
 
     analise = await classificar_intencao(pergunta, idioma)
     intencao = analise.get("intencao", "OUTROS")

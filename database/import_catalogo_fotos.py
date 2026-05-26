@@ -99,6 +99,41 @@ def corredor_from_categoria(categoria):
     return corredores.get(categoria, "1")
 
 
+def preco_from_produto(nome, categoria):
+    nome_baixo = nome.lower()
+    precos_tipo = {
+        "boné": 49.90,
+        "cinto": 39.90,
+        "garrafa": 59.90,
+        "óculos": 79.90,
+        "touca": 34.90,
+        "bermuda": 89.90,
+        "calça": 159.90,
+        "camisa": 119.90,
+        "polo": 139.90,
+        "casaco": 229.90,
+        "moletom": 179.90,
+        "saia": 99.90,
+        "sandália": 129.90,
+        "tênis": 249.90,
+        "vestido": 189.90,
+    }
+    for tipo, preco in precos_tipo.items():
+        if tipo in nome_baixo:
+            return preco
+
+    precos_categoria = {
+        "Acessórios": 59.90,
+        "Bermudas": 89.90,
+        "Calçados": 199.90,
+        "Calças": 159.90,
+        "Camisas": 119.90,
+        "Casacos": 219.90,
+        "Saias e Vestidos": 149.90,
+    }
+    return precos_categoria.get(categoria, 99.90)
+
+
 def image_url(sku, filename):
     if not sku or not filename:
         return ""
@@ -122,7 +157,7 @@ def build_product(row):
         cor_from_nome(nome),
         "",
         "Acervo TCC",
-        0.0,
+        preco_from_produto(nome, categoria),
         1,
         categoria,
         corredor,

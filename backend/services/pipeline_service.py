@@ -159,6 +159,23 @@ def is_pedido_mapa(texto_baixo):
     )
 
 
+def is_pedido_resumo_rotas(texto_baixo):
+    texto = normalizar_texto(texto_baixo)
+    tem_rota = any(palavra in texto for palavra in ["rota", "rotas", "mapa", "lugares", "secoes", "sessao", "resumo"])
+    tem_total = any(palavra in texto for palavra in ["todos", "todas", "geral", "resumo", "final"])
+    return tem_rota and tem_total
+
+
+def produtos_por_secao(produtos):
+    secoes = {}
+    for produto in produtos:
+        corredor = produto.get("corredor")
+        if not corredor or corredor in secoes:
+            continue
+        secoes[corredor] = produto
+    return [secoes[chave] for chave in sorted(secoes, key=lambda valor: int(valor) if str(valor).isdigit() else 99)]
+
+
 def extrair_palavras_busca(texto_baixo):
     stopwords = {
         "eu", "quero", "queria", "saber", "mais", "sobre", "a", "o", "as", "os",
@@ -205,6 +222,16 @@ async def pipeline_processar(pergunta, idioma="pt"):
     if is_encerramento(texto_baixo):
         limpar_memoria()
         return {"resposta": "", "resultados": [], "acao": "ENCERRAR"}
+
+    if is_pedido_resumo_rotas(texto_baixo) and memoria["produtos_mencionados"]:
+        produtos_rota = produtos_por_secao(memoria["produtos_mencionados"].values())
+        if produtos_rota:
+            if idioma == "pt":
+                resposta_texto = f"Montei um resumo com {len(produtos_rota)} rota(s) para as seções dos produtos que vimos."
+            else:
+                resposta_texto = f"I prepared a summary with {len(produtos_rota)} route(s) for the sections we discussed."
+            memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
+            return {"resposta": resposta_texto, "resultados": produtos_rota, "acao": "ABRIR_ROTAS"}
 
     analise = await classificar_intencao(pergunta, idioma)
     intencao = analise.get("intencao", "OUTROS")

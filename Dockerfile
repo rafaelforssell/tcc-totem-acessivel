@@ -3,6 +3,7 @@ FROM python:3.10-slim
 WORKDIR /app
 
 COPY database/ /app/database/
+COPY assets/ /app/assets/
 COPY backend/ /app/backend/
 
 WORKDIR /app/backend

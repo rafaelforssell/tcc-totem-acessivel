@@ -11,11 +11,14 @@ from services.produtos_service import buscar_produto_db, contar_produtos_db
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_DIR = os.path.dirname(BASE_DIR)
 AUDIO_DIR = os.path.join(BASE_DIR, "audios")
+ASSETS_DIR = os.path.join(PROJECT_DIR, "assets")
 os.makedirs(AUDIO_DIR, exist_ok=True)
 
 app = FastAPI(title="Totem Acessivel API")
 app.mount("/audios", StaticFiles(directory=AUDIO_DIR), name="audios")
+app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
 
 app.add_middleware(
     CORSMiddleware,

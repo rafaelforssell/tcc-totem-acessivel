@@ -1,5 +1,6 @@
 import os
 import sqlite3
+import unicodedata
 
 from services.llm_service import classificar_intencao, perguntar_llm
 
@@ -22,21 +23,10 @@ def limpar_memoria():
     memoria["produtos_mencionados"] = {}
 
 
-CLOTHING_IMAGES = {
-    "camiseta": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=500&q=80",
-    "camisa": "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=500&q=80",
-    "calca": "https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&w=500&q=80",
-    "jaqueta": "https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=500&q=80",
-    "vestido": "https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=500&q=80",
-    "blusa": "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=500&q=80",
-    "bermuda": "https://images.unsplash.com/photo-1591195853828-11db59a44f6b?auto=format&fit=crop&w=500&q=80",
-    "legging": "https://images.unsplash.com/photo-1506629905607-d9d297d644c0?auto=format&fit=crop&w=500&q=80",
-    "default": "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=500&q=80",
-}
-
-
 def conectar_bd():
-    return sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 
 def normalizar_texto(texto):
@@ -55,30 +45,38 @@ def normalizar_texto(texto):
     )
 
 
-def escolher_imagem_produto(nome, tipo):
-    texto = normalizar_texto(f"{nome} {tipo}")
-    for chave, imagem in CLOTHING_IMAGES.items():
-        if chave != "default" and chave in texto:
-            return imagem
-    return CLOTHING_IMAGES["default"]
+def normalizar_texto(texto):
+    sem_acento = unicodedata.normalize("NFKD", texto or "")
+    return "".join(ch for ch in sem_acento if not unicodedata.combining(ch)).lower()
+
+
+def obter_campo(produto, campo, indice=None, padrao=""):
+    try:
+        return produto[campo]
+    except (IndexError, KeyError):
+        if indice is None:
+            return padrao
+        return produto[indice] if len(produto) > indice else padrao
 
 
 def formatar_produto(produto):
     return {
-        "id": produto[0],
-        "nome": produto[1],
-        "categoria": produto[2],
-        "tipo": produto[3],
-        "cor": produto[4],
-        "tamanho": produto[5],
-        "marca": produto[6],
-        "preco": produto[7],
-        "estoque": produto[8],
-        "setor": produto[9],
-        "corredor": produto[10],
-        "prateleira": produto[11],
-        "descricao": produto[12],
-        "imagem": escolher_imagem_produto(produto[1], produto[3]),
+        "id": obter_campo(produto, "id", 0),
+        "sku": obter_campo(produto, "sku"),
+        "nome": obter_campo(produto, "nome", 1),
+        "categoria": obter_campo(produto, "categoria", 2),
+        "tipo": obter_campo(produto, "tipo", 3),
+        "cor": obter_campo(produto, "cor", 4),
+        "tamanho": obter_campo(produto, "tamanho", 5),
+        "marca": obter_campo(produto, "marca", 6),
+        "preco": obter_campo(produto, "preco", 7, 0),
+        "estoque": obter_campo(produto, "estoque", 8, 0),
+        "setor": obter_campo(produto, "setor", 9),
+        "corredor": obter_campo(produto, "corredor", 10),
+        "prateleira": obter_campo(produto, "prateleira", 11),
+        "descricao": obter_campo(produto, "descricao", 12),
+        "imagem": obter_campo(produto, "imagem"),
+        "texto_alt": obter_campo(produto, "texto_alt"),
     }
 
 
@@ -96,7 +94,7 @@ def buscar_produtos_sql(palavras_chave):
 
     conn = conectar_bd()
     cursor = conn.cursor()
-    colunas = ["nome", "categoria", "tipo", "cor", "marca", "descricao"]
+    colunas = ["nome", "categoria", "tipo", "cor", "marca", "descricao", "sku"]
 
     clausulas_and = []
     parametros_and = []

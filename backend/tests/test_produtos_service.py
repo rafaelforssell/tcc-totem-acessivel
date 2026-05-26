@@ -22,6 +22,8 @@ def test_lista_produtos_com_schema_completo():
         "prateleira",
         "descricao",
         "imagem",
+        "sku",
+        "texto_alt",
     }.issubset(produto)
 
 
@@ -39,8 +41,8 @@ def test_busca_vazia_nao_retorna_catalogo_inteiro():
 def test_imagem_de_produto_nao_usa_comida():
     produto = buscar_produto_db("camiseta")["resultado"][0]
 
-    assert "images.unsplash.com" in produto["imagem"]
-    assert "prezunic" not in produto["imagem"]
+    assert produto["imagem"].startswith("/assets/imagens/produtos/")
+    assert produto["imagem"].endswith(".jpg")
 
 
 def test_contador_de_produtos():

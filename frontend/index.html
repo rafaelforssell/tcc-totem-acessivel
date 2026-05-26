@@ -302,7 +302,7 @@
                     class="bg-zinc-900 border-l-4 border-yellow-400 p-4 md:p-6 rounded-r-lg text-zinc-300 text-base md:text-xl leading-relaxed"
                     data-i18n="product_desc_demo">
                     O arroz tipo 1 está com um ótimo preço. Encontre este produto facilmente no <b
-                        class="text-white font-bold text-lg md:text-xl">corredor 3</b>.
+                        class="text-white font-bold text-lg md:text-xl">sessão 3 - Calçados</b>.
                 </div>
 
                 <button onclick="verMapaDoProdutoAtual()"
@@ -344,7 +344,7 @@
                     <p class="font-lexend font-bold text-lg md:text-3xl text-white leading-none"
                         id="header-product-name" data-i18n="product_name_demo">Arroz 5KG</p>
                     <p class="text-[10px] md:text-sm text-yellow-400 uppercase mt-1 md:mt-2 font-bold tracking-wider">
-                        <span data-i18n="aisle_prefix">Corredor</span> <span id="header-map-aisle">3</span></p>
+                        <span data-i18n="aisle_prefix">Sessão</span> <span id="header-map-aisle">3 - Calçados</span></p>
                 </div>
             </div>
         </header>
@@ -363,8 +363,8 @@
                             <div>
                                 <p class="text-zinc-400 text-xs md:text-sm uppercase font-bold tracking-wider"
                                     data-i18n="your_route">Sua Rota</p>
-                                <p class="text-white font-bold text-base md:text-xl mt-1" data-i18n="route_desc">Entrada
-                                    -> Corredor <span id="route-desc-corredor">3</span></p>
+                                <p class="text-white font-bold text-base md:text-xl mt-1">Entrada
+                                    -> Sessão <span id="route-desc-corredor">3 - Calçados</span></p>
                             </div>
                         </div>
                         <div class="flex items-center gap-4">
@@ -402,34 +402,51 @@
                         <text x="125" y="455" fill="#3b82f6" font-size="14" font-weight="bold" text-anchor="middle"
                             data-i18n="you">VOCÊ</text>
 
-                        <!-- Aisles (Corredores) 1 to 5 -->
+                        <!-- Seções 1 a 7 -->
                         <g fill="#131313" stroke="#333" stroke-width="2">
-                            <rect id="rect-corredor-1" x="250" y="50" width="80" height="350" rx="4" />
-                            <rect id="rect-corredor-2" x="400" y="50" width="80" height="350" rx="4" />
-                            <rect id="rect-corredor-3" x="550" y="50" width="80" height="350" rx="4" stroke="#ffd700"
-                                stroke-width="4" /> <!-- Highlighted Aisle -->
-                            <rect id="rect-corredor-4" x="700" y="50" width="80" height="350" rx="4" />
-                            <rect id="rect-corredor-5" x="850" y="50" width="80" height="350" rx="4" />
+                            <rect id="rect-corredor-1" x="210" y="70" width="78" height="330" rx="4" />
+                            <rect id="rect-corredor-2" x="306" y="70" width="78" height="330" rx="4" />
+                            <rect id="rect-corredor-3" x="402" y="70" width="78" height="330" rx="4" stroke="#ffd700"
+                                stroke-width="4" />
+                            <rect id="rect-corredor-4" x="498" y="70" width="78" height="330" rx="4" />
+                            <rect id="rect-corredor-5" x="594" y="70" width="78" height="330" rx="4" />
+                            <rect id="rect-corredor-6" x="690" y="70" width="78" height="330" rx="4" />
+                            <rect id="rect-corredor-7" x="786" y="70" width="78" height="330" rx="4" />
                         </g>
 
-                        <!-- Aisle Numbers -->
+                        <!-- Números e nomes das seções -->
                         <g font-size="24" font-family="sans-serif" font-weight="bold" text-anchor="middle">
-                            <text id="text-corredor-1" x="290" y="35" fill="#555">1</text>
-                            <text id="text-corredor-2" x="440" y="35" fill="#555">2</text>
-                            <text id="text-corredor-3" x="590" y="35" fill="#ffd700">3</text>
-                            <text id="text-corredor-4" x="740" y="35" fill="#555">4</text>
-                            <text id="text-corredor-5" x="890" y="35" fill="#555">5</text>
+                            <text id="text-corredor-1" x="249" y="48" fill="#555">1</text>
+                            <text id="text-corredor-2" x="345" y="48" fill="#555">2</text>
+                            <text id="text-corredor-3" x="441" y="48" fill="#ffd700">3</text>
+                            <text id="text-corredor-4" x="537" y="48" fill="#555">4</text>
+                            <text id="text-corredor-5" x="633" y="48" fill="#555">5</text>
+                            <text id="text-corredor-6" x="729" y="48" fill="#555">6</text>
+                            <text id="text-corredor-7" x="825" y="48" fill="#555">7</text>
+                        </g>
+                        <g fill="#d4d4d8" font-size="13" font-family="sans-serif" font-weight="bold"
+                            text-anchor="middle">
+                            <text x="249" y="424">Acessórios</text>
+                            <text x="345" y="424">Bermudas</text>
+                            <text x="441" y="424" fill="#ffd700">Calçados</text>
+                            <text x="537" y="424">Calças</text>
+                            <text x="633" y="424">Camisas</text>
+                            <text x="729" y="424">Casacos</text>
+                            <text x="825" y="416">
+                                <tspan x="825" dy="0">Saias e</tspan>
+                                <tspan x="825" dy="15">Vestidos</tspan>
+                            </text>
                         </g>
 
                         <!-- Path -->
-                        <path id="map-svg-path" d="M 125,480 L 125,430 L 590,430 L 590,200" fill="none" stroke="#FFD700"
+                        <path id="map-svg-path" d="M 125,480 L 125,450 L 441,450 L 441,220" fill="none" stroke="#FFD700"
                             stroke-dasharray="15,10" stroke-width="6">
                             <animate attributeName="stroke-dashoffset" from="100" to="0" dur="2s"
                                 repeatCount="indefinite" />
                         </path>
 
                         <!-- Target Pin -->
-                        <g id="map-target-pin" transform="translate(590, 200)">
+                        <g id="map-target-pin" transform="translate(441, 220)">
                             <circle cx="0" cy="0" fill="#ef4444" r="14" stroke="#fff" stroke-width="3"></circle>
                             <path d="M 0,0 L -10,-30 L 10,-30 Z" fill="#ef4444" />
                         </g>
@@ -537,13 +554,13 @@
                 basic_foods: "Alimentos Básicos",
                 product_name_demo: "Arroz 5KG",
                 product_price_demo: "R$ 22,90",
-                product_desc_demo: "O arroz tipo 1 está com um ótimo preço. Encontre este produto facilmente no <b class='text-white font-bold text-lg md:text-xl'>corredor 3</b>.",
+                product_desc_demo: "O produto está em destaque. Encontre este item facilmente na <b class='text-white font-bold text-lg md:text-xl'>sessão 3 - Calçados</b>.",
                 see_map_btn: "Ver Localização no Mapa",
                 back_chat_btn: "Voltar (Chat)",
                 store_map_title: "MAPA DA LOJA",
-                aisle_prefix: "Corredor",
+                aisle_prefix: "Sessão",
                 your_route: "Sua Rota",
-                route_desc: "Entrada -> Corredor 3",
+                route_desc: "Entrada -> Sessão 3",
                 destination: "Destino",
                 checkouts: "CAIXAS",
                 entrance: "ENTRADA",
@@ -568,13 +585,13 @@
                 basic_foods: "Basic Foods",
                 product_name_demo: "Rice 5KG",
                 product_price_demo: "$ 4.50",
-                product_desc_demo: "Type 1 rice is at a great price. Easily find this product in <b class='text-white font-bold text-lg md:text-xl'>aisle 3</b>.",
+                product_desc_demo: "This product is highlighted. Easily find it in <b class='text-white font-bold text-lg md:text-xl'>section 3 - Shoes</b>.",
                 see_map_btn: "View on Map",
                 back_chat_btn: "Back (Chat)",
                 store_map_title: "STORE MAP",
-                aisle_prefix: "Aisle",
+                aisle_prefix: "Section",
                 your_route: "Your Route",
-                route_desc: "Entrance -> Aisle 3",
+                route_desc: "Entrance -> Section 3",
                 destination: "Destination",
                 checkouts: "CHECKOUTS",
                 entrance: "ENTRANCE",
@@ -682,6 +699,59 @@
             }
         }
 
+        function getProductMainImage(product) {
+            if (!product) return DEFAULT_PRODUCT_IMAGE;
+            if (product.imagem) return product.imagem;
+            if (Array.isArray(product.imagens) && product.imagens.length > 0) {
+                return product.imagens[0];
+            }
+            return DEFAULT_PRODUCT_IMAGE;
+        }
+
+        const STORE_SECTIONS = {
+            1: { label: "Acessórios", x: 249 },
+            2: { label: "Bermudas", x: 345 },
+            3: { label: "Calçados", x: 441 },
+            4: { label: "Calças", x: 537 },
+            5: { label: "Camisas", x: 633 },
+            6: { label: "Casacos", x: 729 },
+            7: { label: "Saias e Vestidos", x: 825 },
+        };
+
+        function getProductSection(product) {
+            const sectionNum = parseInt(product?.corredor);
+            const section = STORE_SECTIONS[sectionNum] || STORE_SECTIONS[1];
+            return {
+                number: sectionNum || 1,
+                label: product?.setor || product?.categoria || section.label,
+                x: section.x,
+            };
+        }
+
+        function updateStoreMap(sectionNumber) {
+            const section = STORE_SECTIONS[sectionNumber] || STORE_SECTIONS[1];
+            for (let i = 1; i <= 7; i++) {
+                const rect = document.getElementById('rect-corredor-' + i);
+                const text = document.getElementById('text-corredor-' + i);
+                if (rect) {
+                    rect.setAttribute('stroke', '#333');
+                    rect.setAttribute('stroke-width', '2');
+                }
+                if (text) text.setAttribute('fill', '#555');
+            }
+
+            const activeRect = document.getElementById('rect-corredor-' + sectionNumber);
+            const activeText = document.getElementById('text-corredor-' + sectionNumber);
+            if (activeRect) {
+                activeRect.setAttribute('stroke', '#ffd700');
+                activeRect.setAttribute('stroke-width', '4');
+            }
+            if (activeText) activeText.setAttribute('fill', '#ffd700');
+
+            document.getElementById('map-svg-path').setAttribute('d', `M 125,480 L 125,450 L ${section.x},450 L ${section.x},220`);
+            document.getElementById('map-target-pin').setAttribute('transform', `translate(${section.x}, 220)`);
+        }
+
         // ====== INTEGRAÇÃO DE PRODUTO ======
         function loadProductData(data) {
             if (!data) return;
@@ -696,34 +766,16 @@
                 document.getElementById('product-price').textContent = 'R$ ' + Number(data.preco).toFixed(2).replace('.', ',');
             }
             if (data.corredor) {
-                document.getElementById('header-map-aisle').textContent = data.corredor;
-                document.getElementById('map-pin-number').textContent = data.corredor;
-                document.getElementById('route-desc-corredor').textContent = data.corredor;
-
-                // Lógica simples para atualizar o mapa: iluminar o corredor correto (1 a 5)
-                const aisleNum = parseInt(data.corredor);
-                if (!isNaN(aisleNum) && aisleNum >= 1 && aisleNum <= 5) {
-                    // Reseta todos
-                    for (let i = 1; i <= 5; i++) {
-                        document.getElementById('rect-corredor-' + i).setAttribute('stroke', '#333');
-                        document.getElementById('rect-corredor-' + i).setAttribute('stroke-width', '2');
-                        document.getElementById('text-corredor-' + i).setAttribute('fill', '#555');
-                    }
-                    // Destaca o atual
-                    document.getElementById('rect-corredor-' + aisleNum).setAttribute('stroke', '#ffd700');
-                    document.getElementById('rect-corredor-' + aisleNum).setAttribute('stroke-width', '4');
-                    document.getElementById('text-corredor-' + aisleNum).setAttribute('fill', '#ffd700');
-
-                    // Move the path target
-                    // Map x coords for aisles 1-5: 290, 440, 590, 740, 890
-                    const targetX = 290 + (aisleNum - 1) * 150;
-                    document.getElementById('map-svg-path').setAttribute('d', `M 125,480 L 125,430 L ${targetX},430 L ${targetX},200`);
-                    document.getElementById('map-target-pin').setAttribute('transform', `translate(${targetX}, 200)`);
-                }
+                const section = getProductSection(data);
+                document.getElementById('header-map-aisle').textContent = `${section.number} - ${section.label}`;
+                document.getElementById('map-pin-number').textContent = section.number;
+                document.getElementById('route-desc-corredor').textContent = `${section.number} - ${section.label}`;
+                updateStoreMap(section.number);
             }
             if (data.descricao && data.corredor) {
                 const prefix = currentLang === 'pt' ? "Encontre este produto facilmente no" : "Easily find this product in";
-                const aisleStr = currentLang === 'pt' ? "corredor" : "aisle";
+                const aisleStr = currentLang === 'pt' ? "sessão" : "section";
+                const section = getProductSection(data);
                 const descriptionEl = document.getElementById('product-description');
                 descriptionEl.textContent = "";
                 descriptionEl.append(document.createTextNode(data.descricao));
@@ -732,14 +784,14 @@
                 descriptionEl.append(document.createTextNode(`${prefix} `));
                 const aisleEl = document.createElement("b");
                 aisleEl.className = "text-white font-bold text-lg md:text-xl";
-                aisleEl.textContent = `${aisleStr} ${data.corredor}`;
+                aisleEl.textContent = `${aisleStr} ${section.number} - ${section.label}`;
                 descriptionEl.append(aisleEl);
                 descriptionEl.append(document.createTextNode("."));
             }
 
             const imgEl = document.getElementById('product-image');
             if (imgEl) {
-                imgEl.src = data.imagem || DEFAULT_PRODUCT_IMAGE;
+                imgEl.src = getProductMainImage(data);
             }
         }
 
@@ -751,8 +803,8 @@
         const params = new URLSearchParams(window.location.search);
         const BACKEND_URL = params.get("backend") ||
             window.TOTEM_BACKEND_URL ||
-            ((location.hostname === "localhost" || location.hostname === "127.0.0.1")
-                ? "http://localhost:8000"
+            ((location.protocol === "file:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")
+                ? "http://127.0.0.1:8000"
                 : "https://totem-acessivel.onrender.com");
 
         let audioCtxGlobal = null;
@@ -812,7 +864,7 @@
 
                     // Pré-computa a lista de imagens para o Lightbox
                     const lightboxItems = results.map(r => ({
-                        src: r.imagem || DEFAULT_PRODUCT_IMAGE,
+                        src: getProductMainImage(r),
                         title: r.nome || "Produto",
                         price: 'R$ ' + Number(r.preco || 0).toFixed(2).replace('.', ',')
                     }));
@@ -825,7 +877,7 @@
                         card.onclick = () => visualizarProduto(index);
 
                         const img = document.createElement("img");
-                        img.src = p.imagem || DEFAULT_PRODUCT_IMAGE;
+                        img.src = getProductMainImage(p);
                         img.alt = p.nome || "Produto";
                         img.className = "w-full h-24 md:h-32 object-contain mb-2 rounded bg-white p-2 hover:opacity-85 transition-opacity cursor-zoom-in";
                         img.onclick = (e) => {
@@ -1242,13 +1294,26 @@
         // ====== INTEGRATED INLINE MAP FUNCTIONS ======
         function createMapCardHtml(productName, aisle) {
             const aisleNum = parseInt(aisle);
-            let targetX = 590;
-            if (!isNaN(aisleNum) && aisleNum >= 1 && aisleNum <= 5) {
-                targetX = 290 + (aisleNum - 1) * 150;
-            }
-            
-            const getStroke = (num) => num === aisleNum ? 'stroke="#ffd700" stroke-width="4"' : 'stroke="#333" stroke-width="2"';
-            const getFill = (num) => num === aisleNum ? '#ffd700' : '#555';
+            const activeSectionNumber = STORE_SECTIONS[aisleNum] ? aisleNum : 1;
+            const section = STORE_SECTIONS[activeSectionNumber];
+            const targetX = section.x;
+            const getStroke = (num) => num === activeSectionNumber ? 'stroke="#ffd700" stroke-width="4"' : 'stroke="#333" stroke-width="2"';
+            const getFill = (num) => num === activeSectionNumber ? '#ffd700' : '#555';
+            const sectionRects = Object.entries(STORE_SECTIONS).map(([num, item]) => {
+                const x = item.x - 39;
+                return `<rect x="${x}" y="70" width="78" height="330" rx="4" ${getStroke(Number(num))} />`;
+            }).join("");
+            const sectionNumbers = Object.keys(STORE_SECTIONS).map(num => {
+                const item = STORE_SECTIONS[num];
+                return `<text x="${item.x}" y="48" fill="${getFill(Number(num))}">${num}</text>`;
+            }).join("");
+            const sectionLabels = Object.entries(STORE_SECTIONS).map(([num, item]) => {
+                const fill = Number(num) === activeSectionNumber ? '#ffd700' : '#d4d4d8';
+                if (item.label === "Saias e Vestidos") {
+                    return `<text x="${item.x}" y="416" fill="${fill}"><tspan x="${item.x}" dy="0">Saias e</tspan><tspan x="${item.x}" dy="15">Vestidos</tspan></text>`;
+                }
+                return `<text x="${item.x}" y="424" fill="${fill}">${item.label}</text>`;
+            }).join("");
 
             return `
                 <div class="bg-zinc-900 border-2 border-zinc-800 rounded-2xl p-4 mt-4 w-full flex flex-col gap-4">
@@ -1261,7 +1326,7 @@
                             </div>
                         </div>
                         <div class="bg-yellow-400 text-black font-lexend font-black px-3 py-1 rounded-lg text-lg">
-                            Corredor ${aisle}
+                            Sessão ${activeSectionNumber} - ${section.label}
                         </div>
                     </div>
                     
@@ -1277,31 +1342,26 @@
                             <circle cx="125" cy="480" r="12" fill="#3b82f6" class="animate-pulse" />
                             <text x="125" y="455" fill="#3b82f6" font-size="14" font-weight="bold" text-anchor="middle">VOCÊ</text>
 
-                            <!-- Aisles (Corredores) 1 to 5 -->
+                            <!-- Seções 1 a 7 -->
                             <g fill="#131313">
-                                <rect x="250" y="50" width="80" height="350" rx="4" ${getStroke(1)} />
-                                <rect x="400" y="50" width="80" height="350" rx="4" ${getStroke(2)} />
-                                <rect x="550" y="50" width="80" height="350" rx="4" ${getStroke(3)} />
-                                <rect x="700" y="50" width="80" height="350" rx="4" ${getStroke(4)} />
-                                <rect x="850" y="50" width="80" height="350" rx="4" ${getStroke(5)} />
+                                ${sectionRects}
                             </g>
 
-                            <!-- Aisle Numbers -->
+                            <!-- Números e nomes das seções -->
                             <g font-size="24" font-family="sans-serif" font-weight="bold" text-anchor="middle">
-                                <text x="290" y="35" fill="${getFill(1)}">1</text>
-                                <text x="440" y="35" fill="${getFill(2)}">2</text>
-                                <text x="590" y="35" fill="${getFill(3)}">3</text>
-                                <text x="740" y="35" fill="${getFill(4)}">4</text>
-                                <text x="890" y="35" fill="${getFill(5)}">5</text>
+                                ${sectionNumbers}
+                            </g>
+                            <g font-size="13" font-family="sans-serif" font-weight="bold" text-anchor="middle">
+                                ${sectionLabels}
                             </g>
 
                             <!-- Path -->
-                            <path d="M 125,480 L 125,430 L ${targetX},430 L ${targetX},200" fill="none" stroke="#FFD700" stroke-dasharray="15,10" stroke-width="6">
+                            <path d="M 125,480 L 125,450 L ${targetX},450 L ${targetX},220" fill="none" stroke="#FFD700" stroke-dasharray="15,10" stroke-width="6">
                                 <animate attributeName="stroke-dashoffset" from="100" to="0" dur="2s" repeatCount="indefinite" />
                             </path>
 
                             <!-- Target Pin -->
-                            <g transform="translate(${targetX}, 200)">
+                            <g transform="translate(${targetX}, 220)">
                                 <circle cx="0" cy="0" fill="#ef4444" r="14" stroke="#fff" stroke-width="3"></circle>
                                 <path d="M 0,0 L -10,-30 L 10,-30 Z" fill="#ef4444" />
                             </g>

@@ -88,42 +88,88 @@ def formatar_produto_para_contexto(p):
     )
 
 
+def texto_produto(produto):
+    return normalizar_texto(
+        " ".join(
+            str(obter_campo(produto, campo))
+            for campo in ["nome", "categoria", "tipo", "cor", "marca", "descricao", "sku", "setor"]
+        ).replace("_", " ")
+    )
+
+
+def token_match(texto, token):
+    token = normalizar_texto(token).strip()
+    if not token:
+        return False
+    variantes = {token}
+    if len(token) > 3 and token.endswith("s"):
+        variantes.add(token[:-1])
+    return any(variante in texto for variante in variantes)
+
+
+def detectar_genero(tokens):
+    texto = " ".join(normalizar_texto(token) for token in tokens)
+    if any(palavra in texto for palavra in ["feminino", "feminina", "femininos", "femininas", "fem"]):
+        return "fem"
+    if any(palavra in texto for palavra in ["masculino", "masculina", "masculinos", "masculinas", "masc", "mas"]):
+        return "mas"
+    return None
+
+
+def genero_produto(produto):
+    texto = texto_produto(produto)
+    sku = normalizar_texto(obter_campo(produto, "sku")).replace("_", " ")
+    if any(palavra in texto or palavra in sku for palavra in ["feminino", "feminina", " fem"]):
+        return "fem"
+    if any(palavra in texto or palavra in sku for palavra in ["masculino", "masculina", " masc", " mas"]):
+        return "mas"
+    return None
+
+
+def limpar_tokens_busca(palavras_chave):
+    stopwords = {
+        "eu", "quero", "queria", "saber", "mais", "sobre", "a", "o", "as", "os",
+        "de", "da", "do", "tem", "ha", "me", "fale", "uma", "um", "por", "favor",
+        "voce", "voces", "disponivel", "disponiveis",
+    }
+    return [
+        normalizar_texto(palavra.strip(".,?!"))
+        for palavra in palavras_chave
+        if len(palavra.strip(".,?!")) > 2 and normalizar_texto(palavra.strip(".,?!")) not in stopwords
+    ]
+
+
 def buscar_produtos_sql(palavras_chave):
     if not palavras_chave:
         return []
 
     conn = conectar_bd()
     cursor = conn.cursor()
-    colunas = ["nome", "categoria", "tipo", "cor", "marca", "descricao", "sku"]
-
-    clausulas_and = []
-    parametros_and = []
-    for palavra in palavras_chave:
-        or_interno = [f"{col} LIKE ?" for col in colunas]
-        parametros_and += [f"%{palavra}%" for _ in colunas]
-        clausulas_and.append("(" + " OR ".join(or_interno) + ")")
-
-    query_and = f"SELECT * FROM produtos WHERE {' AND '.join(clausulas_and)}"
-    cursor.execute(query_and, parametros_and)
-    produtos = cursor.fetchall()
-
-    if not produtos:
-        contagem = {}
-        for palavra in palavras_chave:
-            or_interno = [f"{col} LIKE ?" for col in colunas]
-            params = [f"%{palavra}%" for _ in colunas]
-            query = f"SELECT * FROM produtos WHERE {' OR '.join(or_interno)}"
-            cursor.execute(query, params)
-            for p in cursor.fetchall():
-                pid = p[0]
-                if pid not in contagem:
-                    contagem[pid] = {"count": 0, "data": p}
-                contagem[pid]["count"] += 1
-
-        sorted_ids = sorted(contagem.keys(), key=lambda x: contagem[x]["count"], reverse=True)
-        produtos = [contagem[i]["data"] for i in sorted_ids]
-
+    cursor.execute("SELECT * FROM produtos ORDER BY nome, cor, tamanho")
+    todos_produtos = cursor.fetchall()
     conn.close()
+
+    tokens = limpar_tokens_busca(palavras_chave)
+    genero = detectar_genero(tokens)
+    tokens_sem_genero = [
+        token for token in tokens
+        if token not in {"feminino", "feminina", "femininos", "femininas", "fem", "masculino", "masculina", "masculinos", "masculinas", "masc", "mas"}
+    ]
+
+    def produto_valido(produto, exigir_todos=True):
+        texto = texto_produto(produto)
+        if genero and genero_produto(produto) != genero:
+            return False
+        if not tokens_sem_genero:
+            return True
+        if exigir_todos:
+            return all(token_match(texto, token) for token in tokens_sem_genero)
+        return any(token_match(texto, token) for token in tokens_sem_genero)
+
+    produtos = [p for p in todos_produtos if produto_valido(p, exigir_todos=True)]
+    if not produtos:
+        produtos = [p for p in todos_produtos if produto_valido(p, exigir_todos=False)]
+
     return [formatar_produto(p) for p in produtos]
 
 
@@ -174,6 +220,37 @@ def produtos_por_secao(produtos):
             continue
         secoes[corredor] = produto
     return [secoes[chave] for chave in sorted(secoes, key=lambda valor: int(valor) if str(valor).isdigit() else 99)]
+
+
+def selecionar_produtos_para_mapa(texto_baixo, produtos_memoria):
+    pool = list(memoria.get("produtos_mencionados", {}).values()) or list(produtos_memoria)
+    if not pool:
+        return []
+
+    stopwords_mapa = {
+        "eu", "quero", "queria", "mostra", "mostrar", "mostre", "caminho", "mapa", "pra",
+        "para", "mim", "por", "favor", "do", "da", "de", "o", "a", "os", "as", "no", "na",
+        "elas", "eles", "ele", "ela", "gostei", "sim",
+    }
+    tokens = [
+        token for token in normalizar_texto(texto_baixo).replace(",", " ").replace("?", " ").split()
+        if len(token) > 2 and token not in stopwords_mapa
+    ]
+    if not tokens:
+        return list(produtos_memoria[:1] if produtos_memoria else pool[:1])
+
+    pontuados = []
+    for produto in pool:
+        texto = texto_produto(produto)
+        score = sum(1 for token in tokens if token_match(texto, token))
+        if score:
+            pontuados.append((score, produto))
+
+    if not pontuados:
+        return list(produtos_memoria[:1] if produtos_memoria else pool[:1])
+
+    maior_score = max(score for score, _ in pontuados)
+    return [produto for score, produto in pontuados if score == maior_score or score >= 1]
 
 
 def extrair_palavras_busca(texto_baixo):
@@ -242,9 +319,17 @@ async def pipeline_processar(pergunta, idioma="pt"):
         return {"resposta": "", "resultados": [], "acao": "ENCERRAR"}
 
     if produtos_memoria and (intencao == "IR_PARA_MAPA" or is_pedido_mapa(texto_baixo)):
+        produtos_mapa = selecionar_produtos_para_mapa(texto_baixo, produtos_memoria)
+        produtos_rota = produtos_por_secao(produtos_mapa)
+        if len(produtos_rota) > 1:
+            resposta_texto = f"Mostrando {len(produtos_rota)} rotas no mapa." if idioma == "pt" else f"Showing {len(produtos_rota)} routes on the map."
+            memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
+            return {"resposta": resposta_texto, "resultados": produtos_rota, "acao": "ABRIR_ROTAS"}
+
+        produto_mapa = produtos_rota[0] if produtos_rota else produtos_memoria[0]
         resposta_texto = "Mostrando o caminho no mapa." if idioma == "pt" else "Showing the route on the map."
         memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
-        return {"resposta": resposta_texto, "resultados": [produtos_memoria[0]], "acao": "ABRIR_MAPA"}
+        return {"resposta": resposta_texto, "resultados": [produto_mapa], "acao": "ABRIR_MAPA"}
 
     if intencao == "SOBRE_PRODUTO" and not produtos_memoria:
         intencao = "NOVA_BUSCA"
@@ -303,9 +388,17 @@ async def pipeline_processar(pergunta, idioma="pt"):
 
     if intencao == "IR_PARA_MAPA":
         if produtos_memoria:
+            produtos_mapa = selecionar_produtos_para_mapa(texto_baixo, produtos_memoria)
+            produtos_rota = produtos_por_secao(produtos_mapa)
+            if len(produtos_rota) > 1:
+                resposta_texto = f"Mostrando {len(produtos_rota)} rotas no mapa." if idioma == "pt" else f"Showing {len(produtos_rota)} routes on the map."
+                memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
+                return {"resposta": resposta_texto, "resultados": produtos_rota, "acao": "ABRIR_ROTAS"}
+
+            produto_mapa = produtos_rota[0] if produtos_rota else produtos_memoria[0]
             resposta_texto = "Mostrando o caminho no mapa." if idioma == "pt" else "Showing the route on the map."
             memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
-            return {"resposta": resposta_texto, "resultados": [produtos_memoria[0]], "acao": "ABRIR_MAPA"}
+            return {"resposta": resposta_texto, "resultados": [produto_mapa], "acao": "ABRIR_MAPA"}
 
         resposta_texto = "Qual produto voce gostaria de ver no mapa?" if idioma == "pt" else "Which product would you like to see on the map?"
         memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})

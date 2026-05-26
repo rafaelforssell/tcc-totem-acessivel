@@ -76,6 +76,13 @@ def buscar_produto_db(nome):
 
     conn = conectar_bd()
     cursor = conn.cursor()
+    cursor.execute("SELECT * FROM produtos ORDER BY nome, cor, tamanho")
+    produtos = [p for p in cursor.fetchall() if produto_contem_termos(p, termo)]
+
+    if produtos:
+        conn.close()
+        return {"resultado": [formatar_produto(p) for p in produtos]}
+
     cursor.execute(
         """
         SELECT * FROM produtos
@@ -91,10 +98,6 @@ def buscar_produto_db(nome):
         tuple(f"%{termo}%" for _ in range(7)),
     )
     produtos = cursor.fetchall()
-
-    if not produtos:
-        cursor.execute("SELECT * FROM produtos ORDER BY nome, cor, tamanho")
-        produtos = [p for p in cursor.fetchall() if produto_contem_termos(p, termo)]
 
     conn.close()
 

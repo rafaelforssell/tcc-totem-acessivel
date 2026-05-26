@@ -133,6 +133,8 @@ def limpar_tokens_busca(palavras_chave):
         "voce", "voces", "disponivel", "disponiveis", "produto", "produtos", "outro",
         "outros", "outra", "outras", "opcao", "opcoes", "qual", "quais",
         "perfeito", "legal", "beleza", "certo", "ok", "entendi", "bom", "boa",
+        "roupa", "roupas", "algum", "alguns", "alguma", "algumas", "hoje", "noite",
+        "tudo", "bem", "vou", "numa", "num", "para", "pra",
     }
     return [
         normalizar_texto(palavra.strip(".,?!"))
@@ -189,6 +191,68 @@ def listar_amostra_catalogo(limite=6):
     produtos = cursor.fetchall()
     conn.close()
     return produtos_por_secao([formatar_produto(p) for p in produtos])[:limite]
+
+
+def listar_todos_produtos_formatados():
+    conn = conectar_bd()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM produtos ORDER BY CAST(corredor AS INTEGER), nome")
+    produtos = cursor.fetchall()
+    conn.close()
+    return [formatar_produto(p) for p in produtos]
+
+
+def is_pedido_por_occasiao(texto_baixo):
+    texto = normalizar_texto(texto_baixo)
+    termos_ocasiao = [
+        "festa", "sair", "saida", "noite", "balada", "evento", "encontro", "passeio",
+        "frio", "calor", "trabalho", "casual", "presente",
+    ]
+    tem_contexto_roupa = any(termo in texto for termo in ["roupa", "roupas", "look", "opcao", "opcoes", "usar", "vestir"])
+    return tem_contexto_roupa and any(termo in texto for termo in termos_ocasiao)
+
+
+def buscar_produtos_por_occasiao(texto_baixo, limite=4):
+    texto = normalizar_texto(texto_baixo)
+    todos = listar_todos_produtos_formatados()
+
+    if any(termo in texto for termo in ["festa", "sair", "saida", "noite", "balada", "evento", "encontro"]):
+        prioridades = ["vestido", "camisa", "calca", "sandalia", "tenis", "saia", "polo"]
+    elif "frio" in texto:
+        prioridades = ["casaco", "moletom", "touca", "calca"]
+    elif "calor" in texto or "passeio" in texto:
+        prioridades = ["bermuda", "camisa", "saia", "sandalia", "bone", "oculos"]
+    elif "trabalho" in texto:
+        prioridades = ["camisa", "polo", "calca", "cinto", "sapato"]
+    else:
+        prioridades = ["camisa", "calca", "vestido", "tenis"]
+
+    def combina_prioridade(produto, prioridade):
+        texto_principal = normalizar_texto(
+            " ".join(
+                str(produto.get(campo, ""))
+                for campo in ["nome", "tipo", "sku", "descricao"]
+            ).replace("_", " ")
+        )
+        return prioridade in texto_principal
+
+    escolhidos = []
+    secoes_usadas = set()
+    for prioridade in prioridades:
+        for produto in todos:
+            if produto["id"] in {p["id"] for p in escolhidos}:
+                continue
+            if not combina_prioridade(produto, prioridade):
+                continue
+            if produto.get("corredor") in secoes_usadas and len(escolhidos) < 3:
+                continue
+            escolhidos.append(produto)
+            secoes_usadas.add(produto.get("corredor"))
+            break
+        if len(escolhidos) >= limite:
+            break
+
+    return escolhidos or listar_amostra_catalogo(limite)
 
 
 def is_pedido_catalogo(texto_baixo):
@@ -338,6 +402,30 @@ async def responder_catalogo_geral(pergunta, idioma):
     return {"resposta": resposta, "resultados": produtos, "acao": "MOSTRAR_PRODUTOS"}
 
 
+async def responder_por_occasiao(pergunta, idioma):
+    produtos = buscar_produtos_por_occasiao(pergunta)
+    memoria["ultimos_produtos"] = produtos[:3]
+    memoria["assunto_ativo"] = "produto"
+    for produto in produtos:
+        memoria["produtos_mencionados"][produto["id"]] = produto
+
+    contexto = (
+        "O usuario descreveu uma ocasiao ou uso da roupa, nao um produto exato. "
+        "Interprete a intencao e sugira produtos reais do banco que combinem com a situacao. "
+        "Fale de forma natural e objetiva, sem dizer que nenhum produto foi encontrado.\n"
+        + "\n---\n".join([formatar_produto_para_contexto(p) for p in produtos])
+    )
+    resposta = await perguntar_llm(
+        pergunta,
+        contexto_produtos=contexto,
+        idioma=idioma,
+        historico=memoria["historico_conversas"][:-1],
+        todos_produtos=list(memoria["produtos_mencionados"].values()),
+    )
+    memoria["historico_conversas"].append({"role": "assistant", "content": resposta})
+    return {"resposta": resposta, "resultados": produtos, "acao": "MOSTRAR_PRODUTOS"}
+
+
 
 async def pipeline_processar(pergunta, idioma="pt"):
     print(f"\n--- Nova Requisicao: {pergunta} --- Idioma: {idioma}")
@@ -369,6 +457,9 @@ async def pipeline_processar(pergunta, idioma="pt"):
 
     if is_pedido_catalogo_geral(texto_baixo):
         return await responder_catalogo_geral(pergunta, idioma)
+
+    if is_pedido_por_occasiao(texto_baixo):
+        return await responder_por_occasiao(pergunta, idioma)
 
     analise = await classificar_intencao(pergunta, idioma)
     intencao = analise.get("intencao", "OUTROS")
@@ -423,6 +514,9 @@ async def pipeline_processar(pergunta, idioma="pt"):
 
         memoria["ultimos_produtos"] = []
         memoria["assunto_ativo"] = None
+        if is_pedido_por_occasiao(texto_baixo) or is_pedido_catalogo(texto_baixo):
+            return await responder_por_occasiao(pergunta, idioma)
+
         resposta_base = "Nenhum produto encontrado no banco de dados com esses termos. Informe ao usuario."
         todos_prods = list(memoria["produtos_mencionados"].values())
         resposta = await perguntar_llm(

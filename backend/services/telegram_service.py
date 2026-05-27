@@ -12,8 +12,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ENV_PATH = os.path.join(BASE_DIR, "..", ".env")
 load_dotenv(ENV_PATH)
 
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "").strip()
 
 TELEGRAM_API = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
 
@@ -34,10 +34,13 @@ async def enviar_alerta_atendente(foto_base64: str | None = None, totem_id: str 
         return {"ok": False, "erro": "Telegram não configurado"}
 
     agora = datetime.now().strftime("%H:%M:%S")
+    # Escapa caracteres HTML para evitar quebras se totem_id contiver símbolos especiais
+    totem_id_safe = str(totem_id).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    
     texto = (
-        f"🔔 *Cliente precisando de ajuda!*\n\n"
-        f"📍 *Local:* {totem_id}\n"
-        f"🕐 *Horário:* {agora}\n\n"
+        f"🔔 <b>Cliente precisando de ajuda!</b>\n\n"
+        f"📍 <b>Local:</b> {totem_id_safe}\n"
+        f"🕐 <b>Horário:</b> {agora}\n\n"
         f"Por favor, dirija-se ao totem para atender o cliente."
     )
 
@@ -56,7 +59,7 @@ async def enviar_alerta_atendente(foto_base64: str | None = None, totem_id: str 
                     data={
                         "chat_id": TELEGRAM_CHAT_ID,
                         "caption": texto,
-                        "parse_mode": "Markdown",
+                        "parse_mode": "HTML",
                     },
                     files={"photo": ("mapa.png", foto_bytes, "image/png")},
                 )
@@ -72,7 +75,7 @@ async def enviar_alerta_atendente(foto_base64: str | None = None, totem_id: str 
                 json={
                     "chat_id": TELEGRAM_CHAT_ID,
                     "text": texto,
-                    "parse_mode": "Markdown",
+                    "parse_mode": "HTML",
                 },
             )
             response.raise_for_status()
@@ -80,3 +83,4 @@ async def enviar_alerta_atendente(foto_base64: str | None = None, totem_id: str 
         except Exception as e:
             print(f"[Telegram] Erro ao enviar mensagem: {e}")
             return {"ok": False, "erro": str(e)}
+

@@ -810,7 +810,7 @@
         const params = new URLSearchParams(window.location.search);
         const BACKEND_URL = params.get("backend") ||
             window.TOTEM_BACKEND_URL ||
-            ((location.hostname === "localhost" || location.hostname === "127.0.0.1" || location.hostname === "")
+            ((location.hostname === "localhost" || location.hostname === "127.0.0.1")
                 ? "http://127.0.0.1:8000"
                 : "https://totem-acessivel.onrender.com");
 

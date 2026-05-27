@@ -1126,9 +1126,6 @@
                             audioAtual = null;
                             if (encerrarAposAudio) {
                                 voltarDoChat();
-                            } else if (abrirMapaAposAudio) {
-                                encerrarSessao();
-                                navigateTo('screen4');
                             } else if (sessaoAtiva) {
                                 if (statusEl) statusEl.innerText = "Ouvindo";
                                 if (indicatorEl) indicatorEl.classList.add("listening-indicator");
@@ -1140,9 +1137,6 @@
                             audioAtual = null;
                             if (encerrarAposAudio) {
                                 voltarDoChat();
-                            } else if (abrirMapaAposAudio) {
-                                encerrarSessao();
-                                navigateTo('screen4');
                             } else if (sessaoAtiva) {
                                 if (statusEl) statusEl.innerText = "Ouvindo";
                                 if (indicatorEl) indicatorEl.classList.add("listening-indicator");
@@ -1154,9 +1148,6 @@
                     } else {
                         if (encerrarAposAudio) {
                             voltarDoChat();
-                        } else if (abrirMapaAposAudio) {
-                            encerrarSessao();
-                            navigateTo('screen4');
                         } else if (sessaoAtiva) {
                             if (statusEl) statusEl.innerText = "Ouvindo";
                             if (indicatorEl) indicatorEl.classList.add("listening-indicator");

@@ -155,6 +155,19 @@ def limpar_tokens_busca(palavras_chave):
     ]
 
 
+def montar_resposta_multiplos_produtos(produtos, idioma="pt"):
+    nomes = [p.get("nome", "Produto") for p in produtos[:3]]
+    if idioma != "pt":
+        return (
+            f"I found these options for you: {', '.join(nomes)}. "
+            "If you like, add the products you want to your list and then ask me to open the map."
+        )
+    return (
+        f"Encontrei estas opcoes para voce: {', '.join(nomes)}. "
+        "Se gostar, adicione os produtos que quiser na lista e depois me peça para abrir o mapa."
+    )
+
+
 def buscar_produtos_sql(palavras_chave):
     if not palavras_chave:
         return []
@@ -358,6 +371,11 @@ def is_pedido_mapa(texto_baixo):
         "me mostre",
         "quero ver",
         "ver",
+        "abrir",
+        "abre",
+        "pode abrir",
+        "abrir mapa",
+        "abre o mapa",
         "ok",
         "ta",
         "vai",
@@ -383,6 +401,7 @@ def is_pedido_mapa(texto_baixo):
         or "localizacao" in texto
         or "me leva" in texto
         or "me indica" in texto
+        or "abrir" in texto
     )
 
 
@@ -394,6 +413,7 @@ def is_confirmacao_positiva(texto_baixo):
         "claro", "ok", "ta", "vai", "vamos", "bora", "perfeito", "otimo", "gostei",
         "gostei sim", "adorei", "legal", "beleza", "show", "certo", "entendido",
         "quero ver", "me mostra", "me mostre", "mostra", "mostre", "ver",
+        "abrir", "abre", "pode abrir", "abre o mapa", "abrir o mapa",
     }
     return texto in afirmacoes
 
@@ -531,13 +551,16 @@ async def responder_por_occasiao(pergunta, idioma):
         "Fale de forma natural e objetiva, sem dizer que nenhum produto foi encontrado.\n"
         + "\n---\n".join([formatar_produto_para_contexto(p) for p in produtos])
     )
-    resposta = await perguntar_llm(
-        pergunta,
-        contexto_produtos=contexto,
-        idioma=idioma,
-        historico=memoria["historico_conversas"][:-1],
-        todos_produtos=list(memoria["produtos_mencionados"].values()),
-    )
+    if len(produtos) > 1:
+        resposta = montar_resposta_multiplos_produtos(produtos, idioma)
+    else:
+        resposta = await perguntar_llm(
+            pergunta,
+            contexto_produtos=contexto,
+            idioma=idioma,
+            historico=memoria["historico_conversas"][:-1],
+            todos_produtos=list(memoria["produtos_mencionados"].values()),
+        )
     memoria["historico_conversas"].append({"role": "assistant", "content": resposta})
     return {"resposta": resposta, "resultados": produtos, "acao": "MOSTRAR_PRODUTOS"}
 
@@ -720,13 +743,16 @@ async def pipeline_processar(pergunta, idioma="pt"):
                 [formatar_produto_para_contexto(p) for p in disponiveis[:3]]
             )
             todos_prods = list(memoria["produtos_mencionados"].values())
-            resposta = await perguntar_llm(
-                pergunta,
-                contexto_produtos=contexto,
-                idioma=idioma,
-                historico=memoria["historico_conversas"][:-1],
-                todos_produtos=todos_prods
-            )
+            if len(disponiveis[:3]) > 1:
+                resposta = montar_resposta_multiplos_produtos(disponiveis[:3], idioma)
+            else:
+                resposta = await perguntar_llm(
+                    pergunta,
+                    contexto_produtos=contexto,
+                    idioma=idioma,
+                    historico=memoria["historico_conversas"][:-1],
+                    todos_produtos=todos_prods
+                )
             acao_final = "ABRIR_MAPA" if is_pedido_mapa(texto_baixo) else "MOSTRAR_PRODUTOS"
             return {"resposta": resposta, "resultados": disponiveis[:3], "acao": acao_final}
 

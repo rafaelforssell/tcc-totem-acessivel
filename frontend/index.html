@@ -240,6 +240,25 @@
         </header>
         <main id="chat-container"
             class="flex-grow mt-20 md:mt-32 mb-24 md:mb-32 bg-black flex flex-col p-4 md:p-12 overflow-y-auto chat-scroll overflow-x-hidden">
+            <div id="selected-products-panel" class="hidden w-full max-w-4xl mx-auto mb-6 bg-zinc-900/95 border-2 border-yellow-400/60 rounded-2xl p-4 md:p-5">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div>
+                        <p class="text-yellow-400 text-xs uppercase font-bold tracking-[0.2em]">Lista de Interesse</p>
+                        <p id="selected-products-summary" class="text-white font-lexend font-bold text-lg md:text-2xl mt-1">0 produtos selecionados</p>
+                        <div id="selected-products-chips" class="flex flex-wrap gap-2 mt-3"></div>
+                    </div>
+                    <div class="flex flex-col gap-2 md:w-[260px] shrink-0">
+                        <button id="selected-products-map-btn" type="button" onclick="abrirMapaDaListaSelecionada()"
+                            class="w-full bg-yellow-400 text-black font-lexend font-bold text-sm md:text-base px-4 py-3 rounded-xl border-2 border-yellow-300 hover:bg-yellow-300 transition-colors">
+                            Abrir mapa da lista
+                        </button>
+                        <button id="selected-products-clear-btn" type="button" onclick="limparListaSelecionada()"
+                            class="w-full bg-zinc-800 text-white font-bold text-sm md:text-base px-4 py-3 rounded-xl border-2 border-zinc-700 hover:bg-zinc-700 transition-colors">
+                            Limpar lista
+                        </button>
+                    </div>
+                </div>
+            </div>
             <div id="chat-messages" class="flex flex-col gap-6 w-full max-w-4xl mx-auto mt-auto" role="log"
                 aria-live="polite" aria-relevant="additions">
                 <!-- Messages will be injected here dynamically -->
@@ -608,6 +627,7 @@
         let previousScreenId = 'screen1';
         let currentScreenId = 'screen1';
         let windowResults = [];
+        let selectedProducts = [];
         let produtosNotificacaoAtendente = [];
         const DEFAULT_PRODUCT_IMAGE = "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=500&q=80";
 
@@ -700,6 +720,67 @@
             }
         }
 
+        function obterChaveProduto(produto) {
+            if (!produto) return "";
+            return String(produto.id || produto.sku || `${produto.nome}|${produto.corredor}|${produto.setor || produto.categoria || ""}`);
+        }
+
+        function produtoSelecionado(produto) {
+            const chave = obterChaveProduto(produto);
+            return selectedProducts.some(item => obterChaveProduto(item) === chave);
+        }
+
+        function atualizarPainelListaSelecionada() {
+            const panel = document.getElementById('selected-products-panel');
+            const summary = document.getElementById('selected-products-summary');
+            const chips = document.getElementById('selected-products-chips');
+            const mapBtn = document.getElementById('selected-products-map-btn');
+            const clearBtn = document.getElementById('selected-products-clear-btn');
+            if (!panel || !summary || !chips || !mapBtn || !clearBtn) return;
+
+            const total = selectedProducts.length;
+            if (total === 0) {
+                panel.classList.add('hidden');
+                chips.innerHTML = "";
+                return;
+            }
+
+            panel.classList.remove('hidden');
+            summary.textContent = total === 1 ? "1 produto selecionado" : `${total} produtos selecionados`;
+            chips.innerHTML = selectedProducts.map(produto => `
+                <button type="button" onclick="toggleProdutoSelecionadoPorChave('${obterChaveProduto(produto).replace(/'/g, "\\'")}')"
+                    class="inline-flex items-center gap-2 bg-black/60 border border-zinc-700 text-white rounded-full px-3 py-2 text-sm hover:border-yellow-400 transition-colors">
+                    <span>${produto.nome}</span>
+                    <span class="text-yellow-400 font-bold">x</span>
+                </button>
+            `).join("");
+            mapBtn.disabled = total === 0;
+            clearBtn.disabled = total === 0;
+        }
+
+        function toggleProdutoSelecionadoPorChave(chave) {
+            selectedProducts = selectedProducts.filter(produto => obterChaveProduto(produto) !== chave);
+            atualizarPainelListaSelecionada();
+        }
+
+        function toggleProdutoSelecionado(produto) {
+            const chave = obterChaveProduto(produto);
+            if (!chave) return false;
+            if (produtoSelecionado(produto)) {
+                selectedProducts = selectedProducts.filter(item => obterChaveProduto(item) !== chave);
+                atualizarPainelListaSelecionada();
+                return false;
+            }
+            selectedProducts = [...selectedProducts, produto];
+            atualizarPainelListaSelecionada();
+            return true;
+        }
+
+        function limparListaSelecionada() {
+            selectedProducts = [];
+            atualizarPainelListaSelecionada();
+        }
+
         function formatarProdutoParaAtendente(produto) {
             if (!produto || !produto.nome) return null;
             const section = getProductSection(produto);
@@ -710,9 +791,9 @@
             };
         }
 
-        function mesclarProdutosNotificacao(produtos = []) {
+        function formatarListaParaAtendente(produtos = []) {
             const vistos = new Set();
-            produtosNotificacaoAtendente = [...produtosNotificacaoAtendente, ...produtos]
+            return produtos
                 .map(formatarProdutoParaAtendente)
                 .filter(produto => {
                     if (!produto) return false;
@@ -721,6 +802,47 @@
                     vistos.add(chave);
                     return true;
                 });
+        }
+
+        function mesclarProdutosNotificacao(produtos = []) {
+            produtosNotificacaoAtendente = formatarListaParaAtendente([...produtosNotificacaoAtendente, ...produtos]);
+        }
+
+        function obterProdutosPreferidosParaMapa(produtosFallback = []) {
+            if (selectedProducts.length > 0) {
+                return selectedProducts;
+            }
+            if (produtosFallback.length > 0) {
+                return produtosFallback;
+            }
+            return windowResults;
+        }
+
+        function abrirMapaDaListaSelecionada() {
+            const produtos = obterProdutosPreferidosParaMapa();
+            if (!produtos || produtos.length === 0) return;
+            navigateTo('screen2');
+            if (produtos.length > 1) {
+                appendMessage(
+                    currentLang === 'pt'
+                        ? "Aqui está o mapa da sua lista de interesse."
+                        : "Here is the map for your selected list.",
+                    'totem',
+                    produtos,
+                    'ABRIR_ROTAS'
+                );
+                return;
+            }
+
+            const produto = produtos[0];
+            appendMessage(
+                currentLang === 'pt'
+                    ? "Aqui está o caminho do produto selecionado."
+                    : "Here is the route for the selected product.",
+                'totem',
+                [produto],
+                'ABRIR_MAPA'
+            );
         }
 
         function getProductMainImage(product) {
@@ -1025,11 +1147,14 @@
                     }));
 
                     results.forEach((p, index) => {
-                        const card = document.createElement("button");
-                        card.type = "button";
-                        card.className = "text-left bg-zinc-900 border-2 border-zinc-700 p-3 rounded-xl min-w-[160px] md:min-w-[200px] flex-shrink-0 hover:border-yellow-400 transition-colors";
-                        card.setAttribute("aria-label", `Ver produto ${p.nome || ""}`);
-                        card.onclick = () => visualizarProduto(index);
+                        const card = document.createElement("div");
+                        card.className = "text-left bg-zinc-900 border-2 border-zinc-700 p-3 rounded-xl min-w-[160px] md:min-w-[220px] flex-shrink-0";
+
+                        const openBtn = document.createElement("button");
+                        openBtn.type = "button";
+                        openBtn.className = "w-full text-left hover:border-yellow-400 transition-colors";
+                        openBtn.setAttribute("aria-label", `Ver produto ${p.nome || ""}`);
+                        openBtn.onclick = () => visualizarProduto(index);
 
                         const img = document.createElement("img");
                         img.src = getProductMainImage(p);
@@ -1054,7 +1179,24 @@
                             .filter(Boolean)
                             .join(" | ");
 
-                        card.append(img, name, price, detail);
+                        openBtn.append(img, name, price, detail);
+
+                        const selectBtn = document.createElement("button");
+                        selectBtn.type = "button";
+                        const atualizarBotaoSelecao = () => {
+                            const ativo = produtoSelecionado(p);
+                            selectBtn.className = ativo
+                                ? "w-full mt-3 bg-yellow-400 text-black font-bold text-xs md:text-sm px-3 py-2 rounded-lg border border-yellow-300"
+                                : "w-full mt-3 bg-zinc-800 text-white font-bold text-xs md:text-sm px-3 py-2 rounded-lg border border-zinc-700 hover:border-yellow-400 transition-colors";
+                            selectBtn.textContent = ativo ? "Remover da lista" : "Adicionar à lista";
+                        };
+                        atualizarBotaoSelecao();
+                        selectBtn.onclick = () => {
+                            toggleProdutoSelecionado(p);
+                            atualizarBotaoSelecao();
+                        };
+
+                        card.append(openBtn, selectBtn);
                         cards.appendChild(card);
                     });
 
@@ -1163,7 +1305,9 @@
                     "Hello! I'm the Kiosk virtual assistant. How can I help you today?";
 
                 windowResults = [];
+                selectedProducts = [];
                 produtosNotificacaoAtendente = [];
+                atualizarPainelListaSelecionada();
                 appendMessage(welcomeText, "totem");
                 iniciarSessao();
             }
@@ -1207,6 +1351,19 @@
                     const data = await resposta.json();
                     if (!sessaoAtiva) return;
 
+                    const produtosPreferidosResposta = obterProdutosPreferidosParaMapa(data.resultados || []);
+                    if (data.acao === "ABRIR_MAPA" && produtosPreferidosResposta.length > 1) {
+                        data.acao = "ABRIR_ROTAS";
+                        data.resultados = produtosPreferidosResposta;
+                        if (!data.resposta) {
+                            data.resposta = currentLang === 'pt'
+                                ? "Aqui esta o mapa da sua lista de interesse."
+                                : "Here is the map for your selected list.";
+                        }
+                    } else if ((data.acao === "ABRIR_ROTAS" || data.acao === "CHAMAR_ATENDENTE") && produtosPreferidosResposta.length > 0) {
+                        data.resultados = produtosPreferidosResposta;
+                    }
+
                     appendMessage(data.transcricao, 'user');
 
                     if (data.acao === "ENCERRAR") {
@@ -1225,6 +1382,7 @@
                     // Check actions to perform after audio
                     let encerrarAposAudio = false;
                     let abrirMapaAposAudio = false;
+                    const produtosPreferidos = obterProdutosPreferidosParaMapa(data.resultados || []);
                     if (data.acao === "ABRIR_MAPA") {
                         abrirMapaAposAudio = true;
                         if (data.resultados && data.resultados.length > 0) {
@@ -1233,18 +1391,18 @@
                         }
                     } else if (data.acao === "ABRIR_ROTAS") {
                         abrirMapaAposAudio = true;
-                        if (data.resultados && data.resultados.length > 0) {
-                            mesclarProdutosNotificacao(data.resultados);
-                            loadProductData(data.resultados[0]);
-                            updateStoreMap(data.resultados[0].corredor);
+                        if (produtosPreferidos && produtosPreferidos.length > 0) {
+                            mesclarProdutosNotificacao(produtosPreferidos);
+                            loadProductData(produtosPreferidos[0]);
+                            updateStoreMap(produtosPreferidos[0].corredor);
                         }
                     }
 
                     if (data.acao === "CHAMAR_ATENDENTE") {
                         console.log('[Atendente] Ação CHAMAR_ATENDENTE disparada pelo backend!');
-                        const produtosAtendente = (data.resultados && data.resultados.length > 0)
-                            ? data.resultados.map(formatarProdutoParaAtendente).filter(Boolean)
-                            : produtosNotificacaoAtendente;
+                        const produtosAtendente = formatarListaParaAtendente(
+                            selectedProducts.length > 0 ? selectedProducts : (data.resultados || [])
+                        );
                         if (produtosAtendente.length > 0) {
                             produtosNotificacaoAtendente = produtosAtendente;
                         }
@@ -1680,6 +1838,7 @@
 
         applyHighContrast(localStorage.getItem("totemHighContrast") === "1");
         enhanceButtonLabels();
+        atualizarPainelListaSelecionada();
     </script>
 </body>
 

@@ -136,8 +136,13 @@ def limpar_tokens_busca(palavras_chave):
         "roupa", "roupas", "algum", "alguns", "alguma", "algumas", "hoje", "noite",
         "tudo", "bem", "vou", "numa", "num", "para", "pra",
     }
+    sinonimos = {
+        "short": "bermuda",
+        "shorts": "bermuda",
+        "bermudao": "bermuda",
+    }
     return [
-        normalizar_texto(palavra.strip(".,?!"))
+        sinonimos.get(normalizar_texto(palavra.strip(".,?!")), normalizar_texto(palavra.strip(".,?!")))
         for palavra in palavras_chave
         if len(palavra.strip(".,?!")) > 2 and normalizar_texto(palavra.strip(".,?!")) not in stopwords
     ]
@@ -268,6 +273,12 @@ def is_pedido_catalogo_geral(texto_baixo):
     return not tokens
 
 
+def is_pergunta_pagamento(texto_baixo):
+    texto = normalizar_texto(texto_baixo)
+    termos_pagamento = ["boleto", "pix", "cartao", "credito", "debito", "parcelar", "pagamento", "pagar"]
+    return any(termo in texto for termo in termos_pagamento)
+
+
 def is_encerramento(texto_baixo):
     palavras = texto_baixo.split()
     despedidas = {"tchau", "obrigado", "obrigada", "valeu", "encerrar", "bye", "thanks", "falou"}
@@ -303,7 +314,7 @@ def is_pedido_mapa(texto_baixo):
 def is_pedido_resumo_rotas(texto_baixo):
     texto = normalizar_texto(texto_baixo)
     tem_rota = any(palavra in texto for palavra in ["rota", "rotas", "mapa", "lugares", "secoes", "sessao", "resumo"])
-    tem_total = any(palavra in texto for palavra in ["todos", "todas", "geral", "resumo", "final"])
+    tem_total = any(palavra in texto for palavra in ["todos", "todas", "tudo", "geral", "resumo", "final", "falamos", "vimos", "conversamos"])
     return tem_rota and tem_total
 
 
@@ -325,7 +336,8 @@ def selecionar_produtos_para_mapa(texto_baixo, produtos_memoria):
     stopwords_mapa = {
         "eu", "quero", "queria", "mostra", "mostrar", "mostre", "caminho", "mapa", "pra",
         "para", "mim", "por", "favor", "do", "da", "de", "o", "a", "os", "as", "no", "na",
-        "elas", "eles", "ele", "ela", "gostei", "sim",
+        "elas", "eles", "ele", "ela", "gostei", "sim", "tudo", "todos", "todas", "falamos",
+        "vimos", "conversamos",
     }
     tokens = [
         token for token in normalizar_texto(texto_baixo).replace(",", " ").replace("?", " ").split()
@@ -353,6 +365,8 @@ def extrair_palavras_busca(texto_baixo):
         "eu", "quero", "queria", "saber", "mais", "sobre", "a", "o", "as", "os",
         "de", "da", "do", "tem", "ha", "me", "fale", "uma", "um", "por", "favor",
         "perfeito", "legal", "beleza", "certo", "ok", "entendi", "bom", "boa",
+        "roupa", "roupas", "algum", "alguns", "alguma", "algumas", "hoje", "noite",
+        "tudo", "bem", "vou", "numa", "num", "para", "pra",
     }
     return [
         normalizar_texto(w.strip(".,?!"))
@@ -444,6 +458,16 @@ async def pipeline_processar(pergunta, idioma="pt"):
     if is_encerramento(texto_baixo):
         limpar_memoria()
         return {"resposta": "", "resultados": [], "acao": "ENCERRAR"}
+
+    if is_pergunta_pagamento(texto_baixo):
+        resposta_texto = (
+            "Sobre pagamento, eu consigo te ajudar melhor com os produtos e a localização deles. "
+            "Formas como boleto, Pix ou cartão precisam ser confirmadas no caixa da loja."
+            if idioma == "pt"
+            else "For payment, I can best help with products and their location. Methods like bank slip, Pix, or card should be confirmed at checkout."
+        )
+        memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
+        return {"resposta": resposta_texto, "resultados": [], "acao": "NENHUM"}
 
     if is_pedido_resumo_rotas(texto_baixo) and memoria["produtos_mencionados"]:
         produtos_rota = produtos_por_secao(memoria["produtos_mencionados"].values())

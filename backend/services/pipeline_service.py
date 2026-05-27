@@ -1,12 +1,11 @@
 import os
-import sqlite3
 import unicodedata
 
 from services.llm_service import classificar_intencao, perguntar_llm
+from services import db_service
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "..", "..", "database", "produtos.db")
 
 memoria = {
     "ultimos_produtos": [],
@@ -24,7 +23,10 @@ def limpar_memoria():
 
 
 def conectar_bd():
-    conn = sqlite3.connect(DB_PATH)
+    """Mantido por compatibilidade com outros módulos que possam importá-lo."""
+    import sqlite3
+    sqlite_path = os.path.join(BASE_DIR, "..", "..", "database", "produtos.db")
+    conn = sqlite3.connect(sqlite_path)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -157,11 +159,9 @@ def buscar_produtos_sql(palavras_chave):
     if not palavras_chave:
         return []
 
-    conn = conectar_bd()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM produtos ORDER BY nome, cor, tamanho")
-    todos_produtos = cursor.fetchall()
-    conn.close()
+    todos_produtos_raw = db_service.fetchall(
+        "SELECT * FROM produtos ORDER BY nome, cor, tamanho"
+    )
 
     tokens = limpar_tokens_busca(palavras_chave)
     genero = detectar_genero(tokens)
@@ -182,33 +182,38 @@ def buscar_produtos_sql(palavras_chave):
             return all(token_match(texto, token) for token in tokens_sem_genero)
         return any(token_match(texto, token) for token in tokens_sem_genero)
 
-    produtos = [p for p in todos_produtos if produto_valido(p, exigir_todos=True)]
+    # Separa produtos com e sem estoque
+    com_estoque = [p for p in todos_produtos_raw if (p.get("estoque") or 0) > 0]
+    sem_estoque = [p for p in todos_produtos_raw if (p.get("estoque") or 0) <= 0]
+
+    # Busca com estoque primeiro
+    produtos = [p for p in com_estoque if produto_valido(p, exigir_todos=True)]
     if not produtos:
-        produtos = [p for p in todos_produtos if produto_valido(p, exigir_todos=False)]
+        produtos = [p for p in com_estoque if produto_valido(p, exigir_todos=False)]
+
+    # Se não achou com estoque, verifica se existe esgotado para dar mensagem adequada
+    if not produtos:
+        esgotados = [p for p in sem_estoque if produto_valido(p, exigir_todos=True)]
+        if not esgotados:
+            esgotados = [p for p in sem_estoque if produto_valido(p, exigir_todos=False)]
+        if esgotados:
+            # Retorna marcado como esgotado para a IA dar a mensagem certa
+            return [{**formatar_produto(p), "_esgotado": True} for p in esgotados[:3]]
 
     return [formatar_produto(p) for p in produtos]
 
 
 def listar_amostra_catalogo(limite=6):
-    conn = conectar_bd()
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        SELECT * FROM produtos
-        ORDER BY CAST(corredor AS INTEGER), nome
-        """
+    produtos = db_service.fetchall(
+        "SELECT * FROM produtos WHERE estoque > 0 ORDER BY corredor, nome"
     )
-    produtos = cursor.fetchall()
-    conn.close()
     return produtos_por_secao([formatar_produto(p) for p in produtos])[:limite]
 
 
 def listar_todos_produtos_formatados():
-    conn = conectar_bd()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM produtos ORDER BY CAST(corredor AS INTEGER), nome")
-    produtos = cursor.fetchall()
-    conn.close()
+    produtos = db_service.fetchall(
+        "SELECT * FROM produtos WHERE estoque > 0 ORDER BY corredor, nome"
+    )
     return [formatar_produto(p) for p in produtos]
 
 
@@ -288,6 +293,19 @@ def is_encerramento(texto_baixo):
     palavras = texto_baixo.split()
     despedidas = {"tchau", "obrigado", "obrigada", "valeu", "encerrar", "bye", "thanks", "falou"}
     return (any(w in palavras for w in despedidas) or "ate logo" in normalizar_texto(texto_baixo)) and len(palavras) <= 4
+
+
+def is_pedido_atendente(texto_baixo):
+    """Detecta quando o usuário pede ajuda humana/atendente."""
+    texto = normalizar_texto(texto_baixo)
+    termos = [
+        "atendente", "atendimento", "funcionario", "vendedor", "vendedora",
+        "chame", "chamar", "preciso de ajuda", "me ajuda", "ajuda humana",
+        "falar com alguem", "falar com uma pessoa", "pessoa real",
+        "nao consigo", "nao entendeu", "nao entendo", "chama alguem",
+        "chama um atendente", "quero um atendente", "quero ajuda",
+    ]
+    return any(termo in texto for termo in termos)
 
 
 def is_pedido_mapa(texto_baixo):
@@ -511,6 +529,16 @@ async def pipeline_processar(pergunta, idioma="pt"):
         limpar_memoria()
         return {"resposta": "", "resultados": [], "acao": "ENCERRAR"}
 
+    # Verifica se o usuário está pedindo um atendente humano
+    if is_pedido_atendente(texto_baixo):
+        resposta_texto = (
+            "Claro! Estou chamando um atendente para te ajudar. Em instantes alguém virá até você."
+            if idioma == "pt"
+            else "Of course! I'm calling an attendant to help you. Someone will be with you shortly."
+        )
+        memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
+        return {"resposta": resposta_texto, "resultados": [], "acao": "CHAMAR_ATENDENTE"}
+
     if is_pergunta_pagamento(texto_baixo):
         resposta_texto = (
             "Sobre pagamento, eu consigo te ajudar melhor com os produtos e a localização deles. "
@@ -599,15 +627,36 @@ async def pipeline_processar(pergunta, idioma="pt"):
     if intencao == "NOVA_BUSCA":
         resultados = buscar_produtos_sql(palavras)
         if resultados:
-            memoria["ultimos_produtos"] = resultados[:3]
+            # Verifica se são produtos esgotados
+            esgotados = [p for p in resultados if p.get("_esgotado")]
+            disponiveis = [p for p in resultados if not p.get("_esgotado")]
+
+            if esgotados and not disponiveis:
+                # Produto existe mas está esgotado
+                nomes = ", ".join(p["nome"] for p in esgotados[:2])
+                contexto = (
+                    f"ATENÇÃO: O(s) produto(s) '{nomes}' exist(e/m) no catálogo MAS ESTÁ(ÃO) ESGOTADO(S) (estoque = 0). "
+                    f"Informe ao usuário de forma gentil que o produto está esgotado no momento e ofereça ajuda para encontrar outra opção."
+                )
+                todos_prods = list(memoria["produtos_mencionados"].values())
+                resposta = await perguntar_llm(
+                    pergunta,
+                    contexto_produtos=contexto,
+                    idioma=idioma,
+                    historico=memoria["historico_conversas"][:-1],
+                    todos_produtos=todos_prods,
+                )
+                memoria["historico_conversas"].append({"role": "assistant", "content": resposta})
+                return {"resposta": resposta, "resultados": [], "acao": "NENHUM"}
+
+            # Produtos com estoque disponível — fluxo normal
+            memoria["ultimos_produtos"] = disponiveis[:3]
             memoria["assunto_ativo"] = "produto"
-            
-            # Adiciona ao dicionário de produtos mencionados
-            for p in resultados[:3]:
+            for p in disponiveis[:3]:
                 memoria["produtos_mencionados"][p["id"]] = p
-                
+
             contexto = "Produtos encontrados no banco de dados:\n" + "\n---\n".join(
-                [formatar_produto_para_contexto(p) for p in resultados[:3]]
+                [formatar_produto_para_contexto(p) for p in disponiveis[:3]]
             )
             todos_prods = list(memoria["produtos_mencionados"].values())
             resposta = await perguntar_llm(
@@ -618,7 +667,8 @@ async def pipeline_processar(pergunta, idioma="pt"):
                 todos_produtos=todos_prods
             )
             memoria["historico_conversas"].append({"role": "assistant", "content": resposta})
-            return {"resposta": resposta, "resultados": resultados[:3], "acao": "MOSTRAR_PRODUTOS"}
+            return {"resposta": resposta, "resultados": disponiveis[:3], "acao": "MOSTRAR_PRODUTOS"}
+
 
         memoria["ultimos_produtos"] = []
         memoria["assunto_ativo"] = None

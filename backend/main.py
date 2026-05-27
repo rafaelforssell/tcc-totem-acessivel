@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from routes import produtos, query
+from routes import produtos, query, admin, atendente
 from services.llm_service import perguntar_llm
 from services.produtos_service import buscar_produto_db, contar_produtos_db
 
@@ -30,6 +30,8 @@ app.add_middleware(
 
 app.include_router(query.router)
 app.include_router(produtos.router)
+app.include_router(admin.router)
+app.include_router(atendente.router)
 
 
 @app.get("/")

@@ -1081,6 +1081,33 @@
                         }
                     }
 
+                    if (data.acao === "CHAMAR_ATENDENTE") {
+                        // Captura o canvas do mapa e envia para o backend notificar via Telegram
+                        setTimeout(async () => {
+                            try {
+                                let fotoBase64 = null;
+                                // Tenta capturar o canvas do mapa (se estiver visível)
+                                const mapaCanvas = document.querySelector('#map-canvas canvas') ||
+                                                   document.querySelector('canvas');
+                                if (mapaCanvas) {
+                                    fotoBase64 = mapaCanvas.toDataURL('image/png');
+                                }
+
+                                await fetch(`${BACKEND_URL}/chamar-atendente`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        foto_base64: fotoBase64,
+                                        totem_id: 'Totem 1'
+                                    })
+                                });
+                                console.log('[Atendente] Notificação enviada via Telegram.');
+                            } catch (err) {
+                                console.error('[Atendente] Erro ao notificar:', err);
+                            }
+                        }, 800);
+                    }
+
                     if (data.audio) {
                         totemFalando = true;
                         const audio = new Audio();

@@ -1,5 +1,5 @@
 """
-Telegram notification service used to alert an attendant from the kiosk.
+Servico de notificacoes via Telegram para alertar o atendente do totem.
 """
 import base64
 import os
@@ -31,13 +31,13 @@ def _format_telegram_error(exc: Exception) -> str:
             details = response.json()
         except Exception:
             details = response.text
-        return f"Telegram returned HTTP {response.status_code}: {details}"
+        return f"Telegram retornou HTTP {response.status_code}: {details}"
     return str(exc)
 
 
 token_configured, chat_id_configured = _get_telegram_config()
-print(f"[Telegram] Token configured: {'YES' if token_configured else 'NO'}")
-print(f"[Telegram] Chat ID configured: {'YES' if chat_id_configured else 'NO'}")
+print(f"[Telegram] Token configurado: {'SIM' if token_configured else 'NAO'}")
+print(f"[Telegram] Chat ID configurado: {'SIM' if chat_id_configured else 'NAO'}")
 
 
 async def enviar_alerta_atendente(
@@ -45,22 +45,22 @@ async def enviar_alerta_atendente(
     totem_id: str = "Totem 1",
 ) -> dict:
     """
-    Sends a Telegram alert when a client asks for an attendant.
+    Envia um alerta no Telegram quando um cliente pede um atendente.
     """
     telegram_bot_token, telegram_chat_id = _get_telegram_config()
     if not telegram_bot_token or not telegram_chat_id:
-        print("[Telegram] Token or Chat ID not configured.")
-        return {"ok": False, "erro": "Telegram not configured"}
+        print("[Telegram] Token ou Chat ID nao configurados.")
+        return {"ok": False, "erro": "Telegram nao configurado"}
 
     telegram_api = _build_telegram_api(telegram_bot_token)
     now_text = datetime.now().strftime("%H:%M:%S")
     totem_id_safe = str(totem_id).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
     texto = (
-        "<b>Client needs help!</b>\n\n"
-        f"<b>Location:</b> {totem_id_safe}\n"
-        f"<b>Time:</b> {now_text}\n\n"
-        "Please go to the kiosk to assist the client."
+        "<b>Cliente precisando de ajuda</b>\n\n"
+        f"<b>Local:</b> {totem_id_safe}\n"
+        f"<b>Horario:</b> {now_text}\n"
+        "<b>Mapa:</b> foto em anexo"
     )
 
     async with httpx.AsyncClient(timeout=15.0) as client:
@@ -87,8 +87,8 @@ async def enviar_alerta_atendente(
                 return {"ok": True, "modo": "foto"}
             except Exception as exc:
                 print(
-                    "[Telegram] Error sending photo: "
-                    f"{_format_telegram_error(exc)}. Falling back to text..."
+                    "[Telegram] Erro ao enviar foto: "
+                    f"{_format_telegram_error(exc)}. Tentando enviar so texto..."
                 )
 
         try:
@@ -104,5 +104,5 @@ async def enviar_alerta_atendente(
             return {"ok": True, "modo": "texto"}
         except Exception as exc:
             erro_formatado = _format_telegram_error(exc)
-            print(f"[Telegram] Error sending message: {erro_formatado}")
+            print(f"[Telegram] Erro ao enviar mensagem: {erro_formatado}")
             return {"ok": False, "erro": erro_formatado}

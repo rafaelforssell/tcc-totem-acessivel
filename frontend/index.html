@@ -824,6 +824,54 @@
             return audioCtxGlobal;
         }
 
+        async function capturarMapaParaTelegram() {
+            const svgOriginal = document.querySelector('#map-svg-container svg');
+            if (!svgOriginal) return null;
+
+            const svgClone = svgOriginal.cloneNode(true);
+            svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+            svgClone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+            svgClone.setAttribute('width', '1000');
+            svgClone.setAttribute('height', '600');
+
+            const fundo = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            fundo.setAttribute('x', '0');
+            fundo.setAttribute('y', '0');
+            fundo.setAttribute('width', '1000');
+            fundo.setAttribute('height', '600');
+            fundo.setAttribute('fill', '#111111');
+            svgClone.insertBefore(fundo, svgClone.firstChild);
+
+            const serializer = new XMLSerializer();
+            const svgString = serializer.serializeToString(svgClone);
+            const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+            const blobUrl = URL.createObjectURL(svgBlob);
+
+            try {
+                const image = await new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = reject;
+                    img.src = blobUrl;
+                });
+
+                const canvas = document.createElement('canvas');
+                canvas.width = 1000;
+                canvas.height = 600;
+
+                const context = canvas.getContext('2d');
+                if (!context) return null;
+
+                context.fillStyle = '#111111';
+                context.fillRect(0, 0, canvas.width, canvas.height);
+                context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+                return canvas.toDataURL('image/png');
+            } finally {
+                URL.revokeObjectURL(blobUrl);
+            }
+        }
+
         function appendMessage(text, sender, results = [], acao = "NENHUM") {
             const chatMessages = document.getElementById("chat-messages");
             const div = document.createElement("div");
@@ -1090,21 +1138,18 @@
 
                     if (data.acao === "CHAMAR_ATENDENTE") {
                         console.log('[Atendente] Ação CHAMAR_ATENDENTE disparada pelo backend!');
-                        // Captura o canvas do mapa e envia para o backend notificar via Telegram
+                        // Captura o SVG do mapa e envia para o backend notificar via Telegram
                         setTimeout(async () => {
                             try {
                                 console.log('[Atendente] Iniciando processo de envio de alerta...');
                                 let fotoBase64 = null;
                                 try {
-                                    // Tenta capturar o canvas do mapa (se estiver visível)
-                                    const mapaCanvas = document.querySelector('#map-canvas canvas') ||
-                                                       document.querySelector('canvas');
-                                    if (mapaCanvas) {
-                                        fotoBase64 = mapaCanvas.toDataURL('image/png');
-                                        console.log('[Atendente] Canvas capturado com sucesso.');
+                                    fotoBase64 = await capturarMapaParaTelegram();
+                                    if (fotoBase64) {
+                                        console.log('[Atendente] Mapa capturado com sucesso.');
                                     }
                                 } catch (canvasErr) {
-                                    console.warn('[Atendente] Falha ao ler pixels do canvas (ignorado para enviar apenas texto):', canvasErr);
+                                    console.warn('[Atendente] Falha ao capturar o mapa (sera enviado apenas texto):', canvasErr);
                                 }
 
                                 const urlDestino = `${BACKEND_URL}/chamar-atendente`;

@@ -142,8 +142,11 @@ def health():
         "status": "ok",
         "db": "ok",
         "produtos": total_produtos,
+        "groq_key_configured": bool(os.getenv("GROQ_API_KEY")),
+        "groq_key_length": len(os.getenv("GROQ_API_KEY") or ""),
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+
 
 
 @app.get("/perguntar-ia")

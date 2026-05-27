@@ -300,6 +300,24 @@ def is_pedido_mapa(texto_baixo):
         "mostre",
         "mostrar",
         "me mostra",
+        "me mostre",
+        "quero ver",
+        "ver",
+        "ok",
+        "ta",
+        "vai",
+        "vamos",
+        "bora",
+        "perfeito",
+        "otimo",
+        "gostei",
+        "gostei sim",
+        "adorei",
+        "legal",
+        "beleza",
+        "show",
+        "certo",
+        "entendido",
     }
     return (
         texto in afirmacoes
@@ -308,14 +326,43 @@ def is_pedido_mapa(texto_baixo):
         or "caminho" in texto
         or "corredor" in texto
         or "localizacao" in texto
+        or "me leva" in texto
+        or "me indica" in texto
     )
+
+
+def is_confirmacao_positiva(texto_baixo):
+    """Detecta respostas afirmativas curtas que, combinadas com produtos na memória, indicam que o usuário quer ver o mapa."""
+    texto = normalizar_texto(texto_baixo).replace(",", "").replace(".", "").replace("?", "").strip()
+    afirmacoes = {
+        "sim", "sim por favor", "por favor", "pode", "pode sim", "quero", "quero sim",
+        "claro", "ok", "ta", "vai", "vamos", "bora", "perfeito", "otimo", "gostei",
+        "gostei sim", "adorei", "legal", "beleza", "show", "certo", "entendido",
+        "quero ver", "me mostra", "me mostre", "mostra", "mostre", "ver",
+    }
+    return texto in afirmacoes
 
 
 def is_pedido_resumo_rotas(texto_baixo):
     texto = normalizar_texto(texto_baixo)
-    tem_rota = any(palavra in texto for palavra in ["rota", "rotas", "mapa", "lugares", "secoes", "sessao", "resumo"])
-    tem_total = any(palavra in texto for palavra in ["todos", "todas", "tudo", "geral", "resumo", "final", "falamos", "vimos", "conversamos"])
-    return tem_rota and tem_total
+    # Detecta pedidos explícitos de rotas/resumo com múltiplos produtos
+    tem_rota = any(palavra in texto for palavra in [
+        "rota", "rotas", "mapa", "lugares", "secoes", "sessao", "resumo",
+        "ver tudo", "ver todos", "todos os lugares", "todas as secoes",
+    ])
+    tem_total = any(palavra in texto for palavra in [
+        "todos", "todas", "tudo", "geral", "resumo", "final",
+        "falamos", "vimos", "conversamos", "mencionados", "vistos",
+    ])
+    # Detecta frases naturais como "onde ficam todos", "me mostra tudo no mapa"
+    frases_naturais = [
+        "onde ficam", "onde estao", "onde sao", "onde fica tudo",
+        "me mostra tudo", "mostrar tudo", "ver tudo no mapa",
+        "todos no mapa", "tudo no mapa", "mapa de tudo",
+        "quero ver todos", "quero ver tudo", "onde tem tudo",
+        "como chegar em todos", "caminho de todos",
+    ]
+    return (tem_rota and tem_total) or any(frase in texto for frase in frases_naturais)
 
 
 def produtos_por_secao(produtos):
@@ -473,11 +520,37 @@ async def pipeline_processar(pergunta, idioma="pt"):
         produtos_rota = produtos_por_secao(memoria["produtos_mencionados"].values())
         if produtos_rota:
             if idioma == "pt":
-                resposta_texto = f"Montei um resumo com {len(produtos_rota)} rota(s) para as seções dos produtos que vimos."
+                resposta_texto = f"Claro! Aqui estão as {len(produtos_rota)} seção(ões) dos produtos que conversamos."
             else:
-                resposta_texto = f"I prepared a summary with {len(produtos_rota)} route(s) for the sections we discussed."
+                resposta_texto = f"Sure! Here are the {len(produtos_rota)} section(s) for the products we discussed."
             memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
             return {"resposta": resposta_texto, "resultados": produtos_rota, "acao": "ABRIR_ROTAS"}
+
+    # Detecção de confirmação positiva contextual: usuário responde afirmativamente a uma sugestão de mapa
+    # Ex: "sim", "perfeito", "gostei", "quero ver" — quando já tem produtos na memória
+    ultima_resposta_ia = ""
+    if memoria["historico_conversas"]:
+        # Pega a última mensagem do assistente (antes da atual do usuário)
+        msgs_assistente = [m for m in memoria["historico_conversas"][:-1] if m["role"] == "assistant"]
+        if msgs_assistente:
+            ultima_resposta_ia = normalizar_texto(msgs_assistente[-1]["content"])
+
+    ia_ofereceu_mapa = any(termo in ultima_resposta_ia for termo in [
+        "mapa", "localizacao", "caminho", "corredor", "mostrar", "onde", "rota"
+    ])
+
+    if is_confirmacao_positiva(texto_baixo) and ia_ofereceu_mapa and produtos_memoria:
+        todos_mencionados = list(memoria["produtos_mencionados"].values())
+        pool_mapa = todos_mencionados if todos_mencionados else produtos_memoria
+        produtos_rota = produtos_por_secao(pool_mapa)
+        if len(produtos_rota) > 1:
+            resposta_texto = f"Ótimo! Mostrando {len(produtos_rota)} rotas no mapa." if idioma == "pt" else f"Great! Showing {len(produtos_rota)} routes on the map."
+            memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
+            return {"resposta": resposta_texto, "resultados": produtos_rota, "acao": "ABRIR_ROTAS"}
+        produto_mapa = produtos_rota[0] if produtos_rota else produtos_memoria[0]
+        resposta_texto = "Ótimo! Mostrando o caminho no mapa." if idioma == "pt" else "Great! Showing the route on the map."
+        memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
+        return {"resposta": resposta_texto, "resultados": [produto_mapa], "acao": "ABRIR_MAPA"}
 
     if is_pedido_catalogo_geral(texto_baixo):
         return await responder_catalogo_geral(pergunta, idioma)
@@ -494,7 +567,13 @@ async def pipeline_processar(pergunta, idioma="pt"):
         return {"resposta": "", "resultados": [], "acao": "ENCERRAR"}
 
     if produtos_memoria and (intencao == "IR_PARA_MAPA" or is_pedido_mapa(texto_baixo)):
+        # Usa todos os produtos já mencionados na sessão, não só os últimos
+        todos_mencionados = list(memoria["produtos_mencionados"].values())
+        pool_mapa = todos_mencionados if todos_mencionados else produtos_memoria
         produtos_mapa = selecionar_produtos_para_mapa(texto_baixo, produtos_memoria)
+        # Se a frase é genérica/afirmativa, mostra todas as seções da sessão
+        if is_confirmacao_positiva(texto_baixo) or is_pedido_resumo_rotas(texto_baixo):
+            produtos_mapa = pool_mapa
         produtos_rota = produtos_por_secao(produtos_mapa)
         if len(produtos_rota) > 1:
             resposta_texto = f"Mostrando {len(produtos_rota)} rotas no mapa." if idioma == "pt" else f"Showing {len(produtos_rota)} routes on the map."

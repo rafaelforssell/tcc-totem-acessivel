@@ -585,6 +585,34 @@ async def pipeline_processar(pergunta, idioma="pt"):
         memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
         return {"resposta": resposta_texto, "resultados": [produto_mapa], "acao": "ABRIR_MAPA"}
 
+    # Se o usuário pediu explicitamente um mapa e citou um produto na mesma frase
+    if is_pedido_mapa(texto_baixo):
+        palavras_busca = extrair_palavras_busca(texto_baixo)
+        termos_excluir = {"mapa", "localizacao", "caminho", "onde", "fica", "ficar", "como", "chegar", "ir", "para", "sessao", "corredor", "ver", "mostra", "mostrar", "me", "rotas", "rota"}
+        palavras_filtradas = [p for p in palavras_busca if p not in termos_excluir]
+        
+        resultados = buscar_produtos_sql(palavras_filtradas) if palavras_filtradas else []
+        if resultados:
+            disponiveis = [p for p in resultados if not p.get("_esgotado")]
+            if disponiveis:
+                memoria["ultimos_produtos"] = disponiveis[:3]
+                memoria["assunto_ativo"] = "produto"
+                for p in disponiveis[:3]:
+                    memoria["produtos_mencionados"][p["id"]] = p
+                
+                contexto = "Produtos encontrados para mostrar no mapa:\n" + "\n---\n".join(
+                    [formatar_produto_para_contexto(p) for p in disponiveis[:3]]
+                )
+                resposta = await perguntar_llm(
+                    pergunta,
+                    contexto_produtos=contexto,
+                    idioma=idioma,
+                    historico=memoria["historico_conversas"][:-1],
+                    todos_produtos=list(memoria["produtos_mencionados"].values())
+                )
+                memoria["historico_conversas"].append({"role": "assistant", "content": resposta})
+                return {"resposta": resposta, "resultados": disponiveis[:3], "acao": "ABRIR_MAPA"}
+
     if is_pedido_catalogo_geral(texto_baixo):
         return await responder_catalogo_geral(pergunta, idioma)
 
@@ -666,8 +694,8 @@ async def pipeline_processar(pergunta, idioma="pt"):
                 historico=memoria["historico_conversas"][:-1],
                 todos_produtos=todos_prods
             )
-            memoria["historico_conversas"].append({"role": "assistant", "content": resposta})
-            return {"resposta": resposta, "resultados": disponiveis[:3], "acao": "MOSTRAR_PRODUTOS"}
+            acao_final = "ABRIR_MAPA" if is_pedido_mapa(texto_baixo) else "MOSTRAR_PRODUTOS"
+            return {"resposta": resposta, "resultados": disponiveis[:3], "acao": acao_final}
 
 
         memoria["ultimos_produtos"] = []

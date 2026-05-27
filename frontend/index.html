@@ -1093,11 +1093,15 @@
                         setTimeout(async () => {
                             try {
                                 let fotoBase64 = null;
-                                // Tenta capturar o canvas do mapa (se estiver visível)
-                                const mapaCanvas = document.querySelector('#map-canvas canvas') ||
-                                                   document.querySelector('canvas');
-                                if (mapaCanvas) {
-                                    fotoBase64 = mapaCanvas.toDataURL('image/png');
+                                try {
+                                    // Tenta capturar o canvas do mapa (se estiver visível)
+                                    const mapaCanvas = document.querySelector('#map-canvas canvas') ||
+                                                       document.querySelector('canvas');
+                                    if (mapaCanvas) {
+                                        fotoBase64 = mapaCanvas.toDataURL('image/png');
+                                    }
+                                } catch (canvasErr) {
+                                    console.warn('[Atendente] Falha ao ler pixels do canvas (ignorado para enviar apenas texto):', canvasErr);
                                 }
 
                                 await fetch(`${BACKEND_URL}/chamar-atendente`, {
@@ -1110,7 +1114,7 @@
                                 });
                                 console.log('[Atendente] Notificação enviada via Telegram.');
                             } catch (err) {
-                                console.error('[Atendente] Erro ao notificar:', err);
+                                console.error('[Atendente] Erro ao notificar atendente:', err);
                             }
                         }, 800);
                     }

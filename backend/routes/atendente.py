@@ -27,4 +27,6 @@ async def chamar_atendente(body: ChamarAtendenteBody):
         "ok": resultado.get("ok", False),
         "modo": resultado.get("modo", "nenhum"),
         "mensagem": "Atendente notificado com sucesso!" if resultado.get("ok") else "Falha ao notificar atendente.",
+        "erro": resultado.get("erro"),
     }
+

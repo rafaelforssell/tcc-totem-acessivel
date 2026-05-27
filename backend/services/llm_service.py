@@ -89,7 +89,32 @@ REGRAS DE INTENÇÃO:
             return json.loads(content)
     except Exception as e:
         print("Erro no classificar_intencao:", e)
+        # Fallback local baseado em regras simples se a API falhar ou der Rate Limit (429)
+        texto = pergunta.lower()
+        
+        # Se for encerramento
+        if any(term in texto for term in ["tchau", "obrigado", "obrigada", "valeu", "encerrar", "ate logo"]):
+            return {"intencao": "ENCERRAR", "palavras_chave": []}
+            
+        # Se for pedido de mapa ou localização
+        if any(term in texto for term in ["mapa", "onde fica", "onde e", "caminho", "corredor", "localizacao"]):
+            return {"intencao": "IR_PARA_MAPA", "palavras_chave": []}
+            
+        # Extrai palavras e remove stopwords para busca
+        stopwords = {
+            "eu", "quero", "queria", "saber", "mais", "sobre", "tem", "voce", "roupa", "roupas",
+            "qual", "quais", "uma", "um", "de", "da", "do", "comprar", "buscar", "procurar"
+        }
+        palavras_pergunta = [w.strip(".,?!") for w in texto.split()]
+        palavras_chave = [w for w in palavras_pergunta if len(w) > 2 and w not in stopwords]
+        
+        if palavras_chave:
+            # Mapeamento simples de sinônimo "short" -> "bermuda" para o banco
+            palavras_final = ["bermuda" if p in ["short", "shorts"] else p for p in palavras_chave]
+            return {"intencao": "NOVA_BUSCA", "palavras_chave": palavras_final}
+            
         return {"intencao": "OUTROS", "palavras_chave": []}
+
 
 
 async def perguntar_llm(pergunta, contexto_produtos=None, idioma="pt", historico=None, todos_produtos=None):

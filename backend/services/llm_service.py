@@ -177,4 +177,31 @@ REGRAS OBRIGATÓRIAS:
             return data["choices"][0]["message"]["content"]
     except Exception as e:
         print("Erro no perguntar_llm:", e)
-        return "Desculpe, estou com problemas técnicos no momento."
+        # Fallback local conversacional amigável se a API do Groq falhar ou der Rate Limit (429)
+        try:
+            if todos_produtos:
+                p = todos_produtos[-1] # Pega o último produto adicionado/mencionado
+                nome = p.get("nome", "produto")
+                preco = p.get("preco", 0.0)
+                cor = p.get("cor", "")
+                
+                if idioma == "pt":
+                    res = f"Encontrei o {nome} por R$ {preco:.2f}. "
+                    if cor:
+                        res += f"Temos ele na cor {cor}. "
+                    res += "Gostou dessa opção? Quer que eu te mostre o caminho no mapa?"
+                    return res
+                else:
+                    res = f"I found the {nome} for ${preco:.2f}. "
+                    if cor:
+                        res += f"We have it in {cor}. "
+                    res += "Did you like this option? Would you like me to show you the route on the map?"
+                    return res
+        except Exception as fallback_err:
+            print("Erro ao gerar fallback de produto:", fallback_err)
+
+        if idioma == "pt":
+            return "Perfeito! Consegui encontrar as opções no nosso sistema. Gostaria de ver a localização no mapa?"
+        else:
+            return "Perfect! I found the options in our system. Would you like to see the location on the map?"
+

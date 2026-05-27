@@ -7,18 +7,39 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ENV_PATH = os.path.join(BASE_DIR, "..", ".env")
 load_dotenv(ENV_PATH)
 
-API_KEY = os.getenv("GROQ_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+
+
+def obter_config_llm():
+    """Define a URL, headers e modelo conforme as chaves disponíveis."""
+    if GROQ_API_KEY:
+        return {
+            "url": "https://api.groq.com/openai/v1/chat/completions",
+            "headers": {
+                "Authorization": f"Bearer {GROQ_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            "model": "llama-3.3-70b-versatile"
+        }
+    elif OPENROUTER_API_KEY:
+        return {
+            "url": "https://openrouter.ai/api/v1/chat/completions",
+            "headers": {
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://github.com/yeagerdavo/tcc-totem-acessivel",
+                "X-Title": "Totem Acessivel"
+            },
+            "model": "google/gemini-2.5-flash"
+        }
+    return None
 
 
 async def classificar_intencao(pergunta, idioma="pt"):
-    if not API_KEY:
+    config = obter_config_llm()
+    if not config:
         return {"intencao": "OUTROS", "palavras_chave": []}
-
-    url = "https://api.groq.com/openai/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json"
-    }
 
     prompt_sistema = """
 Você é o classificador de intenções de um totem de loja de roupas.
@@ -46,19 +67,21 @@ REGRAS DE INTENÇÃO:
 """
 
     payload = {
-        "model": "llama-3.3-70b-versatile",
+        "model": config["model"],
         "messages": [
             {"role": "system", "content": prompt_sistema},
             {"role": "user", "content": pergunta}
         ],
         "temperature": 0.0,
-        "max_tokens": 100,
-        "response_format": {"type": "json_object"}
+        "max_tokens": 100
     }
+    
+    if "groq" in config["url"]:
+        payload["response_format"] = {"type": "json_object"}
 
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.post(url, headers=headers, json=payload, timeout=20.0)
+            response = await client.post(config["url"], headers=config["headers"], json=payload, timeout=20.0)
             response.raise_for_status()
             data = response.json()
             content = data["choices"][0]["message"]["content"]
@@ -70,15 +93,9 @@ REGRAS DE INTENÇÃO:
 
 
 async def perguntar_llm(pergunta, contexto_produtos=None, idioma="pt", historico=None, todos_produtos=None):
-    if not API_KEY:
+    config = obter_config_llm()
+    if not config:
         return "Desculpe, a chave da IA nao esta configurada no momento."
-
-    url = "https://api.groq.com/openai/v1/chat/completions"
-
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json"
-    }
 
     if contexto_produtos:
         info_produtos = f"DADOS DO BANCO DE DADOS (use APENAS estes para responder):\n{contexto_produtos}"
@@ -115,14 +132,13 @@ REGRAS OBRIGATÓRIAS:
     messages = [{"role": "system", "content": prompt_sistema}]
     
     if historico:
-        # Pega as últimas 10 interações para manter o contexto curto e otimizado
         for msg in historico[-10:]:
             messages.append({"role": msg["role"], "content": msg["content"]})
             
     messages.append({"role": "user", "content": pergunta})
 
     payload = {
-        "model": "llama-3.3-70b-versatile",
+        "model": config["model"],
         "messages": messages,
         "temperature": 0.0,
         "max_tokens": 150
@@ -130,7 +146,7 @@ REGRAS OBRIGATÓRIAS:
 
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.post(url, headers=headers, json=payload, timeout=20.0)
+            response = await client.post(config["url"], headers=config["headers"], json=payload, timeout=20.0)
             response.raise_for_status()
             data = response.json()
             return data["choices"][0]["message"]["content"]

@@ -104,7 +104,9 @@ def token_match(texto, token):
     variantes = {token}
     if len(token) > 3 and token.endswith("s"):
         variantes.add(token[:-1])
-    return any(variante in texto for variante in variantes)
+    # Busca por palavra inteira (evita "vestido" bater em "revestido" ou na descricao de outro produto)
+    palavras = set(texto.replace("-", " ").split())
+    return any(variante in palavras for variante in variantes)
 
 
 def detectar_genero(tokens):
@@ -140,6 +142,9 @@ def limpar_tokens_busca(palavras_chave):
         "short": "bermuda",
         "shorts": "bermuda",
         "bermudao": "bermuda",
+        "bole": "bone",    # typo comum de "boné"
+        "tenis": "tenis",  # garante normalizacao
+        "bone": "bone",
     }
     return [
         sinonimos.get(normalizar_texto(palavra.strip(".,?!")), normalizar_texto(palavra.strip(".,?!")))

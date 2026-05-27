@@ -1076,8 +1076,15 @@
                     let encerrarAposAudio = false;
                     let abrirMapaAposAudio = false;
                     if (data.acao === "ABRIR_MAPA") {
+                        abrirMapaAposAudio = true;
                         if (data.resultados && data.resultados.length > 0) {
                             loadProductData(data.resultados[0]);
+                        }
+                    } else if (data.acao === "ABRIR_ROTAS") {
+                        abrirMapaAposAudio = true;
+                        if (data.resultados && data.resultados.length > 0) {
+                            loadProductData(data.resultados[0]);
+                            updateStoreMap(data.resultados[0].corredor);
                         }
                     }
 
@@ -1121,6 +1128,7 @@
                                 voltarDoChat();
                             } else if (abrirMapaAposAudio) {
                                 encerrarSessao();
+                                navigateTo('screen3');
                             } else if (sessaoAtiva) {
                                 if (statusEl) statusEl.innerText = "Ouvindo";
                                 if (indicatorEl) indicatorEl.classList.add("listening-indicator");
@@ -1134,6 +1142,7 @@
                                 voltarDoChat();
                             } else if (abrirMapaAposAudio) {
                                 encerrarSessao();
+                                navigateTo('screen3');
                             } else if (sessaoAtiva) {
                                 if (statusEl) statusEl.innerText = "Ouvindo";
                                 if (indicatorEl) indicatorEl.classList.add("listening-indicator");
@@ -1147,12 +1156,14 @@
                             voltarDoChat();
                         } else if (abrirMapaAposAudio) {
                             encerrarSessao();
+                            navigateTo('screen3');
                         } else if (sessaoAtiva) {
                             if (statusEl) statusEl.innerText = "Ouvindo";
                             if (indicatorEl) indicatorEl.classList.add("listening-indicator");
                             conversar();
                         }
                     }
+
 
                 } catch (error) {
                     console.error(error);

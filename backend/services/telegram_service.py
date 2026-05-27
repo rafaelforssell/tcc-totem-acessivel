@@ -46,7 +46,7 @@ async def enviar_alerta_atendente(foto_base64: str | None = None, totem_id: str 
 
     async with httpx.AsyncClient(timeout=15.0) as client:
         # Se tem foto do mapa, envia como foto com legenda
-        if foto_base64:
+        if foto_base64 and str(foto_base64).strip() and str(foto_base64).lower() not in ("null", "none", "undefined"):
             try:
                 # Remove prefixo data:image/...;base64, se presente
                 if "," in foto_base64:

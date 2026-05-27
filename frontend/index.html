@@ -1242,13 +1242,19 @@
 
                     if (data.acao === "CHAMAR_ATENDENTE") {
                         console.log('[Atendente] Ação CHAMAR_ATENDENTE disparada pelo backend!');
+                        const produtosAtendente = (data.resultados && data.resultados.length > 0)
+                            ? data.resultados.map(formatarProdutoParaAtendente).filter(Boolean)
+                            : produtosNotificacaoAtendente;
+                        if (produtosAtendente.length > 0) {
+                            produtosNotificacaoAtendente = produtosAtendente;
+                        }
                         // Captura o SVG do mapa e envia para o backend notificar via Telegram
                         setTimeout(async () => {
                             try {
                                 console.log('[Atendente] Iniciando processo de envio de alerta...');
                                 let fotoBase64 = null;
                                 try {
-                                    fotoBase64 = await capturarMapaParaTelegram(produtosNotificacaoAtendente);
+                                    fotoBase64 = await capturarMapaParaTelegram(produtosAtendente);
                                     if (fotoBase64) {
                                         console.log('[Atendente] Mapa capturado com sucesso.');
                                     }
@@ -1265,7 +1271,7 @@
                                     body: JSON.stringify({
                                         foto_base64: fotoBase64,
                                         totem_id: 'Totem 1',
-                                        produtos: produtosNotificacaoAtendente
+                                        produtos: produtosAtendente
                                     })
                                 });
                                 

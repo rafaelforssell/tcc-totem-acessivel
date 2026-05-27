@@ -182,9 +182,41 @@ def buscar_produtos_sql(palavras_chave):
             return all(token_match(texto, token) for token in tokens_sem_genero)
         return any(token_match(texto, token) for token in tokens_sem_genero)
 
+    def selecionar_por_token(produtos_base):
+        escolhidos = []
+        ids_escolhidos = set()
+        secoes_usadas = set()
+
+        for token in tokens_sem_genero:
+            candidatos = [p for p in produtos_base if token_match(texto_produto(p), token)]
+            if not candidatos:
+                continue
+
+            candidatos.sort(
+                key=lambda p: (
+                    p.get("corredor") in secoes_usadas,
+                    normalizar_texto(obter_campo(p, "nome")),
+                )
+            )
+            escolhido = candidatos[0]
+            produto_id = obter_campo(escolhido, "id", 0)
+            if produto_id in ids_escolhidos:
+                continue
+
+            escolhidos.append(escolhido)
+            ids_escolhidos.add(produto_id)
+            secoes_usadas.add(obter_campo(escolhido, "corredor", 10))
+
+        return escolhidos
+
     # Separa produtos com e sem estoque
     com_estoque = [p for p in todos_produtos_raw if (p.get("estoque") or 0) > 0]
     sem_estoque = [p for p in todos_produtos_raw if (p.get("estoque") or 0) <= 0]
+
+    if len(tokens_sem_genero) > 1:
+        multi_resultados = selecionar_por_token(com_estoque)
+        if len(multi_resultados) >= 2:
+            return [formatar_produto(p) for p in multi_resultados]
 
     # Busca com estoque primeiro
     produtos = [p for p in com_estoque if produto_valido(p, exigir_todos=True)]
@@ -531,13 +563,14 @@ async def pipeline_processar(pergunta, idioma="pt"):
 
     # Verifica se o usuário está pedindo um atendente humano
     if is_pedido_atendente(texto_baixo):
+        produtos_alerta = list(memoria["produtos_mencionados"].values())
         resposta_texto = (
             "Claro! Estou chamando um atendente para te ajudar. Em instantes alguém virá até você."
             if idioma == "pt"
             else "Of course! I'm calling an attendant to help you. Someone will be with you shortly."
         )
         memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
-        return {"resposta": resposta_texto, "resultados": [], "acao": "CHAMAR_ATENDENTE"}
+        return {"resposta": resposta_texto, "resultados": produtos_alerta, "acao": "CHAMAR_ATENDENTE"}
 
     if is_pergunta_pagamento(texto_baixo):
         resposta_texto = (

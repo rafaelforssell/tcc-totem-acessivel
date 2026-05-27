@@ -608,6 +608,7 @@
         let previousScreenId = 'screen1';
         let currentScreenId = 'screen1';
         let windowResults = [];
+        let produtosNotificacaoAtendente = [];
         const DEFAULT_PRODUCT_IMAGE = "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=500&q=80";
 
         // Lightbox & Pause state variables
@@ -699,6 +700,30 @@
             }
         }
 
+        function formatarProdutoParaAtendente(produto) {
+            if (!produto || !produto.nome) return null;
+            const section = getProductSection(produto);
+            return {
+                nome: produto.nome,
+                setor: section?.label || produto.setor || produto.categoria || "",
+                corredor: section?.number || produto.corredor || "",
+            };
+        }
+
+        function atualizarProdutosNotificacao(produtos = []) {
+            const vistos = new Set();
+            produtosNotificacaoAtendente = produtos
+                .map(formatarProdutoParaAtendente)
+                .filter(produto => {
+                    if (!produto) return false;
+                    const chave = `${produto.nome}|${produto.corredor}|${produto.setor}`;
+                    if (vistos.has(chave)) return false;
+                    vistos.add(chave);
+                    return true;
+                })
+                .slice(0, 3);
+        }
+
         function getProductMainImage(product) {
             if (!product) return DEFAULT_PRODUCT_IMAGE;
             if (product.imagem) return resolveBackendUrl(product.imagem);
@@ -762,6 +787,10 @@
         // ====== INTEGRAÇÃO DE PRODUTO ======
         function loadProductData(data) {
             if (!data) return;
+            const produtoAtual = formatarProdutoParaAtendente(data);
+            if (produtoAtual) {
+                atualizarProdutosNotificacao([produtoAtual, ...windowResults]);
+            }
 
             // data.nome, data.preco, data.corredor, data.descricao, data.imagem (se houver)
             if (data.nome) {
@@ -914,6 +943,7 @@
 
                 if (results && results.length > 0 && acao === "MOSTRAR_PRODUTOS") {
                     windowResults = results;
+                    atualizarProdutosNotificacao(results);
                     const cards = document.createElement("div");
                     cards.className = "flex gap-4 mt-4 overflow-x-auto pb-2 chat-scroll";
 
@@ -1062,6 +1092,8 @@
                     "Olá! Sou o assistente virtual do Kiosk. Como posso ajudar você hoje?" :
                     "Hello! I'm the Kiosk virtual assistant. How can I help you today?";
 
+                windowResults = [];
+                produtosNotificacaoAtendente = [];
                 appendMessage(welcomeText, "totem");
                 iniciarSessao();
             }
@@ -1160,7 +1192,8 @@
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({
                                         foto_base64: fotoBase64,
-                                        totem_id: 'Totem 1'
+                                        totem_id: 'Totem 1',
+                                        produtos: produtosNotificacaoAtendente
                                     })
                                 });
                                 

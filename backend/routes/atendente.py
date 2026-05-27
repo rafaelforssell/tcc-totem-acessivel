@@ -9,9 +9,16 @@ from services.telegram_service import enviar_alerta_atendente
 router = APIRouter(tags=["Atendente"])
 
 
+class ProdutoAtendenteBody(BaseModel):
+    nome: str
+    setor: str | None = None
+    corredor: str | int | None = None
+
+
 class ChamarAtendenteBody(BaseModel):
     foto_base64: str | None = None
     totem_id: str = "Totem 1"
+    produtos: list[ProdutoAtendenteBody] = []
 
 
 @router.post("/chamar-atendente")
@@ -22,6 +29,7 @@ async def chamar_atendente(body: ChamarAtendenteBody):
     resultado = await enviar_alerta_atendente(
         foto_base64=body.foto_base64,
         totem_id=body.totem_id,
+        produtos=body.produtos,
     )
     return {
         "ok": resultado.get("ok", False),

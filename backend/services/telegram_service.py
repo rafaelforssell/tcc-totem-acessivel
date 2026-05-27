@@ -43,6 +43,7 @@ print(f"[Telegram] Chat ID configurado: {'SIM' if chat_id_configured else 'NAO'}
 async def enviar_alerta_atendente(
     foto_base64: str | None = None,
     totem_id: str = "Totem 1",
+    produtos: list | None = None,
 ) -> dict:
     """
     Envia um alerta no Telegram quando um cliente pede um atendente.
@@ -55,12 +56,37 @@ async def enviar_alerta_atendente(
     telegram_api = _build_telegram_api(telegram_bot_token)
     now_text = datetime.now().strftime("%H:%M:%S")
     totem_id_safe = str(totem_id).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    produtos = produtos or []
+
+    linhas_produtos = []
+    for produto in produtos[:3]:
+        if hasattr(produto, "model_dump"):
+            produto = produto.model_dump()
+        nome = str(produto.get("nome", "")).strip() if isinstance(produto, dict) else ""
+        setor = str(produto.get("setor", "")).strip() if isinstance(produto, dict) else ""
+        corredor = str(produto.get("corredor", "")).strip() if isinstance(produto, dict) else ""
+        if not nome:
+            continue
+        detalhes = []
+        if setor:
+            detalhes.append(setor)
+        if corredor:
+            detalhes.append(f"corredor {corredor}")
+        linha = f"• {nome}"
+        if detalhes:
+            linha += f" ({', '.join(detalhes)})"
+        linhas_produtos.append(linha.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
+
+    bloco_produtos = ""
+    if linhas_produtos:
+        bloco_produtos = "\n<b>Produtos de interesse:</b>\n" + "\n".join(linhas_produtos)
 
     texto = (
         "<b>Cliente precisando de ajuda</b>\n\n"
         f"<b>Local:</b> {totem_id_safe}\n"
         f"<b>Horario:</b> {now_text}\n"
         "<b>Mapa:</b> foto em anexo"
+        f"{bloco_produtos}"
     )
 
     async with httpx.AsyncClient(timeout=15.0) as client:

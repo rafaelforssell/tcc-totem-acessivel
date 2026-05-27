@@ -1,7 +1,7 @@
 import asyncio
 import httpx
 
-BOT_TOKEN = "8974271580:AAEonkpmPhCvayhiI96jG26F1CKZW5gL8ZE"
+BOT_TOKEN = "8974271580:AAH6UrjP9S8c6H4hk20jTd3Yww_sw3mcUFA"
 CHAT_ID = "8917844351"
 
 async def test():

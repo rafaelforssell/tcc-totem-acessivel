@@ -15,6 +15,9 @@ load_dotenv(ENV_PATH)
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "").strip()
 
+print(f"[Telegram] Token configurado: {'SIM' if TELEGRAM_BOT_TOKEN else 'NÃO'}")
+print(f"[Telegram] Chat ID: {'SIM' if TELEGRAM_CHAT_ID else 'NÃO'}")
+
 TELEGRAM_API = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
 
 

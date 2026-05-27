@@ -177,7 +177,25 @@ REGRAS OBRIGATÓRIAS:
             return data["choices"][0]["message"]["content"]
     except Exception as e:
         print("Erro no perguntar_llm:", e)
-        # Fallback local conversacional amigável se a API do Groq falhar ou der Rate Limit (429)
+        # Fallback local conversacional inteligente
+        texto = pergunta.lower()
+        
+        # 1. Se for conversa casual, dúvida geral ou saudação
+        if (contexto_produtos and "Conversa casual" in contexto_produtos) or any(w in texto for w in ["ola", "oi", "bom dia", "boa tarde", "boa noite"]):
+            if "boa noite" in texto:
+                return "Boa noite! Seja bem-vindo à nossa loja. Como posso ajudar você hoje?"
+            elif "boa tarde" in texto:
+                return "Boa tarde! Seja bem-vindo à nossa loja. Como posso ajudar você hoje?"
+            elif "bom dia" in texto:
+                return "Bom dia! Seja bem-vindo à nossa loja. Como posso ajudar você hoje?"
+            else:
+                return "Olá! Seja bem-vindo à nossa loja. Como posso ajudar você hoje?"
+
+        # 2. Se for encerramento/agradecimento
+        if any(w in texto for w in ["tchau", "obrigado", "obrigada", "valeu", "encerrar", "obrigado pelo seu tempo"]):
+            return "De nada! Se precisar de mais alguma ajuda, estarei por aqui. Tenha um ótimo dia!"
+
+        # 3. Se for busca de produtos com resultados reais
         try:
             if todos_produtos:
                 p = todos_produtos[-1] # Pega o último produto adicionado/mencionado
@@ -189,19 +207,21 @@ REGRAS OBRIGATÓRIAS:
                     res = f"Encontrei o {nome} por R$ {preco:.2f}. "
                     if cor:
                         res += f"Temos ele na cor {cor}. "
-                    res += "Gostou dessa opção? Quer que eu te mostre o caminho no mapa?"
+                    res += "Gostou das opções? Se quiser, posso te mostrar a localização no mapa."
                     return res
                 else:
                     res = f"I found the {nome} for ${preco:.2f}. "
                     if cor:
                         res += f"We have it in {cor}. "
-                    res += "Did you like this option? Would you like me to show you the route on the map?"
+                    res += "Did you like this option? If you'd like, I can show you the route on the map."
                     return res
         except Exception as fallback_err:
             print("Erro ao gerar fallback de produto:", fallback_err)
 
+        # 4. Caso genérico simples
         if idioma == "pt":
-            return "Perfeito! Consegui encontrar as opções no nosso sistema. Gostaria de ver a localização no mapa?"
+            return "Como posso ajudar você hoje?"
         else:
-            return "Perfect! I found the options in our system. Would you like to see the location on the map?"
+            return "How can I help you today?"
+
 

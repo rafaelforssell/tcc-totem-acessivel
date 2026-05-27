@@ -59,7 +59,7 @@ async def enviar_alerta_atendente(
     produtos = produtos or []
 
     linhas_produtos = []
-    for produto in produtos[:3]:
+    for produto in produtos[:6]:
         if hasattr(produto, "model_dump"):
             produto = produto.model_dump()
         nome = str(produto.get("nome", "")).strip() if isinstance(produto, dict) else ""
@@ -72,7 +72,7 @@ async def enviar_alerta_atendente(
             detalhes.append(setor)
         if corredor:
             detalhes.append(f"corredor {corredor}")
-        linha = f"• {nome}"
+        linha = f"- {nome}"
         if detalhes:
             linha += f" ({', '.join(detalhes)})"
         linhas_produtos.append(linha.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))

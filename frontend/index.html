@@ -710,9 +710,9 @@
             };
         }
 
-        function atualizarProdutosNotificacao(produtos = []) {
+        function mesclarProdutosNotificacao(produtos = []) {
             const vistos = new Set();
-            produtosNotificacaoAtendente = produtos
+            produtosNotificacaoAtendente = [...produtosNotificacaoAtendente, ...produtos]
                 .map(formatarProdutoParaAtendente)
                 .filter(produto => {
                     if (!produto) return false;
@@ -720,8 +720,7 @@
                     if (vistos.has(chave)) return false;
                     vistos.add(chave);
                     return true;
-                })
-                .slice(0, 3);
+                });
         }
 
         function getProductMainImage(product) {
@@ -789,7 +788,7 @@
             if (!data) return;
             const produtoAtual = formatarProdutoParaAtendente(data);
             if (produtoAtual) {
-                atualizarProdutosNotificacao([produtoAtual, ...windowResults]);
+                mesclarProdutosNotificacao([produtoAtual]);
             }
 
             // data.nome, data.preco, data.corredor, data.descricao, data.imagem (se houver)
@@ -853,26 +852,70 @@
             return audioCtxGlobal;
         }
 
-        async function capturarMapaParaTelegram() {
-            const svgOriginal = document.querySelector('#map-svg-container svg');
-            if (!svgOriginal) return null;
+        function criarSvgResumoRotas(produtos = []) {
+            const routes = [];
+            const seenSections = new Set();
+            produtos.forEach(product => {
+                const sectionNumber = parseInt(product.corredor);
+                if (!STORE_SECTIONS[sectionNumber] || seenSections.has(sectionNumber)) return;
+                seenSections.add(sectionNumber);
+                routes.push({
+                    productName: product.nome || "Produto",
+                    sectionNumber,
+                    section: STORE_SECTIONS[sectionNumber],
+                });
+            });
 
-            const svgClone = svgOriginal.cloneNode(true);
-            svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-            svgClone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
-            svgClone.setAttribute('width', '1000');
-            svgClone.setAttribute('height', '600');
+            routes.sort((a, b) => a.sectionNumber - b.sectionNumber);
+            const activeSections = new Set(routes.map(route => route.sectionNumber));
+            const getStroke = (num) => activeSections.has(num) ? 'stroke="#ffd700" stroke-width="4"' : 'stroke="#333" stroke-width="2"';
+            const getFill = (num) => activeSections.has(num) ? '#ffd700' : '#555';
+            const sectionRects = Object.entries(STORE_SECTIONS).map(([num, item]) => {
+                const x = item.x - 39;
+                return `<rect x="${x}" y="70" width="78" height="330" rx="4" ${getStroke(Number(num))} />`;
+            }).join("");
+            const sectionNumbers = Object.keys(STORE_SECTIONS).map(num => {
+                const item = STORE_SECTIONS[num];
+                return `<text x="${item.x}" y="48" fill="${getFill(Number(num))}">${num}</text>`;
+            }).join("");
+            const sectionLabels = Object.entries(STORE_SECTIONS).map(([num, item]) => {
+                const fill = activeSections.has(Number(num)) ? '#ffd700' : '#d4d4d8';
+                if (item.label === "Saias e Vestidos") {
+                    return `<text x="${item.x}" y="416" fill="${fill}"><tspan x="${item.x}" dy="0">Saias e</tspan><tspan x="${item.x}" dy="15">Vestidos</tspan></text>`;
+                }
+                return `<text x="${item.x}" y="424" fill="${fill}">${item.label}</text>`;
+            }).join("");
+            const routePaths = routes.map((route, index) => {
+                const y = 450 - index * 22;
+                const labelY = Math.max(92, 205 - index * 22);
+                return `
+                    <path d="M 125,480 L 125,${y} L ${route.section.x},${y} L ${route.section.x},220" fill="none" stroke="#FFD700" stroke-dasharray="15,10" stroke-width="5" opacity="${Math.max(0.45, 1 - index * 0.12)}" />
+                    <g transform="translate(${route.section.x}, 220)">
+                        <circle cx="0" cy="0" fill="#ef4444" r="13" stroke="#fff" stroke-width="3"></circle>
+                        <path d="M 0,0 L -9,-28 L 9,-28 Z" fill="#ef4444" />
+                    </g>
+                    <text x="${route.section.x}" y="${labelY}" fill="#FFD700" font-size="18" font-family="sans-serif" font-weight="bold" text-anchor="middle">Rota ${index + 1}</text>
+                `;
+            }).join("");
 
-            const fundo = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-            fundo.setAttribute('x', '0');
-            fundo.setAttribute('y', '0');
-            fundo.setAttribute('width', '1000');
-            fundo.setAttribute('height', '600');
-            fundo.setAttribute('fill', '#111111');
-            svgClone.insertBefore(fundo, svgClone.firstChild);
+            return `
+                <svg xmlns="http://www.w3.org/2000/svg" width="1000" height="600" viewBox="0 0 1000 600">
+                    <rect x="0" y="0" width="1000" height="600" fill="#111111" />
+                    <rect x="800" y="500" width="150" height="80" rx="8" fill="#1a1a1a" stroke="#444" stroke-width="2" />
+                    <text x="875" y="545" fill="#888" font-size="20" font-family="sans-serif" font-weight="bold" text-anchor="middle">CAIXAS</text>
+                    <rect x="50" y="500" width="150" height="80" rx="8" fill="#1a1a1a" stroke="#444" stroke-width="2" />
+                    <text x="125" y="545" fill="#888" font-size="20" font-family="sans-serif" font-weight="bold" text-anchor="middle">ENTRADA</text>
+                    <circle cx="125" cy="480" r="12" fill="#3b82f6" />
+                    <text x="125" y="455" fill="#3b82f6" font-size="14" font-family="sans-serif" font-weight="bold" text-anchor="middle">VOCE</text>
+                    <g fill="#131313" stroke-width="2">${sectionRects}</g>
+                    <g font-size="24" font-family="sans-serif" font-weight="bold" text-anchor="middle">${sectionNumbers}</g>
+                    <g font-size="13" font-family="sans-serif" font-weight="bold" text-anchor="middle">${sectionLabels}</g>
+                    ${routePaths}
+                </svg>
+            `;
+        }
 
-            const serializer = new XMLSerializer();
-            const svgString = serializer.serializeToString(svgClone);
+        async function gerarPngDeSvgString(svgString) {
             const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
             const blobUrl = URL.createObjectURL(svgBlob);
 
@@ -899,6 +942,33 @@
             } finally {
                 URL.revokeObjectURL(blobUrl);
             }
+        }
+
+        async function capturarMapaParaTelegram(produtos = []) {
+            if (produtos.length > 1) {
+                return gerarPngDeSvgString(criarSvgResumoRotas(produtos));
+            }
+
+            const svgOriginal = document.querySelector('#map-svg-container svg');
+            if (!svgOriginal) return null;
+
+            const svgClone = svgOriginal.cloneNode(true);
+            svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+            svgClone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+            svgClone.setAttribute('width', '1000');
+            svgClone.setAttribute('height', '600');
+
+            const fundo = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            fundo.setAttribute('x', '0');
+            fundo.setAttribute('y', '0');
+            fundo.setAttribute('width', '1000');
+            fundo.setAttribute('height', '600');
+            fundo.setAttribute('fill', '#111111');
+            svgClone.insertBefore(fundo, svgClone.firstChild);
+
+            const serializer = new XMLSerializer();
+            const svgString = serializer.serializeToString(svgClone);
+            return gerarPngDeSvgString(svgString);
         }
 
         function appendMessage(text, sender, results = [], acao = "NENHUM") {
@@ -943,7 +1013,7 @@
 
                 if (results && results.length > 0 && acao === "MOSTRAR_PRODUTOS") {
                     windowResults = results;
-                    atualizarProdutosNotificacao(results);
+                    mesclarProdutosNotificacao(results);
                     const cards = document.createElement("div");
                     cards.className = "flex gap-4 mt-4 overflow-x-auto pb-2 chat-scroll";
 
@@ -1158,11 +1228,13 @@
                     if (data.acao === "ABRIR_MAPA") {
                         abrirMapaAposAudio = true;
                         if (data.resultados && data.resultados.length > 0) {
+                            mesclarProdutosNotificacao(data.resultados);
                             loadProductData(data.resultados[0]);
                         }
                     } else if (data.acao === "ABRIR_ROTAS") {
                         abrirMapaAposAudio = true;
                         if (data.resultados && data.resultados.length > 0) {
+                            mesclarProdutosNotificacao(data.resultados);
                             loadProductData(data.resultados[0]);
                             updateStoreMap(data.resultados[0].corredor);
                         }
@@ -1176,7 +1248,7 @@
                                 console.log('[Atendente] Iniciando processo de envio de alerta...');
                                 let fotoBase64 = null;
                                 try {
-                                    fotoBase64 = await capturarMapaParaTelegram();
+                                    fotoBase64 = await capturarMapaParaTelegram(produtosNotificacaoAtendente);
                                     if (fotoBase64) {
                                         console.log('[Atendente] Mapa capturado com sucesso.');
                                     }

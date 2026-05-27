@@ -144,8 +144,12 @@ def health():
         "produtos": total_produtos,
         "groq_key_configured": bool(os.getenv("GROQ_API_KEY")),
         "groq_key_length": len(os.getenv("GROQ_API_KEY") or ""),
+        "telegram_token_configured": bool(os.getenv("TELEGRAM_BOT_TOKEN")),
+        "telegram_token_length": len(os.getenv("TELEGRAM_BOT_TOKEN") or ""),
+        "telegram_chat_configured": bool(os.getenv("TELEGRAM_CHAT_ID")),
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+
 
 
 

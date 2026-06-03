@@ -142,6 +142,99 @@ def test_pipeline_nao_trata_negacao_como_atributo_do_produto(monkeypatch):
     assert "nao encontrei bermuda nao" not in resposta["resposta"].lower()
 
 
+def test_pipeline_catalogo_por_genero_mostra_produtos_reais(monkeypatch):
+    async def fake_classificar_intencao(pergunta, idioma="pt"):
+        raise AssertionError("Nao deveria chamar a IA para catalogo por genero")
+
+    produtos = [
+        {
+            "id": 1,
+            "nome": "Camisa Polo Branca Masculina",
+            "categoria": "Roupa",
+            "tipo": "Camisa",
+            "cor": "Branca",
+            "tamanho": "M",
+            "marca": "Marca A",
+            "preco": 119.90,
+            "estoque": 1,
+            "setor": "Masculino",
+            "corredor": "5",
+            "prateleira": "Arara 1",
+            "descricao": "Camisa polo masculina",
+        },
+        {
+            "id": 2,
+            "nome": "Vestido Vermelho Feminino",
+            "categoria": "Roupa",
+            "tipo": "Vestido",
+            "cor": "Vermelho",
+            "tamanho": "M",
+            "marca": "Marca B",
+            "preco": 189.90,
+            "estoque": 1,
+            "setor": "Feminino",
+            "corredor": "7",
+            "prateleira": "Arara 2",
+            "descricao": "Vestido elegante",
+        },
+    ]
+
+    monkeypatch.setattr(pipeline_service, "classificar_intencao", fake_classificar_intencao)
+    monkeypatch.setattr(pipeline_service, "listar_todos_produtos_formatados", lambda: produtos)
+    pipeline_service.limpar_memoria()
+
+    resposta = asyncio.run(pipeline_service.pipeline_processar("O que voce tem pra homem nessa loja?"))
+
+    assert resposta["acao"] == "MOSTRAR_PRODUTOS"
+    assert resposta["resultados"][0]["nome"] == "Camisa Polo Branca Masculina"
+    assert "infelizmente" not in resposta["resposta"].lower()
+
+
+def test_busca_segmentada_ignora_pedido_de_mostrar(monkeypatch):
+    produtos = [
+        {
+            "id": 1,
+            "nome": "Camisa Polo Branca Masculina",
+            "categoria": "Roupa",
+            "tipo": "Camisa",
+            "cor": "Branca",
+            "tamanho": "M",
+            "marca": "Marca A",
+            "preco": 119.90,
+            "estoque": 1,
+            "setor": "Masculino",
+            "corredor": "5",
+            "prateleira": "Arara 1",
+            "descricao": "Camisa polo masculina",
+        },
+        {
+            "id": 2,
+            "nome": "Calca Jeans Masculina",
+            "categoria": "Roupa",
+            "tipo": "Calca",
+            "cor": "Azul",
+            "tamanho": "42",
+            "marca": "Marca B",
+            "preco": 159.90,
+            "estoque": 1,
+            "setor": "Masculino",
+            "corredor": "4",
+            "prateleira": "Arara 3",
+            "descricao": "Calca jeans casual",
+        },
+    ]
+
+    monkeypatch.setattr(pipeline_service.db_service, "fetchall", lambda *args, **kwargs: produtos)
+
+    resultado = pipeline_service.buscar_produtos_por_segmentos(
+        "Poderia me mostrar a camisa polo e a calca jeans?"
+    )
+
+    nomes = [produto["nome"] for produto in resultado["produtos"]]
+    assert nomes == ["Camisa Polo Branca Masculina", "Calca Jeans Masculina"]
+    assert resultado["faltas"] == []
+
+
 def test_pipeline_pedido_explicito_de_mapa_nao_pede_confirmacao_de_novo(monkeypatch):
     async def fake_classificar_intencao(pergunta, idioma="pt"):
         return {"intencao": "IR_PARA_MAPA", "palavras_chave": []}
@@ -182,6 +275,21 @@ def test_pipeline_pedido_explicito_de_mapa_nao_pede_confirmacao_de_novo(monkeypa
     pipeline_service.memoria["produtos_mencionados"] = {
         1: pipeline_service.memoria["ultimos_produtos"][0],
         2: pipeline_service.memoria["ultimos_produtos"][1],
+        99: {
+            "id": 99,
+            "nome": "Garrafa Termica Branca",
+            "categoria": "Acessorios",
+            "tipo": "Garrafa",
+            "cor": "Branca",
+            "tamanho": "Unico",
+            "marca": "Marca C",
+            "preco": 79.90,
+            "estoque": 1,
+            "setor": "Acessorios",
+            "corredor": "1",
+            "prateleira": "Prateleira 5",
+            "descricao": "Garrafa branca",
+        },
     }
     pipeline_service.memoria["produtos_pendentes_confirmacao"] = pipeline_service.memoria["ultimos_produtos"][:]
 
@@ -231,6 +339,21 @@ def test_pipeline_mapa_dos_dois_mostra_duas_rotas(monkeypatch):
     pipeline_service.memoria["produtos_mencionados"] = {
         1: pipeline_service.memoria["ultimos_produtos"][0],
         2: pipeline_service.memoria["ultimos_produtos"][1],
+        99: {
+            "id": 99,
+            "nome": "Garrafa Termica Branca",
+            "categoria": "Acessorios",
+            "tipo": "Garrafa",
+            "cor": "Branca",
+            "tamanho": "Unico",
+            "marca": "Marca C",
+            "preco": 79.90,
+            "estoque": 1,
+            "setor": "Acessorios",
+            "corredor": "1",
+            "prateleira": "Prateleira 5",
+            "descricao": "Garrafa branca",
+        },
     }
     pipeline_service.memoria["produtos_pendentes_confirmacao"] = pipeline_service.memoria["ultimos_produtos"][:]
 
@@ -240,6 +363,7 @@ def test_pipeline_mapa_dos_dois_mostra_duas_rotas(monkeypatch):
 
     assert resposta["acao"] == "ABRIR_ROTAS"
     assert len(resposta["resultados"]) == 2
+    assert all(produto["nome"] != "Garrafa Termica Branca" for produto in resposta["resultados"])
     corredores = {produto["corredor"] for produto in resposta["resultados"]}
     assert corredores == {"1", "5"}
 

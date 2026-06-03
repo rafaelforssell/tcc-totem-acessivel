@@ -128,6 +128,20 @@ def test_pipeline_avisa_falta_cor_e_sugere_opcao_parecida(monkeypatch):
     assert "nao encontrei vestido preto" in resposta["resposta"].lower()
 
 
+def test_pipeline_nao_trata_negacao_como_atributo_do_produto(monkeypatch):
+    async def fake_classificar_intencao(pergunta, idioma="pt"):
+        return {"intencao": "NOVA_BUSCA", "palavras_chave": ["bermuda"]}
+
+    monkeypatch.setattr(pipeline_service, "classificar_intencao", fake_classificar_intencao)
+    pipeline_service.limpar_memoria()
+
+    resposta = asyncio.run(pipeline_service.pipeline_processar("Nao, voce tem bermuda?"))
+
+    assert resposta["acao"] == "MOSTRAR_PRODUTOS"
+    assert resposta["resultados"]
+    assert "nao encontrei bermuda nao" not in resposta["resposta"].lower()
+
+
 def test_pipeline_encerrar_nao_responde_com_fala(monkeypatch):
     async def fake_classificar_intencao(pergunta, idioma="pt"):
         return {"intencao": "OUTROS", "palavras_chave": []}

@@ -719,6 +719,7 @@
         let lightboxImages = []; // List of {src: string, title: string, price: string}
         let currentLightboxIndex = 0;
         let sessaoPausada = false;
+        let retomandoSessao = false;
         let adminProducts = [];
         let adminFilteredProducts = [];
         let adminAutoRefresh = true;
@@ -1535,22 +1536,7 @@
 
                         openBtn.append(img, name, price, detail);
 
-                        const selectBtn = document.createElement("button");
-                        selectBtn.type = "button";
-                        const atualizarBotaoSelecao = () => {
-                            const ativo = produtoSelecionado(p);
-                            selectBtn.className = ativo
-                                ? "w-full mt-3 bg-yellow-400 text-black font-bold text-xs md:text-sm px-3 py-2 rounded-lg border border-yellow-300"
-                                : "w-full mt-3 bg-zinc-800 text-white font-bold text-xs md:text-sm px-3 py-2 rounded-lg border border-zinc-700 hover:border-yellow-400 transition-colors";
-                            selectBtn.textContent = ativo ? "Remover da lista" : "Adicionar à lista";
-                        };
-                        atualizarBotaoSelecao();
-                        selectBtn.onclick = () => {
-                            toggleProdutoSelecionado(p);
-                            atualizarBotaoSelecao();
-                        };
-
-                        card.append(openBtn, selectBtn);
+                        card.append(openBtn);
                         cards.appendChild(card);
                     });
 
@@ -1673,7 +1659,7 @@
         }
 
         async function conversar() {
-            if (!sessaoAtiva) return;
+            if (!sessaoAtiva || sessaoPausada || retomandoSessao) return;
 
             const recorder = new MediaRecorder(streamGlobal);
             const chunks = [];
@@ -1971,6 +1957,7 @@
             if (!sessaoPausada) {
                 // Pausar
                 sessaoPausada = true;
+                retomandoSessao = false;
                 
                 // Mudar texto e ícone do botão
                 btnPausarText.textContent = currentLang === 'pt' ? "Retomar" : "Resume";
@@ -1984,6 +1971,8 @@
                 // Parar gravação e áudio atual
                 if (audioAtual) {
                     audioAtual.pause();
+                    audioAtual.currentTime = 0;
+                    audioAtual = null;
                 }
                 
                 // Parar faixas de áudio temporariamente
@@ -1994,6 +1983,7 @@
             } else {
                 // Retomar
                 sessaoPausada = false;
+                retomandoSessao = true;
 
                 // Restaurar botão
                 btnPausarText.textContent = currentLang === 'pt' ? "Pausar" : "Pause";
@@ -2001,7 +1991,7 @@
                 btnPausar.className = "bg-yellow-400 text-black font-bold px-4 py-2 rounded-lg hover:bg-yellow-300 transition-colors text-sm md:text-base border border-yellow-300 shadow-md flex items-center gap-2";
 
                 // Atualizar status
-                if (statusEl) statusEl.innerText = currentLang === 'pt' ? "Ouvindo" : "Listening";
+                if (statusEl) statusEl.innerText = currentLang === 'pt' ? "Voltando" : "Resuming";
                 if (indicatorEl) indicatorEl.classList.add("listening-indicator");
 
                 // Retomar microfone e gravação
@@ -2011,10 +2001,17 @@
                     const source = ctx.createMediaStreamSource(streamGlobal);
                     analyserGlobal = ctx.createAnalyser();
                     source.connect(analyserGlobal);
-                    
-                    conversar();
+
+                    if (statusEl) statusEl.innerText = currentLang === 'pt' ? "Pronto" : "Ready";
+                    setTimeout(() => {
+                        if (!sessaoAtiva || sessaoPausada || !retomandoSessao) return;
+                        if (statusEl) statusEl.innerText = currentLang === 'pt' ? "Ouvindo" : "Listening";
+                        conversar();
+                        retomandoSessao = false;
+                    }, 700);
                 }).catch(err => {
                     console.error("Erro ao retomar microfone:", err);
+                    retomandoSessao = false;
                     if (statusEl) statusEl.innerText = "Erro Mic";
                 });
             }

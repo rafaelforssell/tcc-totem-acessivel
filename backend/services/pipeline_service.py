@@ -142,6 +142,7 @@ def limpar_tokens_busca(palavras_chave):
         "perfeito", "legal", "beleza", "certo", "ok", "entendi", "bom", "boa",
         "roupa", "roupas", "algum", "alguns", "alguma", "algumas", "hoje", "noite",
         "tudo", "bem", "vou", "numa", "num", "para", "pra",
+        "nao", "sim", "gostei", "agora", "entao", "quer", "quero", "temos",
     }
     sinonimos = {
         "short": "bermuda",
@@ -280,11 +281,11 @@ def montar_resposta_busca_natural(produtos, faltas=None, idioma="pt"):
                 atributos = " ".join(falta["atributos"])
                 avisos.append(f"I couldn't find {falta['tipo']} in {atributos}")
             if not nomes:
-                return f"{'. '.join(avisos)}. I can look for other similar options if you want."
-            return f"{'. '.join(avisos)}. I found these close options: {', '.join(nomes)}. Did you like any of them?"
+                return f"{'. '.join(avisos)}. If you want, I can look for something similar."
+            return f"{'. '.join(avisos)}. I found these similar options: {', '.join(nomes)}. Do any of them work for you?"
         if len(nomes) == 1:
-            return f"I found this option for you: {nomes[0]}. Did you like it?"
-        return f"I found these options for you: {', '.join(nomes)}. Did you like any of them?"
+            return f"I found this option for you: {nomes[0]}. What do you think?"
+        return f"I found these options for you: {', '.join(nomes)}. Do any of them work for you?"
 
     if faltas:
         avisos = []
@@ -292,12 +293,12 @@ def montar_resposta_busca_natural(produtos, faltas=None, idioma="pt"):
             atributos = " ".join(falta["atributos"])
             avisos.append(f"Nao encontrei {falta['tipo']} {atributos}".strip())
         if not nomes:
-            return f"{'. '.join(avisos)}. Se quiser, eu posso procurar outras opcoes parecidas."
-        return f"{'. '.join(avisos)}. Encontrei estas opcoes parecidas para voce: {', '.join(nomes)}. Gostou de alguma delas?"
+            return f"{'. '.join(avisos)}. Se quiser, eu posso procurar algo parecido para voce."
+        return f"{'. '.join(avisos)}. Separei estas opcoes parecidas para voce: {', '.join(nomes)}. Alguma delas te agradou?"
 
     if len(nomes) == 1:
-        return f"Encontrei esta opcao para voce: {nomes[0]}. Gostou?"
-    return f"Encontrei estas opcoes para voce: {', '.join(nomes)}. Gostou de alguma delas?"
+        return f"Encontrei esta opcao para voce: {nomes[0]}. O que achou?"
+    return f"Encontrei estas opcoes para voce: {', '.join(nomes)}. Alguma delas te agradou?"
 
 
 def is_confirmacao_lista(texto_baixo):
@@ -787,7 +788,7 @@ async def pipeline_processar(pergunta, idioma="pt"):
     if produtos_pendentes and is_negacao_curta(texto_baixo):
         memoria["produtos_pendentes_confirmacao"] = []
         resposta_texto = (
-            "Tudo bem. Posso te mostrar outras opcoes parecidas, se quiser."
+            "Tudo bem. Se quiser, eu procuro outras opcoes para voce."
             if idioma == "pt"
             else "No problem. I can show you other similar options if you want."
         )

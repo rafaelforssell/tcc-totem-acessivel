@@ -145,6 +145,8 @@ def limpar_tokens_busca(palavras_chave):
         "nao", "sim", "gostei", "agora", "entao", "quer", "quero", "temos",
         "pode", "poderia", "mostra", "mostrar", "mostre", "ver", "loja",
         "nessa", "nesta", "encontra", "encontrar", "acha", "achar",
+        "acho", "que", "dos", "das", "duas", "dois", "ambos", "ambas",
+        "eles", "elas", "usar", "uso", "usando", "fechar", "so",
     }
     sinonimos = {
         "short": "bermuda",
@@ -176,6 +178,8 @@ CORES_CONHECIDAS = {
 
 def extrair_segmentos_busca(texto_baixo):
     texto = normalizar_texto(texto_baixo)
+    for tipo in sorted(TIPOS_CONHECIDOS, key=len, reverse=True):
+        texto = re.sub(rf"\b(?:um|uma|o|a)\s+({tipo})\b", r", \1", texto)
     partes = re.split(r"\b(?: e | ou |,| com )\b", texto)
     segmentos = []
     for parte in partes:
@@ -561,9 +565,13 @@ def is_pergunta_pagamento(texto_baixo):
 
 
 def is_encerramento(texto_baixo):
-    palavras = texto_baixo.split()
-    despedidas = {"tchau", "obrigado", "obrigada", "valeu", "encerrar", "bye", "thanks", "falou"}
-    return (any(w in palavras for w in despedidas) or "ate logo" in normalizar_texto(texto_baixo)) and len(palavras) <= 4
+    texto = normalizar_texto(texto_baixo).replace(",", " ").replace(".", " ").replace("?", " ")
+    palavras = texto.split()
+    despedidas = {
+        "tchau", "thcau", "tcau", "tchao", "tchauu",
+        "obrigado", "obrigada", "valeu", "encerrar", "bye", "thanks", "falou",
+    }
+    return (any(w in palavras for w in despedidas) or "ate logo" in texto) and len(palavras) <= 4
 
 
 def is_pedido_atendente(texto_baixo):
@@ -833,6 +841,11 @@ async def pipeline_processar(pergunta, idioma="pt"):
             "Claro! Estou chamando um atendente para te ajudar. Em instantes alguém virá até você."
             if idioma == "pt"
             else "Of course! I'm calling an attendant to help you. Someone will be with you shortly."
+        )
+        resposta_texto = (
+            "Claro! Estou chamando um atendente para te ajudar. Em instantes alguem vira ate voce. Muito obrigado e boas compras!"
+            if idioma == "pt"
+            else "Of course! I'm calling an attendant to help you. Someone will be with you shortly. Thank you, and enjoy your shopping!"
         )
         memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
         return {"resposta": resposta_texto, "resultados": produtos_alerta, "acao": "CHAMAR_ATENDENTE"}

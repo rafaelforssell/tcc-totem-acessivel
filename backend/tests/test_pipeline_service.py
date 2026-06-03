@@ -235,6 +235,105 @@ def test_busca_segmentada_ignora_pedido_de_mostrar(monkeypatch):
     assert resultado["faltas"] == []
 
 
+def test_busca_segmentada_entende_lista_repetida_do_mesmo_produto(monkeypatch):
+    produtos = [
+        {
+            "id": 1,
+            "nome": "Bone Azul",
+            "categoria": "Acessorios",
+            "tipo": "Bone",
+            "cor": "Azul",
+            "tamanho": "Unico",
+            "marca": "Marca A",
+            "preco": 49.90,
+            "estoque": 3,
+            "setor": "Acessorios",
+            "corredor": "1",
+            "prateleira": "Gancho 2",
+            "descricao": "Bone casual",
+        },
+        {
+            "id": 2,
+            "nome": "Bone Branco",
+            "categoria": "Acessorios",
+            "tipo": "Bone",
+            "cor": "Branco",
+            "tamanho": "Unico",
+            "marca": "Marca B",
+            "preco": 49.90,
+            "estoque": 3,
+            "setor": "Acessorios",
+            "corredor": "1",
+            "prateleira": "Gancho 3",
+            "descricao": "Bone casual",
+        },
+    ]
+
+    monkeypatch.setattr(pipeline_service.db_service, "fetchall", lambda *args, **kwargs: produtos)
+
+    resultado = pipeline_service.buscar_produtos_por_segmentos(
+        "Eu quero um bone azul um bone branco e acho que um bone vermelho"
+    )
+
+    nomes = [produto["nome"] for produto in resultado["produtos"]]
+    assert nomes == ["Bone Azul", "Bone Branco"]
+    assert resultado["faltas"] == [{"tipo": "bone", "atributos": ["vermelho"]}]
+
+
+def test_busca_segmentada_remove_contexto_de_confirmacao(monkeypatch):
+    produtos = [
+        {
+            "id": 1,
+            "nome": "Camisa Polo Branca Masculina",
+            "categoria": "Roupa",
+            "tipo": "Camisa",
+            "cor": "Branca",
+            "tamanho": "M",
+            "marca": "Marca A",
+            "preco": 119.90,
+            "estoque": 1,
+            "setor": "Masculino",
+            "corredor": "5",
+            "prateleira": "Arara 1",
+            "descricao": "Camisa polo masculina",
+        }
+    ]
+
+    monkeypatch.setattr(pipeline_service.db_service, "fetchall", lambda *args, **kwargs: produtos)
+
+    resultado = pipeline_service.buscar_produtos_por_segmentos(
+        "Sim, gostei dos dois. Voce tem uma camiseta branca masculina para eu usar com eles?"
+    )
+
+    assert [produto["nome"] for produto in resultado["produtos"]] == ["Camisa Polo Branca Masculina"]
+    assert resultado["faltas"] == []
+
+
+def test_pipeline_thcau_encerra_conversa(monkeypatch):
+    async def fake_classificar_intencao(pergunta, idioma="pt"):
+        raise AssertionError("Despedida deve encerrar antes de chamar a IA")
+
+    monkeypatch.setattr(pipeline_service, "classificar_intencao", fake_classificar_intencao)
+    pipeline_service.memoria["ultimos_produtos"] = [{"nome": "Bone Azul"}]
+
+    resposta = asyncio.run(pipeline_service.pipeline_processar("thcau"))
+
+    assert resposta == {"resposta": "", "resultados": [], "acao": "ENCERRAR"}
+
+
+def test_pipeline_atendente_fecha_com_boas_compras(monkeypatch):
+    async def fake_classificar_intencao(pergunta, idioma="pt"):
+        raise AssertionError("Pedido de atendente deve ser detectado antes da IA")
+
+    monkeypatch.setattr(pipeline_service, "classificar_intencao", fake_classificar_intencao)
+    pipeline_service.limpar_memoria()
+
+    resposta = asyncio.run(pipeline_service.pipeline_processar("Consegue chamar um atendente para me ajudar?"))
+
+    assert resposta["acao"] == "CHAMAR_ATENDENTE"
+    assert "boas compras" in resposta["resposta"].lower()
+
+
 def test_pipeline_pedido_explicito_de_mapa_nao_pede_confirmacao_de_novo(monkeypatch):
     async def fake_classificar_intencao(pergunta, idioma="pt"):
         return {"intencao": "IR_PARA_MAPA", "palavras_chave": []}

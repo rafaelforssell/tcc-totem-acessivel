@@ -1705,6 +1705,15 @@
                     const data = await resposta.json();
                     if (!sessaoAtiva) return;
 
+                    if (data.auto_add_lista && Array.isArray(data.resultados)) {
+                        data.resultados.forEach(produto => {
+                            if (!produtoSelecionado(produto)) {
+                                selectedProducts = [...selectedProducts, produto];
+                            }
+                        });
+                        atualizarPainelListaSelecionada();
+                    }
+
                     const produtosPreferidosResposta = obterProdutosPreferidosParaMapa(data.resultados || []);
                     if (data.acao === "ABRIR_MAPA" && produtosPreferidosResposta.length > 1) {
                         data.acao = "ABRIR_ROTAS";

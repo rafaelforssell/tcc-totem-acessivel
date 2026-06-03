@@ -72,10 +72,60 @@ def test_pipeline_sim_abre_mapa_quando_tem_produto_em_memoria(monkeypatch):
         }
     ]
 
+    pipeline_service.memoria["historico_conversas"] = [{"role": "assistant", "content": "Gostou dessa opcao?"}]
+    pipeline_service.memoria["produtos_pendentes_confirmacao"] = pipeline_service.memoria["ultimos_produtos"][:]
+
     resposta = asyncio.run(pipeline_service.pipeline_processar("Sim, por favor"))
 
-    assert resposta["acao"] == "ABRIR_MAPA"
+    assert resposta["acao"] == "MOSTRAR_PRODUTOS"
+    assert resposta["auto_add_lista"] is True
     assert resposta["resultados"][0]["nome"] == "Camiseta Basica"
+
+
+def test_pipeline_nao_abre_mapa_por_confirmacao_generica(monkeypatch):
+    async def fake_classificar_intencao(pergunta, idioma="pt"):
+        return {"intencao": "OUTROS", "palavras_chave": []}
+
+    monkeypatch.setattr(pipeline_service, "classificar_intencao", fake_classificar_intencao)
+    pipeline_service.memoria["ultimos_produtos"] = [
+        {
+            "id": 1,
+            "nome": "Camiseta Basica",
+            "categoria": "Roupa",
+            "tipo": "Camiseta",
+            "cor": "Preta",
+            "tamanho": "M",
+            "marca": "Hering",
+            "preco": 49.90,
+            "estoque": 15,
+            "setor": "Masculino",
+            "corredor": "1",
+            "prateleira": "Arara 1",
+            "descricao": "Camiseta 100% algodao",
+        }
+    ]
+    pipeline_service.memoria["historico_conversas"] = [{"role": "assistant", "content": "Gostou?"}]
+    pipeline_service.memoria["produtos_pendentes_confirmacao"] = []
+
+    resposta = asyncio.run(pipeline_service.pipeline_processar("sim"))
+
+    assert resposta["acao"] == "NENHUM"
+
+
+def test_pipeline_avisa_falta_cor_e_sugere_opcao_parecida(monkeypatch):
+    async def fake_classificar_intencao(pergunta, idioma="pt"):
+        return {"intencao": "NOVA_BUSCA", "palavras_chave": ["bone", "vestido", "preto"]}
+
+    monkeypatch.setattr(pipeline_service, "classificar_intencao", fake_classificar_intencao)
+    pipeline_service.limpar_memoria()
+
+    resposta = asyncio.run(pipeline_service.pipeline_processar("Eu quero um bone e um vestido preto"))
+
+    nomes = [produto["nome"].lower() for produto in resposta["resultados"]]
+    assert resposta["acao"] == "MOSTRAR_PRODUTOS"
+    assert any("vestido" in nome for nome in nomes)
+    assert not any("casaco" in nome for nome in nomes)
+    assert "nao encontrei vestido preto" in resposta["resposta"].lower()
 
 
 def test_pipeline_encerrar_nao_responde_com_fala(monkeypatch):

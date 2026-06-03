@@ -90,5 +90,6 @@ async def query_audio(audio: UploadFile = File(...), idioma: str = Form("pt")):
         "resposta": resposta_texto,
         "resultados": resultado.get("resultados", []),
         "acao": resultado.get("acao", "NENHUM"),
+        "auto_add_lista": resultado.get("auto_add_lista", False),
         "audio": arquivo_audio
     }

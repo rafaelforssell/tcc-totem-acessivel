@@ -1,4 +1,5 @@
 import os
+import re
 import unicodedata
 
 from services.llm_service import classificar_intencao, perguntar_llm
@@ -12,6 +13,7 @@ memoria = {
     "assunto_ativo": None,
     "historico_conversas": [],
     "produtos_mencionados": {},
+    "produtos_pendentes_confirmacao": [],
 }
 
 
@@ -20,6 +22,7 @@ def limpar_memoria():
     memoria["assunto_ativo"] = None
     memoria["historico_conversas"] = []
     memoria["produtos_mencionados"] = {}
+    memoria["produtos_pendentes_confirmacao"] = []
 
 
 def conectar_bd():
@@ -153,6 +156,152 @@ def limpar_tokens_busca(palavras_chave):
         for palavra in palavras_chave
         if len(palavra.strip(".,?!")) > 2 and normalizar_texto(palavra.strip(".,?!")) not in stopwords
     ]
+
+
+TIPOS_CONHECIDOS = {
+    "bone", "vestido", "casaco", "camisa", "calca", "bermuda", "tenis", "sandalia",
+    "saia", "oculos", "garrafa", "cinto", "moletom", "touca", "polo", "camiseta",
+}
+
+CORES_CONHECIDAS = {
+    "preto", "preta", "branco", "branca", "vermelho", "vermelha", "azul", "verde",
+    "marrom", "cinza", "bege", "jeans",
+}
+
+
+def extrair_segmentos_busca(texto_baixo):
+    texto = normalizar_texto(texto_baixo)
+    partes = re.split(r"\b(?: e | ou |,| com )\b", texto)
+    segmentos = []
+    for parte in partes:
+        tokens = limpar_tokens_busca(parte.split())
+        if tokens:
+            segmentos.append(tokens)
+    return segmentos
+
+
+def obter_tipo_segmento(tokens):
+    for token in tokens:
+        if token in TIPOS_CONHECIDOS:
+            return token
+    return None
+
+
+def ordenar_por_aderencia(produtos, tipo_base=None, atributos=None):
+    atributos = atributos or []
+    ordenados = sorted(
+        produtos,
+        key=lambda p: (
+            -sum(1 for atributo in atributos if token_match(texto_produto(p), atributo)),
+            0 if tipo_base and token_match(texto_produto(p), tipo_base) else 1,
+            normalizar_texto(obter_campo(p, "nome")),
+        )
+    )
+    return ordenados
+
+
+def buscar_produtos_por_segmentos(texto_baixo):
+    segmentos = extrair_segmentos_busca(texto_baixo)
+    if not segmentos:
+        return None
+
+    todos_produtos_raw = db_service.fetchall("SELECT * FROM produtos ORDER BY nome, cor, tamanho")
+    com_estoque = [p for p in todos_produtos_raw if (p.get("estoque") or 0) > 0]
+
+    resultados = []
+    faltas = []
+    ids_escolhidos = set()
+
+    for tokens in segmentos:
+        tipo = obter_tipo_segmento(tokens)
+        atributos = [token for token in tokens if token != tipo]
+
+        candidatos_exatos = []
+        for produto in com_estoque:
+            texto = texto_produto(produto)
+            if all(token_match(texto, token) for token in tokens):
+                candidatos_exatos.append(produto)
+
+        if candidatos_exatos:
+            escolhidos = ordenar_por_aderencia(candidatos_exatos, tipo, atributos)
+            for produto in escolhidos:
+                produto_id = obter_campo(produto, "id", 0)
+                if produto_id not in ids_escolhidos:
+                    resultados.append(formatar_produto(produto))
+                    ids_escolhidos.add(produto_id)
+                    break
+            continue
+
+        if not tipo:
+            continue
+
+        candidatos_tipo = []
+        for produto in com_estoque:
+            texto = texto_produto(produto)
+            if token_match(texto, tipo):
+                candidatos_tipo.append(produto)
+
+        if not candidatos_tipo:
+            continue
+
+        escolhidos = ordenar_por_aderencia(candidatos_tipo, tipo, atributos)
+        for produto in escolhidos:
+            produto_id = obter_campo(produto, "id", 0)
+            if produto_id not in ids_escolhidos:
+                resultados.append(formatar_produto(produto))
+                ids_escolhidos.add(produto_id)
+                break
+
+        faltando = [token for token in atributos if token in CORES_CONHECIDAS or token not in {"fem", "mas"}]
+        if faltando:
+            faltas.append({"tipo": tipo, "atributos": faltando})
+
+    if not resultados:
+        return None
+
+    return {"produtos": resultados[:3], "faltas": faltas}
+
+
+def montar_resposta_busca_natural(produtos, faltas=None, idioma="pt"):
+    faltas = faltas or []
+    nomes = [p.get("nome", "Produto") for p in produtos[:3]]
+
+    if idioma != "pt":
+        if faltas:
+            avisos = []
+            for falta in faltas:
+                atributos = " ".join(falta["atributos"])
+                avisos.append(f"I couldn't find {falta['tipo']} in {atributos}")
+            return f"{'. '.join(avisos)}. I found these close options: {', '.join(nomes)}. Did you like any of them?"
+        if len(nomes) == 1:
+            return f"I found this option for you: {nomes[0]}. Did you like it?"
+        return f"I found these options for you: {', '.join(nomes)}. Did you like any of them?"
+
+    if faltas:
+        avisos = []
+        for falta in faltas:
+            atributos = " ".join(falta["atributos"])
+            avisos.append(f"Nao encontrei {falta['tipo']} {atributos}".strip())
+        return f"{'. '.join(avisos)}. Encontrei estas opcoes parecidas para voce: {', '.join(nomes)}. Gostou de alguma delas?"
+
+    if len(nomes) == 1:
+        return f"Encontrei esta opcao para voce: {nomes[0]}. Gostou?"
+    return f"Encontrei estas opcoes para voce: {', '.join(nomes)}. Gostou de alguma delas?"
+
+
+def is_confirmacao_lista(texto_baixo):
+    texto = normalizar_texto(texto_baixo).replace(",", "").replace(".", "").replace("?", "").strip()
+    confirmacoes = {
+        "sim", "sim gostei", "gostei", "gostei sim", "adorei", "perfeito", "pode ser",
+        "esse", "essa", "esses", "essas", "quero esse", "quero essa", "levei", "vou querer",
+        "pode colocar", "coloca", "coloque", "quero esses", "quero essas",
+    }
+    return texto in confirmacoes
+
+
+def is_negacao_curta(texto_baixo):
+    texto = normalizar_texto(texto_baixo).replace(",", "").replace(".", "").replace("?", "").strip()
+    return texto in {"nao", "nao gostei", "nao quero", "nenhum", "nenhuma", "outra opcao", "outras opcoes"}
 
 
 def montar_resposta_multiplos_produtos(produtos, idioma="pt"):
@@ -519,6 +668,7 @@ async def responder_catalogo_geral(pergunta, idioma):
         memoria["produtos_mencionados"][produto["id"]] = produto
     memoria["ultimos_produtos"] = produtos[:3]
     memoria["assunto_ativo"] = "produto"
+    memoria["produtos_pendentes_confirmacao"] = produtos[:3]
 
     contexto = (
         "O usuario fez uma pergunta geral ou mal formulada sobre quais produtos existem na loja. "
@@ -542,6 +692,7 @@ async def responder_por_occasiao(pergunta, idioma):
     produtos = buscar_produtos_por_occasiao(pergunta)
     memoria["ultimos_produtos"] = produtos[:3]
     memoria["assunto_ativo"] = "produto"
+    memoria["produtos_pendentes_confirmacao"] = produtos[:3]
     for produto in produtos:
         memoria["produtos_mencionados"][produto["id"]] = produto
 
@@ -579,6 +730,7 @@ async def pipeline_processar(pergunta, idioma="pt"):
     memoria["historico_conversas"].append({"role": "user", "content": pergunta})
     
     produtos_memoria = memoria.get("ultimos_produtos", [])
+    produtos_pendentes = memoria.get("produtos_pendentes_confirmacao", [])
 
     if is_encerramento(texto_baixo):
         limpar_memoria()
@@ -601,6 +753,30 @@ async def pipeline_processar(pergunta, idioma="pt"):
             "Formas como boleto, Pix ou cartão precisam ser confirmadas no caixa da loja."
             if idioma == "pt"
             else "For payment, I can best help with products and their location. Methods like bank slip, Pix, or card should be confirmed at checkout."
+        )
+        memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
+        return {"resposta": resposta_texto, "resultados": [], "acao": "NENHUM"}
+
+    if produtos_pendentes and is_confirmacao_lista(texto_baixo):
+        memoria["produtos_pendentes_confirmacao"] = []
+        if idioma == "pt":
+            resposta_texto = "Perfeito, ja coloquei essa opcao na sua lista." if len(produtos_pendentes) == 1 else "Perfeito, ja coloquei essas opcoes na sua lista."
+        else:
+            resposta_texto = "Great, I already added this option to your list." if len(produtos_pendentes) == 1 else "Great, I already added these options to your list."
+        memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
+        return {
+            "resposta": resposta_texto,
+            "resultados": produtos_pendentes,
+            "acao": "MOSTRAR_PRODUTOS",
+            "auto_add_lista": True,
+        }
+
+    if produtos_pendentes and is_negacao_curta(texto_baixo):
+        memoria["produtos_pendentes_confirmacao"] = []
+        resposta_texto = (
+            "Tudo bem. Posso te mostrar outras opcoes parecidas, se quiser."
+            if idioma == "pt"
+            else "No problem. I can show you other similar options if you want."
         )
         memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
         return {"resposta": resposta_texto, "resultados": [], "acao": "NENHUM"}
@@ -628,7 +804,7 @@ async def pipeline_processar(pergunta, idioma="pt"):
         "mapa", "localizacao", "caminho", "corredor", "mostrar", "onde", "rota"
     ])
 
-    if is_confirmacao_positiva(texto_baixo) and ia_ofereceu_mapa and produtos_memoria:
+    if False and is_confirmacao_positiva(texto_baixo) and ia_ofereceu_mapa and produtos_memoria:
         todos_mencionados = list(memoria["produtos_mencionados"].values())
         pool_mapa = todos_mencionados if todos_mencionados else produtos_memoria
         produtos_rota = produtos_por_secao(pool_mapa)
@@ -709,6 +885,19 @@ async def pipeline_processar(pergunta, idioma="pt"):
     print(f"Intencao: {intencao} | Palavras: {palavras}")
 
     if intencao == "NOVA_BUSCA":
+        busca_segmentada = buscar_produtos_por_segmentos(texto_baixo)
+        if busca_segmentada and busca_segmentada.get("produtos"):
+            disponiveis = busca_segmentada["produtos"][:3]
+            memoria["ultimos_produtos"] = disponiveis
+            memoria["assunto_ativo"] = "produto"
+            memoria["produtos_pendentes_confirmacao"] = disponiveis
+            for p in disponiveis:
+                memoria["produtos_mencionados"][p["id"]] = p
+
+            resposta = montar_resposta_busca_natural(disponiveis, busca_segmentada.get("faltas", []), idioma)
+            memoria["historico_conversas"].append({"role": "assistant", "content": resposta})
+            return {"resposta": resposta, "resultados": disponiveis, "acao": "MOSTRAR_PRODUTOS"}
+
         resultados = buscar_produtos_sql(palavras)
         if resultados:
             # Verifica se são produtos esgotados
@@ -736,6 +925,7 @@ async def pipeline_processar(pergunta, idioma="pt"):
             # Produtos com estoque disponível — fluxo normal
             memoria["ultimos_produtos"] = disponiveis[:3]
             memoria["assunto_ativo"] = "produto"
+            memoria["produtos_pendentes_confirmacao"] = disponiveis[:3]
             for p in disponiveis[:3]:
                 memoria["produtos_mencionados"][p["id"]] = p
 
@@ -744,7 +934,7 @@ async def pipeline_processar(pergunta, idioma="pt"):
             )
             todos_prods = list(memoria["produtos_mencionados"].values())
             if len(disponiveis[:3]) > 1:
-                resposta = montar_resposta_multiplos_produtos(disponiveis[:3], idioma)
+                resposta = montar_resposta_busca_natural(disponiveis[:3], idioma=idioma)
             else:
                 resposta = await perguntar_llm(
                     pergunta,
@@ -753,12 +943,13 @@ async def pipeline_processar(pergunta, idioma="pt"):
                     historico=memoria["historico_conversas"][:-1],
                     todos_produtos=todos_prods
                 )
-            acao_final = "ABRIR_MAPA" if is_pedido_mapa(texto_baixo) else "MOSTRAR_PRODUTOS"
-            return {"resposta": resposta, "resultados": disponiveis[:3], "acao": acao_final}
+            memoria["historico_conversas"].append({"role": "assistant", "content": resposta})
+            return {"resposta": resposta, "resultados": disponiveis[:3], "acao": "MOSTRAR_PRODUTOS"}
 
 
         memoria["ultimos_produtos"] = []
         memoria["assunto_ativo"] = None
+        memoria["produtos_pendentes_confirmacao"] = []
         if is_pedido_por_occasiao(texto_baixo) or is_pedido_catalogo(texto_baixo):
             return await responder_por_occasiao(pergunta, idioma)
 

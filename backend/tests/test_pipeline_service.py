@@ -75,7 +75,7 @@ def test_pipeline_sim_abre_mapa_quando_tem_produto_em_memoria(monkeypatch):
     pipeline_service.memoria["historico_conversas"] = [{"role": "assistant", "content": "Gostou dessa opcao?"}]
     pipeline_service.memoria["produtos_pendentes_confirmacao"] = pipeline_service.memoria["ultimos_produtos"][:]
 
-    resposta = asyncio.run(pipeline_service.pipeline_processar("Sim, por favor"))
+    resposta = asyncio.run(pipeline_service.pipeline_processar("Gostei das duas"))
 
     assert resposta["acao"] == "MOSTRAR_PRODUTOS"
     assert resposta["auto_add_lista"] is True

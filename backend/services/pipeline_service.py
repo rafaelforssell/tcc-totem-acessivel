@@ -150,6 +150,8 @@ def limpar_tokens_busca(palavras_chave):
         "bole": "bone",    # typo comum de "boné"
         "tenis": "tenis",  # garante normalizacao
         "bone": "bone",
+        "camiseta": "camisa",
+        "camisetas": "camisa",
     }
     return [
         sinonimos.get(normalizar_texto(palavra.strip(".,?!")), normalizar_texto(palavra.strip(".,?!")))
@@ -256,10 +258,15 @@ def buscar_produtos_por_segmentos(texto_baixo):
         if faltando:
             faltas.append({"tipo": tipo, "atributos": faltando})
 
-    if not resultados:
+    if not resultados and not faltas:
         return None
 
-    return {"produtos": resultados[:3], "faltas": faltas}
+    return {
+        "produtos": resultados[:3],
+        "faltas": faltas,
+        "segmentos_total": len(segmentos),
+        "segmentos_encontrados": len(resultados[:3]),
+    }
 
 
 def montar_resposta_busca_natural(produtos, faltas=None, idioma="pt"):
@@ -272,6 +279,8 @@ def montar_resposta_busca_natural(produtos, faltas=None, idioma="pt"):
             for falta in faltas:
                 atributos = " ".join(falta["atributos"])
                 avisos.append(f"I couldn't find {falta['tipo']} in {atributos}")
+            if not nomes:
+                return f"{'. '.join(avisos)}. I can look for other similar options if you want."
             return f"{'. '.join(avisos)}. I found these close options: {', '.join(nomes)}. Did you like any of them?"
         if len(nomes) == 1:
             return f"I found this option for you: {nomes[0]}. Did you like it?"
@@ -282,6 +291,8 @@ def montar_resposta_busca_natural(produtos, faltas=None, idioma="pt"):
         for falta in faltas:
             atributos = " ".join(falta["atributos"])
             avisos.append(f"Nao encontrei {falta['tipo']} {atributos}".strip())
+        if not nomes:
+            return f"{'. '.join(avisos)}. Se quiser, eu posso procurar outras opcoes parecidas."
         return f"{'. '.join(avisos)}. Encontrei estas opcoes parecidas para voce: {', '.join(nomes)}. Gostou de alguma delas?"
 
     if len(nomes) == 1:
@@ -295,6 +306,8 @@ def is_confirmacao_lista(texto_baixo):
         "sim", "sim gostei", "gostei", "gostei sim", "adorei", "perfeito", "pode ser",
         "esse", "essa", "esses", "essas", "quero esse", "quero essa", "levei", "vou querer",
         "pode colocar", "coloca", "coloque", "quero esses", "quero essas",
+        "gostei das duas", "gostei dos dois", "gostei de ambas", "gostei de ambos",
+        "quero as duas", "quero os dois", "as duas", "os dois",
     }
     return texto in confirmacoes
 
@@ -897,6 +910,13 @@ async def pipeline_processar(pergunta, idioma="pt"):
             resposta = montar_resposta_busca_natural(disponiveis, busca_segmentada.get("faltas", []), idioma)
             memoria["historico_conversas"].append({"role": "assistant", "content": resposta})
             return {"resposta": resposta, "resultados": disponiveis, "acao": "MOSTRAR_PRODUTOS"}
+        if busca_segmentada and busca_segmentada.get("faltas"):
+            memoria["ultimos_produtos"] = []
+            memoria["assunto_ativo"] = None
+            memoria["produtos_pendentes_confirmacao"] = []
+            resposta = montar_resposta_busca_natural([], busca_segmentada.get("faltas", []), idioma)
+            memoria["historico_conversas"].append({"role": "assistant", "content": resposta})
+            return {"resposta": resposta, "resultados": [], "acao": "NENHUM"}
 
         resultados = buscar_produtos_sql(palavras)
         if resultados:

@@ -1,22 +1,12 @@
-import os
-import sqlite3
 import unicodedata
 
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "..", "..", "database", "produtos.db")
-
-
-def conectar_bd():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+from services.db_service import fetchall
 
 
 def obter_campo(produto, campo, indice=None, padrao=""):
     try:
         return produto[campo]
-    except (IndexError, KeyError):
+    except (IndexError, KeyError, TypeError):
         if indice is None:
             return padrao
         return produto[indice] if len(produto) > indice else padrao
@@ -60,12 +50,7 @@ def formatar_produto(produto):
 
 
 def listar_produtos_db():
-    conn = conectar_bd()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM produtos ORDER BY nome, cor, tamanho")
-    produtos = cursor.fetchall()
-    conn.close()
-
+    produtos = fetchall("SELECT * FROM produtos ORDER BY nome, cor, tamanho")
     return {"produtos": [formatar_produto(p) for p in produtos]}
 
 
@@ -74,16 +59,13 @@ def buscar_produto_db(nome):
     if not termo:
         return {"resultado": []}
 
-    conn = conectar_bd()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM produtos ORDER BY nome, cor, tamanho")
-    produtos = [p for p in cursor.fetchall() if produto_contem_termos(p, termo)]
+    produtos = fetchall("SELECT * FROM produtos ORDER BY nome, cor, tamanho")
+    produtos = [p for p in produtos if produto_contem_termos(p, termo)]
 
     if produtos:
-        conn.close()
         return {"resultado": [formatar_produto(p) for p in produtos]}
 
-    cursor.execute(
+    produtos = fetchall(
         """
         SELECT * FROM produtos
         WHERE nome LIKE ?
@@ -97,17 +79,10 @@ def buscar_produto_db(nome):
         """,
         tuple(f"%{termo}%" for _ in range(7)),
     )
-    produtos = cursor.fetchall()
-
-    conn.close()
 
     return {"resultado": [formatar_produto(p) for p in produtos]}
 
 
 def contar_produtos_db():
-    conn = conectar_bd()
-    cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM produtos")
-    total = cursor.fetchone()[0]
-    conn.close()
-    return total
+    resultado = fetchall("SELECT COUNT(*) AS total FROM produtos")
+    return resultado[0]["total"] if resultado else 0

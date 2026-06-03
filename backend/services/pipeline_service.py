@@ -608,6 +608,17 @@ def is_pedido_resumo_rotas(texto_baixo):
     return (tem_rota and tem_total) or any(frase in texto for frase in frases_naturais)
 
 
+def menciona_todos_os_produtos(texto_baixo):
+    texto = normalizar_texto(texto_baixo)
+    expressoes = [
+        "os dois", "as duas", "ambos", "ambas",
+        "os dois produtos", "as duas opcoes", "as duas opções",
+        "os dois no mapa", "as duas no mapa",
+        "todos eles", "todas elas",
+    ]
+    return any(expressao in texto for expressao in expressoes)
+
+
 def produtos_por_secao(produtos):
     secoes = {}
     for produto in produtos:
@@ -880,7 +891,11 @@ async def pipeline_processar(pergunta, idioma="pt"):
         pool_mapa = todos_mencionados if todos_mencionados else produtos_memoria
         produtos_mapa = selecionar_produtos_para_mapa(texto_baixo, produtos_memoria)
         # Se a frase é genérica/afirmativa, mostra todas as seções da sessão
-        if is_confirmacao_positiva(texto_baixo) or is_pedido_resumo_rotas(texto_baixo):
+        if (
+            is_confirmacao_positiva(texto_baixo)
+            or is_pedido_resumo_rotas(texto_baixo)
+            or menciona_todos_os_produtos(texto_baixo)
+        ):
             produtos_mapa = pool_mapa
         produtos_rota = produtos_por_secao(produtos_mapa)
         if len(produtos_rota) > 1:
@@ -1000,7 +1015,15 @@ async def pipeline_processar(pergunta, idioma="pt"):
 
     if intencao == "IR_PARA_MAPA":
         if produtos_memoria:
+            todos_mencionados = list(memoria["produtos_mencionados"].values())
+            pool_mapa = todos_mencionados if todos_mencionados else produtos_memoria
             produtos_mapa = selecionar_produtos_para_mapa(texto_baixo, produtos_memoria)
+            if (
+                is_confirmacao_positiva(texto_baixo)
+                or is_pedido_resumo_rotas(texto_baixo)
+                or menciona_todos_os_produtos(texto_baixo)
+            ):
+                produtos_mapa = pool_mapa
             produtos_rota = produtos_por_secao(produtos_mapa)
             if len(produtos_rota) > 1:
                 resposta_texto = f"Mostrando {len(produtos_rota)} rotas no mapa." if idioma == "pt" else f"Showing {len(produtos_rota)} routes on the map."

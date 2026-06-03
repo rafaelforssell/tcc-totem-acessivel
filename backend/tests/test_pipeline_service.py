@@ -191,6 +191,59 @@ def test_pipeline_pedido_explicito_de_mapa_nao_pede_confirmacao_de_novo(monkeypa
     assert "gostaria de ver" not in resposta["resposta"].lower()
 
 
+def test_pipeline_mapa_dos_dois_mostra_duas_rotas(monkeypatch):
+    async def fake_classificar_intencao(pergunta, idioma="pt"):
+        return {"intencao": "IR_PARA_MAPA", "palavras_chave": []}
+
+    monkeypatch.setattr(pipeline_service, "classificar_intencao", fake_classificar_intencao)
+    pipeline_service.memoria["ultimos_produtos"] = [
+        {
+            "id": 1,
+            "nome": "Bone Azul",
+            "categoria": "Acessorios",
+            "tipo": "Bone",
+            "cor": "Azul",
+            "tamanho": "Unico",
+            "marca": "Marca A",
+            "preco": 49.90,
+            "estoque": 3,
+            "setor": "Acessorios",
+            "corredor": "1",
+            "prateleira": "Gancho 2",
+            "descricao": "Bone casual",
+        },
+        {
+            "id": 2,
+            "nome": "Camisa Branca Feminina",
+            "categoria": "Roupa",
+            "tipo": "Camisa",
+            "cor": "Branca",
+            "tamanho": "M",
+            "marca": "Marca B",
+            "preco": 119.90,
+            "estoque": 1,
+            "setor": "Feminino",
+            "corredor": "5",
+            "prateleira": "Arara 4",
+            "descricao": "Camisa leve",
+        },
+    ]
+    pipeline_service.memoria["produtos_mencionados"] = {
+        1: pipeline_service.memoria["ultimos_produtos"][0],
+        2: pipeline_service.memoria["ultimos_produtos"][1],
+    }
+    pipeline_service.memoria["produtos_pendentes_confirmacao"] = pipeline_service.memoria["ultimos_produtos"][:]
+
+    resposta = asyncio.run(
+        pipeline_service.pipeline_processar("As duas me agradou, poderia me mostrar no mapa?")
+    )
+
+    assert resposta["acao"] == "ABRIR_ROTAS"
+    assert len(resposta["resultados"]) == 2
+    corredores = {produto["corredor"] for produto in resposta["resultados"]}
+    assert corredores == {"1", "5"}
+
+
 def test_pipeline_sim_apos_mapa_nao_adiciona_lista(monkeypatch):
     async def fake_classificar_intencao(pergunta, idioma="pt"):
         return {"intencao": "OUTROS", "palavras_chave": []}

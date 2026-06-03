@@ -313,6 +313,17 @@ def is_confirmacao_lista(texto_baixo):
     return texto in confirmacoes
 
 
+def montar_resposta_mapa(produtos, idioma="pt"):
+    total = len(produtos or [])
+    if idioma != "pt":
+        if total > 1:
+            return f"Sure, I'll show the route for the {total} products on the map."
+        return "Sure, I'll show the route on the map."
+    if total > 1:
+        return f"Certo, vou te mostrar no mapa onde estao os {total} produtos."
+    return "Certo, vou te mostrar no mapa onde ele fica."
+
+
 def is_negacao_curta(texto_baixo):
     texto = normalizar_texto(texto_baixo).replace(",", "").replace(".", "").replace("?", "").strip()
     return texto in {"nao", "nao gostei", "nao quero", "nenhum", "nenhuma", "outra opcao", "outras opcoes"}
@@ -321,14 +332,8 @@ def is_negacao_curta(texto_baixo):
 def montar_resposta_multiplos_produtos(produtos, idioma="pt"):
     nomes = [p.get("nome", "Produto") for p in produtos[:3]]
     if idioma != "pt":
-        return (
-            f"I found these options for you: {', '.join(nomes)}. "
-            "If you like, add the products you want to your list and then ask me to open the map."
-        )
-    return (
-        f"Encontrei estas opcoes para voce: {', '.join(nomes)}. "
-        "Se gostar, adicione os produtos que quiser na lista e depois me peça para abrir o mapa."
-    )
+        return f"I found these options for you: {', '.join(nomes)}. Do any of them work for you?"
+    return f"Encontrei estas opcoes para voce: {', '.join(nomes)}. Alguma delas te agradou?"
 
 
 def buscar_produtos_sql(palavras_chave):
@@ -772,18 +777,21 @@ async def pipeline_processar(pergunta, idioma="pt"):
         return {"resposta": resposta_texto, "resultados": [], "acao": "NENHUM"}
 
     if produtos_pendentes and is_confirmacao_lista(texto_baixo):
-        memoria["produtos_pendentes_confirmacao"] = []
-        if idioma == "pt":
-            resposta_texto = "Perfeito, ja coloquei essa opcao na sua lista." if len(produtos_pendentes) == 1 else "Perfeito, ja coloquei essas opcoes na sua lista."
+        if is_pedido_mapa(texto_baixo):
+            memoria["produtos_pendentes_confirmacao"] = []
         else:
-            resposta_texto = "Great, I already added this option to your list." if len(produtos_pendentes) == 1 else "Great, I already added these options to your list."
-        memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
-        return {
-            "resposta": resposta_texto,
-            "resultados": produtos_pendentes,
-            "acao": "MOSTRAR_PRODUTOS",
-            "auto_add_lista": True,
-        }
+            memoria["produtos_pendentes_confirmacao"] = []
+            if idioma == "pt":
+                resposta_texto = "Perfeito, ja coloquei essa opcao na sua lista." if len(produtos_pendentes) == 1 else "Perfeito, ja coloquei essas opcoes na sua lista."
+            else:
+                resposta_texto = "Great, I already added this option to your list." if len(produtos_pendentes) == 1 else "Great, I already added these options to your list."
+            memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
+            return {
+                "resposta": resposta_texto,
+                "resultados": produtos_pendentes,
+                "acao": "MOSTRAR_PRODUTOS",
+                "auto_add_lista": True,
+            }
 
     if produtos_pendentes and is_negacao_curta(texto_baixo):
         memoria["produtos_pendentes_confirmacao"] = []
@@ -798,6 +806,7 @@ async def pipeline_processar(pergunta, idioma="pt"):
     if is_pedido_resumo_rotas(texto_baixo) and memoria["produtos_mencionados"]:
         produtos_rota = produtos_por_secao(memoria["produtos_mencionados"].values())
         if produtos_rota:
+            memoria["produtos_pendentes_confirmacao"] = []
             if idioma == "pt":
                 resposta_texto = f"Claro! Aqui estão as {len(produtos_rota)} seção(ões) dos produtos que conversamos."
             else:
@@ -843,19 +852,10 @@ async def pipeline_processar(pergunta, idioma="pt"):
             if disponiveis:
                 memoria["ultimos_produtos"] = disponiveis[:3]
                 memoria["assunto_ativo"] = "produto"
+                memoria["produtos_pendentes_confirmacao"] = []
                 for p in disponiveis[:3]:
                     memoria["produtos_mencionados"][p["id"]] = p
-                
-                contexto = "Produtos encontrados para mostrar no mapa:\n" + "\n---\n".join(
-                    [formatar_produto_para_contexto(p) for p in disponiveis[:3]]
-                )
-                resposta = await perguntar_llm(
-                    pergunta,
-                    contexto_produtos=contexto,
-                    idioma=idioma,
-                    historico=memoria["historico_conversas"][:-1],
-                    todos_produtos=list(memoria["produtos_mencionados"].values())
-                )
+                resposta = montar_resposta_mapa(disponiveis[:3], idioma)
                 memoria["historico_conversas"].append({"role": "assistant", "content": resposta})
                 return {"resposta": resposta, "resultados": disponiveis[:3], "acao": "ABRIR_MAPA"}
 
@@ -874,6 +874,7 @@ async def pipeline_processar(pergunta, idioma="pt"):
         return {"resposta": "", "resultados": [], "acao": "ENCERRAR"}
 
     if produtos_memoria and (intencao == "IR_PARA_MAPA" or is_pedido_mapa(texto_baixo)):
+        memoria["produtos_pendentes_confirmacao"] = []
         # Usa todos os produtos já mencionados na sessão, não só os últimos
         todos_mencionados = list(memoria["produtos_mencionados"].values())
         pool_mapa = todos_mencionados if todos_mencionados else produtos_memoria
@@ -883,12 +884,12 @@ async def pipeline_processar(pergunta, idioma="pt"):
             produtos_mapa = pool_mapa
         produtos_rota = produtos_por_secao(produtos_mapa)
         if len(produtos_rota) > 1:
-            resposta_texto = f"Mostrando {len(produtos_rota)} rotas no mapa." if idioma == "pt" else f"Showing {len(produtos_rota)} routes on the map."
+            resposta_texto = montar_resposta_mapa(produtos_rota, idioma)
             memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
             return {"resposta": resposta_texto, "resultados": produtos_rota, "acao": "ABRIR_ROTAS"}
 
         produto_mapa = produtos_rota[0] if produtos_rota else produtos_memoria[0]
-        resposta_texto = "Mostrando o caminho no mapa." if idioma == "pt" else "Showing the route on the map."
+        resposta_texto = montar_resposta_mapa([produto_mapa], idioma)
         memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
         return {"resposta": resposta_texto, "resultados": [produto_mapa], "acao": "ABRIR_MAPA"}
 

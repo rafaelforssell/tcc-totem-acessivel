@@ -209,13 +209,13 @@ REGRAS OBRIGATÓRIAS:
                     res = f"Encontrei o {nome} por R$ {preco:.2f}. "
                     if cor:
                         res += f"Temos ele na cor {cor}. "
-                    res += "Gostou das opções? Se quiser, posso te mostrar a localização no mapa."
+                    res += "O que achou?"
                     return res
                 else:
                     res = f"I found the {nome} for ${preco:.2f}. "
                     if cor:
                         res += f"We have it in {cor}. "
-                    res += "Did you like this option? If you'd like, I can show you the route on the map."
+                    res += "What do you think?"
                     return res
         except Exception as fallback_err:
             print("Erro ao gerar fallback de produto:", fallback_err)

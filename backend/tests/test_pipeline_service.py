@@ -142,6 +142,85 @@ def test_pipeline_nao_trata_negacao_como_atributo_do_produto(monkeypatch):
     assert "nao encontrei bermuda nao" not in resposta["resposta"].lower()
 
 
+def test_pipeline_pedido_explicito_de_mapa_nao_pede_confirmacao_de_novo(monkeypatch):
+    async def fake_classificar_intencao(pergunta, idioma="pt"):
+        return {"intencao": "IR_PARA_MAPA", "palavras_chave": []}
+
+    monkeypatch.setattr(pipeline_service, "classificar_intencao", fake_classificar_intencao)
+    pipeline_service.memoria["ultimos_produtos"] = [
+        {
+            "id": 1,
+            "nome": "Vestido Vermelho Feminino",
+            "categoria": "Roupa",
+            "tipo": "Vestido",
+            "cor": "Vermelho",
+            "tamanho": "M",
+            "marca": "Marca X",
+            "preco": 189.90,
+            "estoque": 1,
+            "setor": "Feminino",
+            "corredor": "7",
+            "prateleira": "Arara 2",
+            "descricao": "Vestido elegante",
+        },
+        {
+            "id": 2,
+            "nome": "Tenis Branco Masculino",
+            "categoria": "Calcados",
+            "tipo": "Tenis",
+            "cor": "Branco",
+            "tamanho": "42",
+            "marca": "Marca Y",
+            "preco": 249.90,
+            "estoque": 1,
+            "setor": "Masculino",
+            "corredor": "3",
+            "prateleira": "Prateleira 1",
+            "descricao": "Tenis casual",
+        },
+    ]
+    pipeline_service.memoria["produtos_mencionados"] = {
+        1: pipeline_service.memoria["ultimos_produtos"][0],
+        2: pipeline_service.memoria["ultimos_produtos"][1],
+    }
+    pipeline_service.memoria["produtos_pendentes_confirmacao"] = pipeline_service.memoria["ultimos_produtos"][:]
+
+    resposta = asyncio.run(pipeline_service.pipeline_processar("Me mostra o mapa dos dois por favor"))
+
+    assert resposta["acao"] == "ABRIR_ROTAS"
+    assert "gostaria de ver" not in resposta["resposta"].lower()
+
+
+def test_pipeline_sim_apos_mapa_nao_adiciona_lista(monkeypatch):
+    async def fake_classificar_intencao(pergunta, idioma="pt"):
+        return {"intencao": "OUTROS", "palavras_chave": []}
+
+    monkeypatch.setattr(pipeline_service, "classificar_intencao", fake_classificar_intencao)
+    pipeline_service.memoria["ultimos_produtos"] = [
+        {
+            "id": 2,
+            "nome": "Tenis Branco Masculino",
+            "categoria": "Calcados",
+            "tipo": "Tenis",
+            "cor": "Branco",
+            "tamanho": "42",
+            "marca": "Marca Y",
+            "preco": 249.90,
+            "estoque": 1,
+            "setor": "Masculino",
+            "corredor": "3",
+            "prateleira": "Prateleira 1",
+            "descricao": "Tenis casual",
+        }
+    ]
+    pipeline_service.memoria["produtos_pendentes_confirmacao"] = []
+
+    resposta = asyncio.run(pipeline_service.pipeline_processar("sim"))
+
+    assert resposta["acao"] == "NENHUM"
+    assert resposta.get("auto_add_lista") is None or resposta.get("auto_add_lista") is False
+
+
 def test_pipeline_encerrar_nao_responde_com_fala(monkeypatch):
     async def fake_classificar_intencao(pergunta, idioma="pt"):
         return {"intencao": "OUTROS", "palavras_chave": []}

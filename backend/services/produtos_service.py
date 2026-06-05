@@ -17,6 +17,23 @@ def normalizar_texto(texto):
     return "".join(ch for ch in sem_acento if not unicodedata.combining(ch)).lower()
 
 
+def normalizar_termo_busca(termo):
+    sinonimos = {
+        "camiseta": "camisa",
+        "camisetas": "camisa",
+    }
+    palavras = normalizar_texto(termo).replace("_", " ").split()
+    return " ".join(sinonimos.get(palavra, palavra) for palavra in palavras)
+
+
+def termos_busca_compativeis(termo):
+    termos = [termo]
+    termo_normalizado = normalizar_termo_busca(termo)
+    if termo_normalizado and termo_normalizado != normalizar_texto(termo).replace("_", " "):
+        termos.append(termo_normalizado)
+    return termos
+
+
 def produto_contem_termos(produto, termo):
     texto_produto = " ".join(
         str(obter_campo(produto, campo))
@@ -60,25 +77,33 @@ def buscar_produto_db(nome):
         return {"resultado": []}
 
     produtos = fetchall("SELECT * FROM produtos ORDER BY nome, cor, tamanho")
-    produtos = [p for p in produtos if produto_contem_termos(p, termo)]
+    termos = termos_busca_compativeis(termo)
+    produtos = [
+        p for p in produtos
+        if any(produto_contem_termos(p, termo_busca) for termo_busca in termos)
+    ]
 
     if produtos:
         return {"resultado": [formatar_produto(p) for p in produtos]}
 
-    produtos = fetchall(
-        """
-        SELECT * FROM produtos
-        WHERE nome LIKE ?
-           OR categoria LIKE ?
-           OR tipo LIKE ?
-           OR cor LIKE ?
-           OR marca LIKE ?
-           OR descricao LIKE ?
-           OR sku LIKE ?
-        ORDER BY nome, cor, tamanho
-        """,
-        tuple(f"%{termo}%" for _ in range(7)),
-    )
+    produtos = []
+    for termo_busca in termos:
+        produtos = fetchall(
+            """
+            SELECT * FROM produtos
+            WHERE nome LIKE ?
+               OR categoria LIKE ?
+               OR tipo LIKE ?
+               OR cor LIKE ?
+               OR marca LIKE ?
+               OR descricao LIKE ?
+               OR sku LIKE ?
+            ORDER BY nome, cor, tamanho
+            """,
+            tuple(f"%{termo_busca}%" for _ in range(7)),
+        )
+        if produtos:
+            break
 
     return {"resultado": [formatar_produto(p) for p in produtos]}
 

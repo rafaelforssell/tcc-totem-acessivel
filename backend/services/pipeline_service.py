@@ -180,7 +180,7 @@ def extrair_segmentos_busca(texto_baixo):
     texto = normalizar_texto(texto_baixo)
     for tipo in sorted(TIPOS_CONHECIDOS, key=len, reverse=True):
         texto = re.sub(rf"\b(?:um|uma|o|a)\s+({tipo})\b", r", \1", texto)
-    partes = re.split(r"\b(?: e | ou |,| com )\b", texto)
+    partes = re.split(r"\s*(?:,|;|\b(?:e|ou|com)\b)\s*", texto)
     segmentos = []
     for parte in partes:
         tokens = limpar_tokens_busca(parte.split())
@@ -254,14 +254,21 @@ def buscar_produtos_por_segmentos(texto_baixo):
             continue
 
         escolhidos = ordenar_por_aderencia(candidatos_tipo, tipo, atributos)
+        produto_referencia_falta = escolhidos[0] if escolhidos else None
         for produto in escolhidos:
             produto_id = obter_campo(produto, "id", 0)
             if produto_id not in ids_escolhidos:
                 resultados.append(formatar_produto(produto))
                 ids_escolhidos.add(produto_id)
+                produto_referencia_falta = produto
                 break
 
-        faltando = [token for token in atributos if token in CORES_CONHECIDAS or token not in {"fem", "mas"}]
+        texto_referencia = texto_produto(produto_referencia_falta) if produto_referencia_falta else ""
+        faltando = [
+            token for token in atributos
+            if (token in CORES_CONHECIDAS or token not in {"fem", "mas"})
+            and not token_match(texto_referencia, token)
+        ]
         if faltando:
             faltas.append({"tipo": tipo, "atributos": faltando})
 
@@ -589,45 +596,23 @@ def is_pedido_atendente(texto_baixo):
 
 def is_pedido_mapa(texto_baixo):
     texto = normalizar_texto(texto_baixo).replace(",", "").replace(".", "").replace("?", "").strip()
-    afirmacoes = {
-        "sim",
-        "sim por favor",
-        "por favor",
-        "pode",
-        "pode sim",
-        "quero",
-        "quero sim",
-        "claro",
-        "mostra",
-        "mostre",
-        "mostrar",
-        "me mostra",
-        "me mostre",
-        "quero ver",
-        "ver",
-        "abrir",
-        "abre",
-        "pode abrir",
+    pedidos_explicitos = {
         "abrir mapa",
         "abre o mapa",
-        "ok",
-        "ta",
-        "vai",
-        "vamos",
-        "bora",
-        "perfeito",
-        "otimo",
-        "gostei",
-        "gostei sim",
-        "adorei",
-        "legal",
-        "beleza",
-        "show",
-        "certo",
-        "entendido",
+        "abrir o mapa",
+        "pode abrir o mapa",
+        "mostra o mapa",
+        "mostre o mapa",
+        "mostrar mapa",
+        "me mostra o mapa",
+        "me mostre o mapa",
+        "quero ver o mapa",
+        "quero ver no mapa",
+        "ver mapa",
+        "ver no mapa",
     }
     return (
-        texto in afirmacoes
+        texto in pedidos_explicitos
         or "mapa" in texto
         or "onde" in texto
         or "caminho" in texto
@@ -651,6 +636,24 @@ def is_confirmacao_positiva(texto_baixo):
         "abrir", "abre", "pode abrir", "abre o mapa", "abrir o mapa",
     }
     return texto in afirmacoes
+
+
+def ia_ofereceu_mapa_no_historico():
+    msgs_assistente = [
+        m for m in memoria.get("historico_conversas", [])[:-1]
+        if m.get("role") == "assistant"
+    ]
+    if not msgs_assistente:
+        return False
+
+    ultima_resposta_ia = normalizar_texto(msgs_assistente[-1].get("content", ""))
+    tem_mapa = any(termo in ultima_resposta_ia for termo in [
+        "mapa", "localizacao", "caminho", "corredor", "mostrar", "onde", "rota"
+    ])
+    tem_convite = any(termo in ultima_resposta_ia for termo in [
+        "quer", "gostaria", "deseja", "posso", "posso te", "quer que eu", "voce quer"
+    ])
+    return tem_mapa and tem_convite and "?" in ultima_resposta_ia
 
 
 def is_pedido_resumo_rotas(texto_baixo):
@@ -829,6 +832,12 @@ async def pipeline_processar(pergunta, idioma="pt"):
     
     produtos_memoria = memoria.get("ultimos_produtos", [])
     produtos_pendentes = memoria.get("produtos_pendentes_confirmacao", [])
+    ia_ofereceu_mapa = ia_ofereceu_mapa_no_historico()
+    confirmacao_mapa_pendente = (
+        bool(produtos_memoria)
+        and ia_ofereceu_mapa
+        and is_confirmacao_positiva(texto_baixo)
+    )
 
     if is_encerramento(texto_baixo):
         limpar_memoria()
@@ -859,6 +868,29 @@ async def pipeline_processar(pergunta, idioma="pt"):
         )
         memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
         return {"resposta": resposta_texto, "resultados": [], "acao": "NENHUM"}
+
+    if confirmacao_mapa_pendente:
+        memoria["produtos_pendentes_confirmacao"] = []
+        todos_mencionados = list(memoria["produtos_mencionados"].values())
+        pool_mapa = todos_mencionados if todos_mencionados else produtos_memoria
+        produtos_rota = produtos_por_secao(pool_mapa)
+        if len(produtos_rota) > 1:
+            resposta_texto = (
+                f"Otimo! Mostrando {len(produtos_rota)} rotas no mapa."
+                if idioma == "pt"
+                else f"Great! Showing {len(produtos_rota)} routes on the map."
+            )
+            memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
+            return {"resposta": resposta_texto, "resultados": produtos_rota, "acao": "ABRIR_ROTAS"}
+
+        produto_mapa = produtos_rota[0] if produtos_rota else produtos_memoria[0]
+        resposta_texto = (
+            "Otimo! Mostrando o caminho no mapa."
+            if idioma == "pt"
+            else "Great! Showing the route on the map."
+        )
+        memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
+        return {"resposta": resposta_texto, "resultados": [produto_mapa], "acao": "ABRIR_MAPA"}
 
     if produtos_pendentes and is_confirmacao_lista(texto_baixo):
         if is_pedido_mapa(texto_baixo):
@@ -898,32 +930,6 @@ async def pipeline_processar(pergunta, idioma="pt"):
             memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
             return {"resposta": resposta_texto, "resultados": produtos_rota, "acao": "ABRIR_ROTAS"}
 
-    # Detecção de confirmação positiva contextual: usuário responde afirmativamente a uma sugestão de mapa
-    # Ex: "sim", "perfeito", "gostei", "quero ver" — quando já tem produtos na memória
-    ultima_resposta_ia = ""
-    if memoria["historico_conversas"]:
-        # Pega a última mensagem do assistente (antes da atual do usuário)
-        msgs_assistente = [m for m in memoria["historico_conversas"][:-1] if m["role"] == "assistant"]
-        if msgs_assistente:
-            ultima_resposta_ia = normalizar_texto(msgs_assistente[-1]["content"])
-
-    ia_ofereceu_mapa = any(termo in ultima_resposta_ia for termo in [
-        "mapa", "localizacao", "caminho", "corredor", "mostrar", "onde", "rota"
-    ])
-
-    if False and is_confirmacao_positiva(texto_baixo) and ia_ofereceu_mapa and produtos_memoria:
-        todos_mencionados = list(memoria["produtos_mencionados"].values())
-        pool_mapa = todos_mencionados if todos_mencionados else produtos_memoria
-        produtos_rota = produtos_por_secao(pool_mapa)
-        if len(produtos_rota) > 1:
-            resposta_texto = f"Ótimo! Mostrando {len(produtos_rota)} rotas no mapa." if idioma == "pt" else f"Great! Showing {len(produtos_rota)} routes on the map."
-            memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
-            return {"resposta": resposta_texto, "resultados": produtos_rota, "acao": "ABRIR_ROTAS"}
-        produto_mapa = produtos_rota[0] if produtos_rota else produtos_memoria[0]
-        resposta_texto = "Ótimo! Mostrando o caminho no mapa." if idioma == "pt" else "Great! Showing the route on the map."
-        memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
-        return {"resposta": resposta_texto, "resultados": [produto_mapa], "acao": "ABRIR_MAPA"}
-
     # Se o usuário pediu explicitamente um mapa e citou um produto na mesma frase
     if is_pedido_mapa(texto_baixo):
         palavras_busca = extrair_palavras_busca(texto_baixo)
@@ -960,7 +966,15 @@ async def pipeline_processar(pergunta, idioma="pt"):
         limpar_memoria()
         return {"resposta": "", "resultados": [], "acao": "ENCERRAR"}
 
-    if produtos_memoria and (intencao == "IR_PARA_MAPA" or is_pedido_mapa(texto_baixo)):
+    pedido_mapa_explicito = is_pedido_mapa(texto_baixo)
+    intencao_mapa_valida = (
+        intencao == "IR_PARA_MAPA"
+        and (pedido_mapa_explicito or not is_confirmacao_positiva(texto_baixo))
+    )
+    if intencao == "IR_PARA_MAPA" and not intencao_mapa_valida:
+        intencao = "OUTROS"
+
+    if produtos_memoria and (intencao_mapa_valida or pedido_mapa_explicito):
         memoria["produtos_pendentes_confirmacao"] = []
         # Usa todos os produtos já mencionados na sessão, não só os últimos
         todos_mencionados = list(memoria["produtos_mencionados"].values())
@@ -1089,7 +1103,7 @@ async def pipeline_processar(pergunta, idioma="pt"):
         final_context = produtos_relevantes if produtos_relevantes else produtos_memoria
         return await responder_sobre_produtos(pergunta, final_context, idioma)
 
-    if intencao == "IR_PARA_MAPA":
+    if intencao_mapa_valida:
         if produtos_memoria:
             todos_mencionados = list(memoria["produtos_mencionados"].values())
             pool_mapa = todos_mencionados if is_pedido_resumo_rotas(texto_baixo) else produtos_memoria

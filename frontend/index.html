@@ -166,13 +166,85 @@
             outline: 4px solid #ffffff;
             outline-offset: 4px;
         }
+
+        /* ========== MODO CLARO ========== */
+        .light-mode body {
+            background-color: #f2f2f2;
+            color: #1a1a1a;
+        }
+
+        .light-mode header,
+        .light-mode nav {
+            background-color: #ffffff !important;
+            border-color: #ddd !important;
+        }
+
+        .light-mode .bg-black {
+            background-color: #ffffff !important;
+        }
+
+        .light-mode .bg-zinc-900 {
+            background-color: #f0f0f0 !important;
+        }
+
+        .light-mode .bg-zinc-800 {
+            background-color: #e4e4e4 !important;
+        }
+
+        .light-mode .bg-zinc-950 {
+            background-color: #f8f8f8 !important;
+        }
+
+        .light-mode .text-white {
+            color: #1a1a1a !important;
+        }
+
+        .light-mode .text-zinc-300 {
+            color: #444 !important;
+        }
+
+        .light-mode .text-zinc-400 {
+            color: #555 !important;
+        }
+
+        .light-mode .text-zinc-500 {
+            color: #666 !important;
+        }
+
+        .light-mode .border-zinc-800 {
+            border-color: #d0d0d0 !important;
+        }
+
+        .light-mode .border-zinc-700 {
+            border-color: #c0c0c0 !important;
+        }
+
+        .light-mode .hover\:bg-zinc-800:hover {
+            background-color: #d8d8d8 !important;
+        }
+
+        .light-mode .chat-scroll::-webkit-scrollbar-track {
+            background: #f0f0f0;
+        }
+
+        .light-mode .chat-scroll::-webkit-scrollbar-thumb {
+            background: #bbb;
+        }
+
+        .light-mode .map-grid {
+            background-image: radial-gradient(circle, #aaa 1px, transparent 1px);
+        }
+
+        .light-mode #contrast-toggle {
+            background-color: #ffffff !important;
+        }
     </style>
 </head>
 
 <body class="antialiased">
-    <button id="contrast-toggle" type="button" onclick="toggleHighContrast()" aria-label="Alternar alto contraste"
+    <button id="contrast-toggle" type="button" onclick="toggleDarkMode()" aria-label="Alternar modo claro/escuro"
         class="fixed right-4 top-24 md:top-36 z-[60] w-12 h-12 md:w-14 md:h-14 rounded-xl bg-black border-2 border-yellow-400 text-yellow-400 flex items-center justify-center hover:bg-zinc-900 transition-colors">
-        <span class="material-symbols-outlined text-2xl md:text-3xl">contrast</span>
+        <span id="contrast-icon" class="material-symbols-outlined text-2xl md:text-3xl">light_mode</span>
     </button>
 
     <!-- Screen 1: Start -->
@@ -292,8 +364,9 @@
                     <p class="text-zinc-400 uppercase font-bold text-xs md:text-sm tracking-widest mb-1 md:mb-2"
                         data-i18n="basic_foods">Alimentos Básicos</p>
                     <h1 id="product-name"
-                        class="font-lexend font-bold text-3xl md:text-5xl leading-tight text-white mb-2 md:mb-4"
+                        class="font-lexend font-bold text-3xl md:text-5xl leading-tight text-white mb-1 md:mb-2"
                         data-i18n="product_name_demo">Arroz 5KG</h1>
+                    <p id="product-color" class="text-zinc-400 text-sm md:text-base mb-2 md:mb-3 font-semibold"></p>
                     <p id="product-price" class="font-lexend font-bold text-4xl md:text-6xl text-yellow-400"
                         data-i18n="product_price_demo">R$ 22,90</p>
                 </div>
@@ -541,7 +614,7 @@
         // Dicionário de Traduções
         const translations = {
             pt: {
-                start_btn: "START",
+                start_btn: "INICIAR",
                 back_btn: "Voltar",
                 home_btn: "Início",
                 access_btn: "Idiomas",
@@ -615,21 +688,27 @@
         let currentLightboxIndex = 0;
         let sessaoPausada = false;
 
-        function applyHighContrast(enabled) {
-            document.documentElement.classList.toggle("high-contrast", enabled);
-            localStorage.setItem("totemHighContrast", enabled ? "1" : "0");
-            const contrastButton = document.getElementById("contrast-toggle");
-            if (contrastButton) {
-                contrastButton.setAttribute(
-                    "aria-pressed",
-                    enabled ? "true" : "false"
-                );
+        function applyDarkMode(isDark) {
+            if (isDark) {
+                document.documentElement.classList.remove("light-mode");
+            } else {
+                document.documentElement.classList.add("light-mode");
             }
+            localStorage.setItem("totemDarkMode", isDark ? "1" : "0");
+            const icon = document.getElementById("contrast-icon");
+            if (icon) icon.textContent = isDark ? "light_mode" : "dark_mode";
+            const btn = document.getElementById("contrast-toggle");
+            if (btn) btn.setAttribute("aria-pressed", isDark ? "false" : "true");
         }
 
-        function toggleHighContrast() {
-            applyHighContrast(!document.documentElement.classList.contains("high-contrast"));
+        function toggleDarkMode() {
+            const isCurrentlyDark = !document.documentElement.classList.contains("light-mode");
+            applyDarkMode(!isCurrentlyDark);
         }
+
+        // Mantida por compatibilidade legada
+        function applyHighContrast(enabled) { applyDarkMode(!enabled); }
+        function toggleHighContrast() { toggleDarkMode(); }
 
         function enhanceButtonLabels() {
             document.querySelectorAll("button").forEach(button => {
@@ -662,7 +741,7 @@
             navigateTo(previousScreenId);
         }
 
-        function setLanguage(lang) {
+        function setLanguage(lang, navigate = true) {
             currentLang = lang;
 
             // Atualiza os textos
@@ -689,7 +768,14 @@
             }
 
             // Retorna para a tela anterior
-            goBack();
+            if (navigate) goBack();
+        }
+
+        // Remove a cor do nome do produto para exibição separada
+        function getNomeSemCor(nome, cor) {
+            if (!nome || !cor) return nome || '';
+            const regex = new RegExp('\\b' + cor.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi');
+            return nome.replace(regex, '').replace(/\s+/g, ' ').trim();
         }
 
         function visualizarProduto(index) {
@@ -765,9 +851,18 @@
 
             // data.nome, data.preco, data.corredor, data.descricao, data.imagem (se houver)
             if (data.nome) {
-                document.getElementById('product-name').textContent = data.nome;
-                document.getElementById('map-product-name').textContent = data.nome;
-                document.getElementById('header-product-name').textContent = data.nome;
+                const nomeSemCor = getNomeSemCor(data.nome, data.cor);
+                const nomeExibir = nomeSemCor || data.nome;
+                document.getElementById('product-name').textContent = nomeExibir;
+                document.getElementById('map-product-name').textContent = nomeExibir;
+                document.getElementById('header-product-name').textContent = nomeExibir;
+                // Exibe a cor separada
+                const colorEl = document.getElementById('product-color');
+                if (colorEl) {
+                    colorEl.textContent = data.cor
+                        ? (currentLang === 'pt' ? `Disponível na cor: ${data.cor}` : `Available in color: ${data.cor}`)
+                        : '';
+                }
             }
             if (data.preco !== undefined) {
                 document.getElementById('product-price').textContent = 'R$ ' + Number(data.preco).toFixed(2).replace('.', ',');
@@ -894,7 +989,7 @@
 
                         const name = document.createElement("h3");
                         name.className = "text-white font-bold text-xs md:text-sm line-clamp-2";
-                        name.textContent = p.nome || "Produto";
+                        name.textContent = getNomeSemCor(p.nome, p.cor) || p.nome || "Produto";
 
                         const price = document.createElement("p");
                         price.className = "text-yellow-400 font-bold text-sm md:text-base mt-1";
@@ -912,9 +1007,14 @@
 
                     bubble.appendChild(cards);
                 } else if (results && results.length > 0 && acao === "ABRIR_MAPA") {
-                    const p = results[0];
                     const mapDiv = document.createElement("div");
-                    mapDiv.innerHTML = createMapCardHtml(p.nome, p.corredor);
+                    if (results.length > 1) {
+                        // Múltiplos produtos: mostra todas as rotas no mapa
+                        mapDiv.innerHTML = createMultiRouteMapCardHtml(results);
+                    } else {
+                        const p = results[0];
+                        mapDiv.innerHTML = createMapCardHtml(p.nome, p.corredor);
+                    }
                     bubble.appendChild(mapDiv.firstElementChild);
                 } else if (results && results.length > 0 && acao === "ABRIR_ROTAS") {
                     const mapDiv = document.createElement("div");
@@ -1075,42 +1175,41 @@
                     // Check actions to perform after audio
                     let encerrarAposAudio = false;
                     let abrirMapaAposAudio = false;
-                    if (data.acao === "ABRIR_MAPA") {
+                    if (data.acao === "ABRIR_MAPA" || data.acao === "ABRIR_ROTAS") {
                         abrirMapaAposAudio = true;
                         if (data.resultados && data.resultados.length > 0) {
                             loadProductData(data.resultados[0]);
-                        }
-                    } else if (data.acao === "ABRIR_ROTAS") {
-                        abrirMapaAposAudio = true;
-                        if (data.resultados && data.resultados.length > 0) {
-                            loadProductData(data.resultados[0]);
-                            updateStoreMap(data.resultados[0].corredor);
+                            if (data.resultados.length > 1) {
+                                // Múltiplos produtos: destaca todas as seções no mapa lateral
+                                data.resultados.forEach(p => {
+                                    if (p.corredor) updateStoreMap(parseInt(p.corredor));
+                                });
+                            } else {
+                                updateStoreMap(parseInt(data.resultados[0].corredor));
+                            }
                         }
                     }
 
                     if (data.acao === "CHAMAR_ATENDENTE") {
                         console.log('[Atendente] Ação CHAMAR_ATENDENTE disparada pelo backend!');
-                        // Captura o canvas do mapa e envia para o backend notificar via Telegram
                         setTimeout(async () => {
                             try {
-                                console.log('[Atendente] Iniciando processo de envio de alerta...');
+                                console.log('[Atendente] Capturando SVG do mapa...');
                                 let fotoBase64 = null;
                                 try {
-                                    // Tenta capturar o canvas do mapa (se estiver visível)
-                                    const mapaCanvas = document.querySelector('#map-canvas canvas') ||
-                                                       document.querySelector('canvas');
-                                    if (mapaCanvas) {
-                                        fotoBase64 = mapaCanvas.toDataURL('image/png');
-                                        console.log('[Atendente] Canvas capturado com sucesso.');
+                                    // Captura o SVG do mapa inline do chat (o mais recente)
+                                    const mapSvgs = document.querySelectorAll('.map-grid svg');
+                                    const svg = mapSvgs.length ? mapSvgs[mapSvgs.length - 1] : null;
+                                    if (svg) {
+                                        fotoBase64 = await capturarSVGcomoPNG(svg);
+                                        console.log('[Atendente] SVG convertido para PNG com sucesso.');
                                     }
-                                } catch (canvasErr) {
-                                    console.warn('[Atendente] Falha ao ler pixels do canvas (ignorado para enviar apenas texto):', canvasErr);
+                                } catch (svgErr) {
+                                    console.warn('[Atendente] Falha ao capturar SVG (enviando só texto):', svgErr);
                                 }
 
-                                const urlDestino = `${BACKEND_URL}/chamar-atendente`;
-                                console.log('[Atendente] Disparando fetch para:', urlDestino);
-                                
-                                const response = await fetch(urlDestino, {
+                                console.log('[Atendente] Disparando fetch para /chamar-atendente...');
+                                const response = await fetch(`${BACKEND_URL}/chamar-atendente`, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({
@@ -1118,9 +1217,21 @@
                                         totem_id: 'Totem 1'
                                     })
                                 });
-                                
+
                                 const respostaServidor = await response.json();
-                                console.log('[Atendente] Resposta recebida do servidor:', respostaServidor);
+                                console.log('[Atendente] Resposta do servidor:', respostaServidor);
+
+                                // Exibe mensagem de confirmação e se despede
+                                const msgConfirmacao = currentLang === 'pt'
+                                    ? 'Um atendente está a caminho! Obrigado pela visita. Até logo!'
+                                    : 'An attendant is on the way! Thank you for visiting. Goodbye!';
+                                setTimeout(() => {
+                                    appendMessage(msgConfirmacao, 'totem');
+                                    // Para a sessão e encerra após 6 segundos
+                                    sessaoAtiva = false;
+                                    setTimeout(() => voltarDoChat(), 6000);
+                                }, 1500);
+
                             } catch (err) {
                                 console.error('[Atendente] Erro ao notificar atendente:', err);
                             }
@@ -1202,6 +1313,36 @@
                 requestAnimationFrame(detectarSilencio);
             }
             detectarSilencio();
+        }
+
+        // ====== CAPTURA SVG COMO PNG (para Telegram) ======
+        function capturarSVGcomoPNG(svgElement) {
+            return new Promise((resolve) => {
+                try {
+                    const svgData = new XMLSerializer().serializeToString(svgElement);
+                    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+                    const url = URL.createObjectURL(svgBlob);
+                    const img = new Image();
+                    img.onload = () => {
+                        const rect = svgElement.getBoundingClientRect();
+                        const w = rect.width > 10 ? Math.round(rect.width) : 500;
+                        const h = rect.height > 10 ? Math.round(rect.height) : 300;
+                        const canvas = document.createElement('canvas');
+                        canvas.width = w;
+                        canvas.height = h;
+                        const ctx = canvas.getContext('2d');
+                        ctx.fillStyle = '#1a1a1a';
+                        ctx.fillRect(0, 0, w, h);
+                        ctx.drawImage(img, 0, 0, w, h);
+                        URL.revokeObjectURL(url);
+                        resolve(canvas.toDataURL('image/png'));
+                    };
+                    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+                    img.src = url;
+                } catch (e) {
+                    resolve(null);
+                }
+            });
         }
 
         // ====== IMAGES LIGHTBOX FUNCTIONS ======
@@ -1522,7 +1663,11 @@
             );
         }
 
-        applyHighContrast(localStorage.getItem("totemHighContrast") === "1");
+        // Carrega o tema salvo (padrão: modo escuro)
+        const savedDark = localStorage.getItem("totemDarkMode");
+        applyDarkMode(savedDark === null || savedDark === "1");
+        // Aplica o idioma padrão (português) sem navegar
+        setLanguage('pt', false);
         enhanceButtonLabels();
     </script>
 </body>

@@ -246,6 +246,11 @@
         class="fixed right-4 top-24 md:top-36 z-[60] w-12 h-12 md:w-14 md:h-14 rounded-xl bg-black border-2 border-yellow-400 text-yellow-400 flex items-center justify-center hover:bg-zinc-900 transition-colors">
         <span id="contrast-icon" class="material-symbols-outlined text-2xl md:text-3xl">light_mode</span>
     </button>
+    <button id="admin-toggle" type="button" onclick="navigateToAdmin()" aria-label="Abrir painel administrativo"
+        class="fixed left-4 top-24 md:top-36 z-[60] px-4 h-12 md:h-14 rounded-xl bg-black border-2 border-zinc-700 text-white flex items-center justify-center gap-2 hover:border-yellow-400 hover:text-yellow-400 transition-colors">
+        <span class="material-symbols-outlined text-xl md:text-2xl">tune</span>
+        <span class="font-lexend font-bold text-sm md:text-base uppercase tracking-wide">Admin</span>
+    </button>
 
     <!-- Screen 1: Start -->
     <section id="screen1" class="page active">
@@ -312,6 +317,25 @@
         </header>
         <main id="chat-container"
             class="flex-grow mt-20 md:mt-32 mb-24 md:mb-32 bg-black flex flex-col p-4 md:p-12 overflow-y-auto chat-scroll overflow-x-hidden">
+            <div id="selected-products-panel" class="hidden w-full max-w-4xl mx-auto mb-6 bg-zinc-900/95 border-2 border-yellow-400/60 rounded-2xl p-4 md:p-5">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div>
+                        <p class="text-yellow-400 text-xs uppercase font-bold tracking-[0.2em]">Lista de Interesse</p>
+                        <p id="selected-products-summary" class="text-white font-lexend font-bold text-lg md:text-2xl mt-1">0 produtos selecionados</p>
+                        <div id="selected-products-chips" class="flex flex-wrap gap-2 mt-3"></div>
+                    </div>
+                    <div class="flex flex-col gap-2 md:w-[260px] shrink-0">
+                        <button id="selected-products-map-btn" type="button" onclick="abrirMapaDaListaSelecionada()"
+                            class="w-full bg-yellow-400 text-black font-lexend font-bold text-sm md:text-base px-4 py-3 rounded-xl border-2 border-yellow-300 hover:bg-yellow-300 transition-colors">
+                            Abrir mapa da lista
+                        </button>
+                        <button id="selected-products-clear-btn" type="button" onclick="limparListaSelecionada()"
+                            class="w-full bg-zinc-800 text-white font-bold text-sm md:text-base px-4 py-3 rounded-xl border-2 border-zinc-700 hover:bg-zinc-700 transition-colors">
+                            Limpar lista
+                        </button>
+                    </div>
+                </div>
+            </div>
             <div id="chat-messages" class="flex flex-col gap-6 w-full max-w-4xl mx-auto mt-auto" role="log"
                 aria-live="polite" aria-relevant="additions">
                 <!-- Messages will be injected here dynamically -->
@@ -477,28 +501,28 @@
 
                         <!-- Seções 1 a 7 -->
                         <g fill="#131313" stroke="#333" stroke-width="2">
-                            <rect id="rect-corredor-1" x="210" y="70" width="78" height="330" rx="4" />
-                            <rect id="rect-corredor-2" x="306" y="70" width="78" height="330" rx="4" />
-                            <rect id="rect-corredor-3" x="402" y="70" width="78" height="330" rx="4" stroke="#ffd700"
+                            <rect id="rect-corredor-1" x="180" y="110" width="220" height="72" rx="18" />
+                            <rect id="rect-corredor-2" x="180" y="235" width="220" height="72" rx="18" />
+                            <rect id="rect-corredor-3" x="180" y="360" width="220" height="72" rx="18" stroke="#ffd700"
                                 stroke-width="4" />
-                            <rect id="rect-corredor-4" x="498" y="70" width="78" height="330" rx="4" />
-                            <rect id="rect-corredor-5" x="594" y="70" width="78" height="330" rx="4" />
-                            <rect id="rect-corredor-6" x="690" y="70" width="78" height="330" rx="4" />
-                            <rect id="rect-corredor-7" x="786" y="70" width="78" height="330" rx="4" />
+                            <rect id="rect-corredor-4" x="600" y="110" width="220" height="72" rx="18" />
+                            <rect id="rect-corredor-5" x="600" y="235" width="220" height="72" rx="18" />
+                            <rect id="rect-corredor-6" x="600" y="360" width="220" height="72" rx="18" />
+                            <rect id="rect-corredor-7" x="420" y="40" width="160" height="54" rx="16" />
                         </g>
 
                         <!-- Números e nomes das seções -->
                         <g font-size="24" font-family="sans-serif" font-weight="bold" text-anchor="middle">
-                            <text id="text-corredor-1" x="249" y="48" fill="#555">1</text>
-                            <text id="text-corredor-2" x="345" y="48" fill="#555">2</text>
-                            <text id="text-corredor-3" x="441" y="48" fill="#ffd700">3</text>
-                            <text id="text-corredor-4" x="537" y="48" fill="#555">4</text>
-                            <text id="text-corredor-5" x="633" y="48" fill="#555">5</text>
-                            <text id="text-corredor-6" x="729" y="48" fill="#555">6</text>
-                            <text id="text-corredor-7" x="825" y="48" fill="#555">7</text>
+                            <text id="text-corredor-1" x="208" y="153" fill="#555">1</text>
+                            <text id="text-corredor-2" x="208" y="278" fill="#555">2</text>
+                            <text id="text-corredor-3" x="208" y="403" fill="#ffd700">3</text>
+                            <text id="text-corredor-4" x="628" y="153" fill="#555">4</text>
+                            <text id="text-corredor-5" x="628" y="278" fill="#555">5</text>
+                            <text id="text-corredor-6" x="628" y="403" fill="#555">6</text>
+                            <text id="text-corredor-7" x="448" y="75" fill="#555">7</text>
                         </g>
                         <g fill="#d4d4d8" font-size="13" font-family="sans-serif" font-weight="bold"
-                            text-anchor="middle">
+                            text-anchor="start">
                             <text x="249" y="424">Acessórios</text>
                             <text x="345" y="424">Bermudas</text>
                             <text x="441" y="424" fill="#ffd700">Calçados</text>
@@ -575,6 +599,85 @@
                 class="flex flex-col items-center justify-center text-white border-2 border-zinc-700 rounded-xl max-w-[200px] w-full h-16 md:h-20 hover:bg-zinc-800 transition-colors">
                 <span class="material-symbols-outlined text-xl md:text-3xl">close</span>
                 <span class="text-xs md:text-sm font-bold" data-i18n="cancel_btn">Cancelar</span>
+            </button>
+        </nav>
+    </section>
+
+    <!-- Screen 6: Admin -->
+    <section id="screen-admin" class="page">
+        <header
+            class="fixed top-0 left-0 w-full flex justify-between items-center px-4 md:px-12 z-50 bg-black border-b-2 border-zinc-800 h-20 md:h-32">
+            <div>
+                <p class="text-yellow-400 text-xs md:text-sm uppercase tracking-[0.25em] font-bold">Painel</p>
+                <h1 class="text-xl md:text-4xl font-black text-white font-lexend">Gerenciar Produtos</h1>
+            </div>
+            <button onclick="navigateTo('screen1')"
+                class="bg-zinc-900 text-white border-2 border-zinc-700 rounded-xl px-4 py-2 md:px-6 md:py-3 hover:border-yellow-400 transition-colors">
+                Voltar ao inicio
+            </button>
+        </header>
+        <main class="flex-grow mt-20 md:mt-32 mb-24 md:mb-32 bg-black p-4 md:p-8 overflow-y-auto">
+            <div class="max-w-[1700px] mx-auto flex flex-col gap-6">
+                <section class="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)] gap-6">
+                    <div class="bg-zinc-900 border-2 border-zinc-800 rounded-3xl p-5 md:p-6 flex flex-col gap-4">
+                        <div>
+                            <p class="text-zinc-400 text-xs uppercase tracking-[0.25em] font-bold">Acesso</p>
+                            <h2 class="text-white font-lexend font-bold text-2xl mt-2">Banco em tempo real</h2>
+                            <p class="text-zinc-300 text-sm md:text-base mt-3 leading-relaxed">
+                                Altere preco, estoque, corredor e descricao. O totem passa a usar esses dados atualizados nas proximas buscas.
+                            </p>
+                        </div>
+                        <label class="flex flex-col gap-2">
+                            <span class="text-white font-bold text-sm uppercase tracking-wider">Chave admin</span>
+                            <input id="admin-key-input" type="password" placeholder="X-Admin-Key"
+                                class="bg-black border-2 border-zinc-700 rounded-xl px-4 py-3 text-white focus:border-yellow-400 focus:outline-none">
+                        </label>
+                        <label class="flex flex-col gap-2">
+                            <span class="text-white font-bold text-sm uppercase tracking-wider">Buscar produto</span>
+                            <input id="admin-search-input" type="text" placeholder="Nome, SKU, categoria..."
+                                class="bg-black border-2 border-zinc-700 rounded-xl px-4 py-3 text-white focus:border-yellow-400 focus:outline-none"
+                                oninput="filterAdminProducts()">
+                        </label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button type="button" onclick="loadAdminProducts(true)"
+                                class="bg-yellow-400 text-black font-bold rounded-xl px-4 py-3 hover:bg-yellow-300 transition-colors">
+                                Carregar
+                            </button>
+                            <button type="button" onclick="toggleAdminAutoRefresh()"
+                                id="admin-auto-refresh-btn"
+                                class="bg-zinc-800 text-white font-bold rounded-xl px-4 py-3 border border-zinc-700 hover:border-yellow-400 transition-colors">
+                                Auto sync ligado
+                            </button>
+                        </div>
+                        <div class="bg-black/60 border border-zinc-800 rounded-2xl p-4 flex flex-col gap-2">
+                            <p id="admin-status" class="text-zinc-300 text-sm">Informe a chave e clique em carregar.</p>
+                            <p id="admin-last-sync" class="text-zinc-500 text-xs uppercase tracking-[0.2em]">Sem sincronizacao</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-zinc-900 border-2 border-zinc-800 rounded-3xl p-4 md:p-5 flex flex-col gap-4 min-h-[520px]">
+                        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                            <div>
+                                <p class="text-zinc-400 text-xs uppercase tracking-[0.25em] font-bold">Produtos</p>
+                                <h2 class="text-white font-lexend font-bold text-2xl">Edicao rapida</h2>
+                            </div>
+                            <p id="admin-count" class="text-zinc-300 text-sm">0 itens</p>
+                        </div>
+                        <div id="admin-products-list" class="flex flex-col gap-4 overflow-y-auto pr-1">
+                            <div class="border border-dashed border-zinc-700 rounded-2xl p-8 text-center text-zinc-400">
+                                Nenhum produto carregado ainda.
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+        <nav
+            class="fixed bottom-0 left-0 w-full flex justify-center items-center px-2 md:px-10 h-24 md:h-32 border-t-2 border-zinc-800 bg-black gap-2">
+            <button onclick="navigateTo('screen1')"
+                class="flex flex-col items-center justify-center text-white border-2 border-zinc-700 rounded-xl max-w-[220px] w-full h-16 md:h-20 hover:bg-zinc-800 transition-colors">
+                <span class="material-symbols-outlined text-xl md:text-3xl">home</span>
+                <span class="text-xs md:text-sm font-bold">Inicio</span>
             </button>
         </nav>
     </section>
@@ -681,12 +784,19 @@
         let previousScreenId = 'screen1';
         let currentScreenId = 'screen1';
         let windowResults = [];
+        let selectedProducts = [];
+        let produtosNotificacaoAtendente = [];
         const DEFAULT_PRODUCT_IMAGE = "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=500&q=80";
 
         // Lightbox & Pause state variables
         let lightboxImages = []; // List of {src: string, title: string, price: string}
         let currentLightboxIndex = 0;
         let sessaoPausada = false;
+        let retomandoSessao = false;
+        let adminProducts = [];
+        let adminFilteredProducts = [];
+        let adminAutoRefresh = true;
+        let adminRefreshInterval = null;
 
         function applyDarkMode(isDark) {
             if (isDark) {
@@ -778,11 +888,349 @@
             return nome.replace(regex, '').replace(/\s+/g, ' ').trim();
         }
 
+        function navigateToAdmin() {
+            navigateTo('screen-admin');
+            const keyInput = document.getElementById('admin-key-input');
+            if (keyInput && !keyInput.value) {
+                keyInput.value = localStorage.getItem('totemAdminKey') || '';
+            }
+            if (adminProducts.length === 0 && keyInput?.value) {
+                loadAdminProducts(false);
+            }
+        }
+
+        function setAdminStatus(message, isError = false) {
+            const status = document.getElementById('admin-status');
+            if (!status) return;
+            status.textContent = message;
+            status.className = isError ? 'text-red-400 text-sm' : 'text-zinc-300 text-sm';
+        }
+
+        function updateAdminSyncLabel() {
+            const syncEl = document.getElementById('admin-last-sync');
+            if (!syncEl) return;
+            syncEl.textContent = `Sincronizado em ${new Date().toLocaleTimeString('pt-BR')}`;
+        }
+
+        function formatCurrencyInput(value) {
+            const number = Number(value || 0);
+            return Number.isFinite(number) ? number.toFixed(2) : '0.00';
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function filterAdminProducts() {
+            const query = (document.getElementById('admin-search-input')?.value || '').trim().toLowerCase();
+            adminFilteredProducts = adminProducts.filter(produto => {
+                if (!query) return true;
+                const texto = [
+                    produto.nome,
+                    produto.sku,
+                    produto.categoria,
+                    produto.setor,
+                    produto.corredor,
+                    produto.prateleira,
+                ].join(' ').toLowerCase();
+                return texto.includes(query);
+            });
+            renderAdminProducts();
+        }
+
+        function renderAdminProducts() {
+            const list = document.getElementById('admin-products-list');
+            const count = document.getElementById('admin-count');
+            if (!list || !count) return;
+
+            count.textContent = `${adminFilteredProducts.length} item${adminFilteredProducts.length === 1 ? '' : 's'}`;
+            if (adminFilteredProducts.length === 0) {
+                list.innerHTML = '<div class="border border-dashed border-zinc-700 rounded-2xl p-8 text-center text-zinc-400">Nenhum produto encontrado com esse filtro.</div>';
+                return;
+            }
+
+            list.innerHTML = adminFilteredProducts.map(produto => `
+                <article class="bg-black/40 border border-zinc-800 rounded-3xl p-4 md:p-5">
+                    <div class="flex flex-col gap-4">
+                        <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                            <div>
+                                <p class="text-zinc-400 text-xs uppercase tracking-[0.2em] font-bold">${escapeHtml(produto.categoria || 'Sem categoria')}</p>
+                                <h3 class="text-white font-lexend font-bold text-xl">${escapeHtml(produto.nome || 'Produto')}</h3>
+                                <p class="text-zinc-500 text-sm mt-1">SKU ${escapeHtml(produto.sku || '-')} • ID ${produto.id}</p>
+                            </div>
+                            <button type="button" onclick="saveAdminProduct(${produto.id})"
+                                class="bg-yellow-400 text-black font-bold rounded-xl px-4 py-3 hover:bg-yellow-300 transition-colors">
+                                Salvar alteracoes
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
+                            <label class="flex flex-col gap-2">
+                                <span class="text-zinc-300 text-xs uppercase tracking-wider">Preco</span>
+                                <input id="admin-price-${produto.id}" type="number" min="0" step="0.01" value="${formatCurrencyInput(produto.preco)}"
+                                    class="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-3 text-white focus:border-yellow-400 focus:outline-none">
+                            </label>
+                            <label class="flex flex-col gap-2">
+                                <span class="text-zinc-300 text-xs uppercase tracking-wider">Estoque</span>
+                                <input id="admin-stock-${produto.id}" type="number" min="0" step="1" value="${Number(produto.estoque || 0)}"
+                                    class="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-3 text-white focus:border-yellow-400 focus:outline-none">
+                            </label>
+                            <label class="flex flex-col gap-2">
+                                <span class="text-zinc-300 text-xs uppercase tracking-wider">Corredor</span>
+                                <input id="admin-aisle-${produto.id}" type="text" value="${escapeHtml(produto.corredor || '')}"
+                                    class="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-3 text-white focus:border-yellow-400 focus:outline-none">
+                            </label>
+                            <label class="flex flex-col gap-2">
+                                <span class="text-zinc-300 text-xs uppercase tracking-wider">Setor</span>
+                                <input id="admin-sector-${produto.id}" type="text" value="${escapeHtml(produto.setor || '')}"
+                                    class="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-3 text-white focus:border-yellow-400 focus:outline-none">
+                            </label>
+                            <label class="flex flex-col gap-2">
+                                <span class="text-zinc-300 text-xs uppercase tracking-wider">Prateleira</span>
+                                <input id="admin-shelf-${produto.id}" type="text" value="${escapeHtml(produto.prateleira || '')}"
+                                    class="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-3 text-white focus:border-yellow-400 focus:outline-none">
+                            </label>
+                        </div>
+                        <label class="flex flex-col gap-2">
+                            <span class="text-zinc-300 text-xs uppercase tracking-wider">Descricao</span>
+                            <textarea id="admin-description-${produto.id}" rows="3"
+                                class="bg-zinc-950 border border-zinc-700 rounded-2xl px-3 py-3 text-white focus:border-yellow-400 focus:outline-none">${escapeHtml(produto.descricao || '')}</textarea>
+                        </label>
+                    </div>
+                </article>
+            `).join('');
+        }
+
+        async function loadAdminProducts(showMessage = true) {
+            const keyInput = document.getElementById('admin-key-input');
+            const adminKey = keyInput?.value?.trim();
+            if (!adminKey) {
+                setAdminStatus('Informe a chave administrativa para carregar os produtos.', true);
+                return;
+            }
+
+            localStorage.setItem('totemAdminKey', adminKey);
+            if (showMessage) setAdminStatus('Carregando produtos...');
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/admin/produtos`, {
+                    headers: { 'X-Admin-Key': adminKey }
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Nao foi possivel carregar os produtos.');
+                }
+
+                adminProducts = Array.isArray(data.produtos) ? data.produtos : [];
+                filterAdminProducts();
+                updateAdminSyncLabel();
+                setAdminStatus(`Produtos carregados com sucesso. Total: ${adminProducts.length}.`);
+            } catch (error) {
+                console.error(error);
+                setAdminStatus(error.message || 'Erro ao carregar produtos.', true);
+            }
+        }
+
+        async function saveAdminProduct(productId) {
+            const adminKey = (document.getElementById('admin-key-input')?.value || '').trim();
+            if (!adminKey) {
+                setAdminStatus('Informe a chave administrativa antes de salvar.', true);
+                return;
+            }
+
+            const payload = {
+                preco: Number(document.getElementById(`admin-price-${productId}`)?.value || 0),
+                estoque: Number(document.getElementById(`admin-stock-${productId}`)?.value || 0),
+                corredor: document.getElementById(`admin-aisle-${productId}`)?.value || '',
+                setor: document.getElementById(`admin-sector-${productId}`)?.value || '',
+                prateleira: document.getElementById(`admin-shelf-${productId}`)?.value || '',
+                descricao: document.getElementById(`admin-description-${productId}`)?.value || '',
+            };
+
+            setAdminStatus(`Salvando produto ${productId}...`);
+            try {
+                const response = await fetch(`${BACKEND_URL}/admin/produto/${productId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Key': adminKey,
+                    },
+                    body: JSON.stringify(payload),
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Nao foi possivel salvar o produto.');
+                }
+
+                adminProducts = adminProducts.map(produto => produto.id === productId ? { ...produto, ...payload } : produto);
+                filterAdminProducts();
+                updateAdminSyncLabel();
+                setAdminStatus(`Produto ${productId} atualizado. O totem ja passa a usar os novos dados.`);
+            } catch (error) {
+                console.error(error);
+                setAdminStatus(error.message || 'Erro ao salvar produto.', true);
+            }
+        }
+
+        function toggleAdminAutoRefresh() {
+            adminAutoRefresh = !adminAutoRefresh;
+            const button = document.getElementById('admin-auto-refresh-btn');
+            if (button) {
+                button.textContent = adminAutoRefresh ? 'Auto sync ligado' : 'Auto sync desligado';
+                button.className = adminAutoRefresh
+                    ? 'bg-zinc-800 text-white font-bold rounded-xl px-4 py-3 border border-yellow-400 hover:border-yellow-300 transition-colors'
+                    : 'bg-zinc-800 text-zinc-400 font-bold rounded-xl px-4 py-3 border border-zinc-700 hover:border-yellow-400 transition-colors';
+            }
+            syncAdminAutoRefresh();
+        }
+
+        function syncAdminAutoRefresh() {
+            if (adminRefreshInterval) {
+                clearInterval(adminRefreshInterval);
+                adminRefreshInterval = null;
+            }
+            if (!adminAutoRefresh) return;
+            adminRefreshInterval = setInterval(() => {
+                if (currentScreenId === 'screen-admin' && document.getElementById('admin-key-input')?.value?.trim()) {
+                    loadAdminProducts(false);
+                }
+            }, 12000);
+        }
+
         function visualizarProduto(index) {
             if (windowResults && windowResults[index]) {
                 loadProductData(windowResults[index]);
                 navigateTo('screen3');
             }
+        }
+
+        function obterChaveProduto(produto) {
+            if (!produto) return "";
+            return String(produto.id || produto.sku || `${produto.nome}|${produto.corredor}|${produto.setor || produto.categoria || ""}`);
+        }
+
+        function produtoSelecionado(produto) {
+            const chave = obterChaveProduto(produto);
+            return selectedProducts.some(item => obterChaveProduto(item) === chave);
+        }
+
+        function atualizarPainelListaSelecionada() {
+            const panel = document.getElementById('selected-products-panel');
+            const summary = document.getElementById('selected-products-summary');
+            const chips = document.getElementById('selected-products-chips');
+            const mapBtn = document.getElementById('selected-products-map-btn');
+            const clearBtn = document.getElementById('selected-products-clear-btn');
+            if (!panel || !summary || !chips || !mapBtn || !clearBtn) return;
+
+            const total = selectedProducts.length;
+            if (total === 0) {
+                panel.classList.add('hidden');
+                chips.innerHTML = "";
+                return;
+            }
+
+            panel.classList.remove('hidden');
+            summary.textContent = total === 1 ? "1 produto selecionado" : `${total} produtos selecionados`;
+            chips.innerHTML = selectedProducts.map(produto => `
+                <button type="button" onclick="toggleProdutoSelecionadoPorChave('${obterChaveProduto(produto).replace(/'/g, "\\'")}')"
+                    class="inline-flex items-center gap-2 bg-black/60 border border-zinc-700 text-white rounded-full px-3 py-2 text-sm hover:border-yellow-400 transition-colors">
+                    <span>${produto.nome}</span>
+                    <span class="text-yellow-400 font-bold">x</span>
+                </button>
+            `).join("");
+            mapBtn.disabled = total === 0;
+            clearBtn.disabled = total === 0;
+        }
+
+        function toggleProdutoSelecionadoPorChave(chave) {
+            selectedProducts = selectedProducts.filter(produto => obterChaveProduto(produto) !== chave);
+            atualizarPainelListaSelecionada();
+        }
+
+        function toggleProdutoSelecionado(produto) {
+            const chave = obterChaveProduto(produto);
+            if (!chave) return false;
+            if (produtoSelecionado(produto)) {
+                selectedProducts = selectedProducts.filter(item => obterChaveProduto(item) !== chave);
+                atualizarPainelListaSelecionada();
+                return false;
+            }
+            selectedProducts = [...selectedProducts, produto];
+            atualizarPainelListaSelecionada();
+            return true;
+        }
+
+        function limparListaSelecionada() {
+            selectedProducts = [];
+            atualizarPainelListaSelecionada();
+        }
+
+        function formatarProdutoParaAtendente(produto) {
+            if (!produto || !produto.nome) return null;
+            const section = getProductSection(produto);
+            return {
+                nome: produto.nome,
+                setor: section?.label || produto.setor || produto.categoria || "",
+                corredor: section?.number || produto.corredor || "",
+            };
+        }
+
+        function formatarListaParaAtendente(produtos = []) {
+            const vistos = new Set();
+            return produtos
+                .map(formatarProdutoParaAtendente)
+                .filter(produto => {
+                    if (!produto) return false;
+                    const chave = `${produto.nome}|${produto.corredor}|${produto.setor}`;
+                    if (vistos.has(chave)) return false;
+                    vistos.add(chave);
+                    return true;
+                });
+        }
+
+        function mesclarProdutosNotificacao(produtos = []) {
+            produtosNotificacaoAtendente = formatarListaParaAtendente([...produtosNotificacaoAtendente, ...produtos]);
+        }
+
+        function obterProdutosPreferidosParaMapa(produtosFallback = []) {
+            if (selectedProducts.length > 0) {
+                return selectedProducts;
+            }
+            if (produtosFallback.length > 0) {
+                return produtosFallback;
+            }
+            return windowResults;
+        }
+
+        function abrirMapaDaListaSelecionada() {
+            const produtos = obterProdutosPreferidosParaMapa();
+            if (!produtos || produtos.length === 0) return;
+            navigateTo('screen2');
+            if (produtos.length > 1) {
+                appendMessage(
+                    currentLang === 'pt'
+                        ? "Aqui está o mapa da sua lista de interesse."
+                        : "Here is the map for your selected list.",
+                    'totem',
+                    produtos,
+                    'ABRIR_ROTAS'
+                );
+                return;
+            }
+
+            const produto = produtos[0];
+            appendMessage(
+                currentLang === 'pt'
+                    ? "Aqui está o caminho do produto selecionado."
+                    : "Here is the route for the selected product.",
+                'totem',
+                [produto],
+                'ABRIR_MAPA'
+            );
         }
 
         function getProductMainImage(product) {
@@ -811,13 +1259,61 @@
             7: { label: "Saias e Vestidos", x: 825 },
         };
 
+        const STORE_LAYOUTS = {
+            1: { rect: { x: 180, y: 110, width: 220, height: 72, rx: 18 }, text: { x: 208, y: 153 }, label: { x: 245, y: 154, anchor: "start" }, pin: { x: 180, y: 146 } },
+            2: { rect: { x: 180, y: 235, width: 220, height: 72, rx: 18 }, text: { x: 208, y: 278 }, label: { x: 245, y: 279, anchor: "start" }, pin: { x: 180, y: 271 } },
+            3: { rect: { x: 180, y: 360, width: 220, height: 72, rx: 18 }, text: { x: 208, y: 403 }, label: { x: 245, y: 404, anchor: "start" }, pin: { x: 180, y: 396 } },
+            4: { rect: { x: 600, y: 110, width: 220, height: 72, rx: 18 }, text: { x: 628, y: 153 }, label: { x: 665, y: 154, anchor: "start" }, pin: { x: 600, y: 146 } },
+            5: { rect: { x: 600, y: 235, width: 220, height: 72, rx: 18 }, text: { x: 628, y: 278 }, label: { x: 665, y: 279, anchor: "start" }, pin: { x: 600, y: 271 } },
+            6: { rect: { x: 600, y: 360, width: 220, height: 72, rx: 18 }, text: { x: 628, y: 403 }, label: { x: 665, y: 404, anchor: "start" }, pin: { x: 600, y: 396 } },
+            7: { rect: { x: 420, y: 40, width: 160, height: 54, rx: 16 }, text: { x: 448, y: 75 }, label: { x: 500, y: 73, anchor: "middle", multiline: true }, pin: { x: 500, y: 94 } },
+        };
+
+        function getSectionRoutePath(sectionNumber) {
+            const target = STORE_LAYOUTS[sectionNumber]?.pin || STORE_LAYOUTS[1].pin;
+            return `M 125,480 L 125,${target.y} L ${target.x},${target.y} L ${target.x},${target.y}`;
+        }
+
+        function applyStoreLayout() {
+            Object.entries(STORE_LAYOUTS).forEach(([num, layout]) => {
+                const rect = document.getElementById(`rect-corredor-${num}`);
+                const text = document.getElementById(`text-corredor-${num}`);
+                if (rect) {
+                    rect.setAttribute("x", layout.rect.x);
+                    rect.setAttribute("y", layout.rect.y);
+                    rect.setAttribute("width", layout.rect.width);
+                    rect.setAttribute("height", layout.rect.height);
+                    rect.setAttribute("rx", layout.rect.rx);
+                }
+                if (text) {
+                    text.setAttribute("x", layout.text.x);
+                    text.setAttribute("y", layout.text.y);
+                }
+            });
+
+            const labelNodes = document.querySelectorAll('#map-svg-container svg g[fill="#d4d4d8"] text');
+            Object.values(STORE_LAYOUTS).forEach((layout, index) => {
+                const labelNode = labelNodes[index];
+                if (!labelNode) return;
+                labelNode.setAttribute("x", layout.label.x);
+                labelNode.setAttribute("y", layout.label.y);
+                labelNode.setAttribute("text-anchor", layout.label.anchor);
+                if (layout.label.multiline) {
+                    labelNode.innerHTML = `<tspan x="${layout.label.x}" dy="0">Saias e</tspan><tspan x="${layout.label.x}" dy="15">Vestidos</tspan>`;
+                } else {
+                    labelNode.textContent = STORE_SECTIONS[index + 1].label;
+                }
+            });
+        }
+
         function getProductSection(product) {
             const sectionNum = parseInt(product?.corredor);
             const section = STORE_SECTIONS[sectionNum] || STORE_SECTIONS[1];
             return {
                 number: sectionNum || 1,
                 label: product?.setor || product?.categoria || section.label,
-                x: section.x,
+                x: STORE_LAYOUTS[sectionNum || 1]?.pin?.x || section.x,
+                y: STORE_LAYOUTS[sectionNum || 1]?.pin?.y || 220,
             };
         }
 
@@ -833,6 +1329,11 @@
                 if (text) text.setAttribute('fill', '#555');
             }
 
+            const labelNodes = document.querySelectorAll('#map-svg-container svg g[fill="#d4d4d8"] text');
+            labelNodes.forEach((labelNode, index) => {
+                labelNode.setAttribute('fill', index + 1 === Number(sectionNumber) ? '#ffd700' : '#d4d4d8');
+            });
+
             const activeRect = document.getElementById('rect-corredor-' + sectionNumber);
             const activeText = document.getElementById('text-corredor-' + sectionNumber);
             if (activeRect) {
@@ -841,13 +1342,17 @@
             }
             if (activeText) activeText.setAttribute('fill', '#ffd700');
 
-            document.getElementById('map-svg-path').setAttribute('d', `M 125,480 L 125,450 L ${section.x},450 L ${section.x},220`);
-            document.getElementById('map-target-pin').setAttribute('transform', `translate(${section.x}, 220)`);
+            document.getElementById('map-svg-path').setAttribute('d', getSectionRoutePath(sectionNumber));
+            document.getElementById('map-target-pin').setAttribute('transform', `translate(${STORE_LAYOUTS[sectionNumber]?.pin?.x || section.x}, ${STORE_LAYOUTS[sectionNumber]?.pin?.y || 220})`);
         }
 
         // ====== INTEGRAÇÃO DE PRODUTO ======
         function loadProductData(data) {
             if (!data) return;
+            const produtoAtual = formatarProdutoParaAtendente(data);
+            if (produtoAtual) {
+                mesclarProdutosNotificacao([produtoAtual]);
+            }
 
             // data.nome, data.preco, data.corredor, data.descricao, data.imagem (se houver)
             if (data.nome) {
@@ -919,6 +1424,125 @@
             return audioCtxGlobal;
         }
 
+        function criarSvgResumoRotas(produtos = []) {
+            const routes = [];
+            const seenSections = new Set();
+            produtos.forEach(product => {
+                const sectionNumber = parseInt(product.corredor);
+                if (!STORE_SECTIONS[sectionNumber] || seenSections.has(sectionNumber)) return;
+                seenSections.add(sectionNumber);
+                routes.push({
+                    productName: product.nome || "Produto",
+                    sectionNumber,
+                    section: STORE_SECTIONS[sectionNumber],
+                });
+            });
+
+            routes.sort((a, b) => a.sectionNumber - b.sectionNumber);
+            const activeSections = new Set(routes.map(route => route.sectionNumber));
+            const getStroke = (num) => activeSections.has(num) ? 'stroke="#ffd700" stroke-width="4"' : 'stroke="#333" stroke-width="2"';
+            const getFill = (num) => activeSections.has(num) ? '#ffd700' : '#555';
+            const sectionRects = Object.entries(STORE_SECTIONS).map(([num, item]) => {
+                const x = item.x - 39;
+                return `<rect x="${x}" y="70" width="78" height="330" rx="4" ${getStroke(Number(num))} />`;
+            }).join("");
+            const sectionNumbers = Object.keys(STORE_SECTIONS).map(num => {
+                const item = STORE_SECTIONS[num];
+                return `<text x="${item.x}" y="48" fill="${getFill(Number(num))}">${num}</text>`;
+            }).join("");
+            const sectionLabels = Object.entries(STORE_SECTIONS).map(([num, item]) => {
+                const fill = activeSections.has(Number(num)) ? '#ffd700' : '#d4d4d8';
+                if (item.label === "Saias e Vestidos") {
+                    return `<text x="${item.x}" y="416" fill="${fill}"><tspan x="${item.x}" dy="0">Saias e</tspan><tspan x="${item.x}" dy="15">Vestidos</tspan></text>`;
+                }
+                return `<text x="${item.x}" y="424" fill="${fill}">${item.label}</text>`;
+            }).join("");
+            const routePaths = routes.map((route, index) => {
+                const y = 450 - index * 22;
+                const labelY = Math.max(92, 205 - index * 22);
+                return `
+                    <path d="M 125,480 L 125,${y} L ${route.section.x},${y} L ${route.section.x},220" fill="none" stroke="#FFD700" stroke-dasharray="15,10" stroke-width="5" opacity="${Math.max(0.45, 1 - index * 0.12)}" />
+                    <g transform="translate(${route.section.x}, 220)">
+                        <circle cx="0" cy="0" fill="#ef4444" r="13" stroke="#fff" stroke-width="3"></circle>
+                        <path d="M 0,0 L -9,-28 L 9,-28 Z" fill="#ef4444" />
+                    </g>
+                    <text x="${route.section.x}" y="${labelY}" fill="#FFD700" font-size="18" font-family="sans-serif" font-weight="bold" text-anchor="middle">Rota ${index + 1}</text>
+                `;
+            }).join("");
+
+            return `
+                <svg xmlns="http://www.w3.org/2000/svg" width="1000" height="600" viewBox="0 0 1000 600">
+                    <rect x="0" y="0" width="1000" height="600" fill="#111111" />
+                    <rect x="800" y="500" width="150" height="80" rx="8" fill="#1a1a1a" stroke="#444" stroke-width="2" />
+                    <text x="875" y="545" fill="#888" font-size="20" font-family="sans-serif" font-weight="bold" text-anchor="middle">CAIXAS</text>
+                    <rect x="50" y="500" width="150" height="80" rx="8" fill="#1a1a1a" stroke="#444" stroke-width="2" />
+                    <text x="125" y="545" fill="#888" font-size="20" font-family="sans-serif" font-weight="bold" text-anchor="middle">ENTRADA</text>
+                    <circle cx="125" cy="480" r="12" fill="#3b82f6" />
+                    <text x="125" y="455" fill="#3b82f6" font-size="14" font-family="sans-serif" font-weight="bold" text-anchor="middle">VOCE</text>
+                    <g fill="#131313" stroke-width="2">${sectionRects}</g>
+                    <g font-size="24" font-family="sans-serif" font-weight="bold" text-anchor="middle">${sectionNumbers}</g>
+                    <g font-size="13" font-family="sans-serif" font-weight="bold" text-anchor="middle">${sectionLabels}</g>
+                    ${routePaths}
+                </svg>
+            `;
+        }
+
+        async function gerarPngDeSvgString(svgString) {
+            const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+            const blobUrl = URL.createObjectURL(svgBlob);
+
+            try {
+                const image = await new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = reject;
+                    img.src = blobUrl;
+                });
+
+                const canvas = document.createElement('canvas');
+                canvas.width = 1000;
+                canvas.height = 600;
+
+                const context = canvas.getContext('2d');
+                if (!context) return null;
+
+                context.fillStyle = '#111111';
+                context.fillRect(0, 0, canvas.width, canvas.height);
+                context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+                return canvas.toDataURL('image/png');
+            } finally {
+                URL.revokeObjectURL(blobUrl);
+            }
+        }
+
+        async function capturarMapaParaTelegram(produtos = []) {
+            if (produtos.length > 1) {
+                return gerarPngDeSvgString(criarSvgResumoRotas(produtos));
+            }
+
+            const svgOriginal = document.querySelector('#map-svg-container svg');
+            if (!svgOriginal) return null;
+
+            const svgClone = svgOriginal.cloneNode(true);
+            svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+            svgClone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+            svgClone.setAttribute('width', '1000');
+            svgClone.setAttribute('height', '600');
+
+            const fundo = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            fundo.setAttribute('x', '0');
+            fundo.setAttribute('y', '0');
+            fundo.setAttribute('width', '1000');
+            fundo.setAttribute('height', '600');
+            fundo.setAttribute('fill', '#111111');
+            svgClone.insertBefore(fundo, svgClone.firstChild);
+
+            const serializer = new XMLSerializer();
+            const svgString = serializer.serializeToString(svgClone);
+            return gerarPngDeSvgString(svgString);
+        }
+
         function appendMessage(text, sender, results = [], acao = "NENHUM") {
             const chatMessages = document.getElementById("chat-messages");
             const div = document.createElement("div");
@@ -961,6 +1585,7 @@
 
                 if (results && results.length > 0 && acao === "MOSTRAR_PRODUTOS") {
                     windowResults = results;
+                    mesclarProdutosNotificacao(results);
                     const cards = document.createElement("div");
                     cards.className = "flex gap-4 mt-4 overflow-x-auto pb-2 chat-scroll";
 
@@ -972,11 +1597,14 @@
                     }));
 
                     results.forEach((p, index) => {
-                        const card = document.createElement("button");
-                        card.type = "button";
-                        card.className = "text-left bg-zinc-900 border-2 border-zinc-700 p-3 rounded-xl min-w-[160px] md:min-w-[200px] flex-shrink-0 hover:border-yellow-400 transition-colors";
-                        card.setAttribute("aria-label", `Ver produto ${p.nome || ""}`);
-                        card.onclick = () => visualizarProduto(index);
+                        const card = document.createElement("div");
+                        card.className = "text-left bg-zinc-900 border-2 border-zinc-700 p-3 rounded-xl min-w-[160px] md:min-w-[220px] flex-shrink-0";
+
+                        const openBtn = document.createElement("button");
+                        openBtn.type = "button";
+                        openBtn.className = "w-full text-left hover:border-yellow-400 transition-colors";
+                        openBtn.setAttribute("aria-label", `Ver produto ${p.nome || ""}`);
+                        openBtn.onclick = () => visualizarProduto(index);
 
                         const img = document.createElement("img");
                         img.src = getProductMainImage(p);
@@ -1001,7 +1629,9 @@
                             .filter(Boolean)
                             .join(" | ");
 
-                        card.append(img, name, price, detail);
+                        openBtn.append(img, name, price, detail);
+
+                        card.append(openBtn);
                         cards.appendChild(card);
                     });
 
@@ -1114,6 +1744,10 @@
                     "Olá! Sou o assistente virtual do Kiosk. Como posso ajudar você hoje?" :
                     "Hello! I'm the Kiosk virtual assistant. How can I help you today?";
 
+                windowResults = [];
+                selectedProducts = [];
+                produtosNotificacaoAtendente = [];
+                atualizarPainelListaSelecionada();
                 appendMessage(welcomeText, "totem");
                 iniciarSessao();
             }
@@ -1125,7 +1759,7 @@
         }
 
         async function conversar() {
-            if (!sessaoAtiva) return;
+            if (!sessaoAtiva || sessaoPausada || retomandoSessao) return;
 
             const recorder = new MediaRecorder(streamGlobal);
             const chunks = [];
@@ -1157,6 +1791,28 @@
                     const data = await resposta.json();
                     if (!sessaoAtiva) return;
 
+                    if (data.auto_add_lista && Array.isArray(data.resultados)) {
+                        data.resultados.forEach(produto => {
+                            if (!produtoSelecionado(produto)) {
+                                selectedProducts = [...selectedProducts, produto];
+                            }
+                        });
+                        atualizarPainelListaSelecionada();
+                    }
+
+                    const produtosPreferidosResposta = obterProdutosPreferidosParaMapa(data.resultados || []);
+                    if (data.acao === "ABRIR_MAPA" && produtosPreferidosResposta.length > 1) {
+                        data.acao = "ABRIR_ROTAS";
+                        data.resultados = produtosPreferidosResposta;
+                        if (!data.resposta) {
+                            data.resposta = currentLang === 'pt'
+                                ? "Aqui esta o mapa da sua lista de interesse."
+                                : "Here is the map for your selected list.";
+                        }
+                    } else if ((data.acao === "ABRIR_ROTAS" || data.acao === "CHAMAR_ATENDENTE") && produtosPreferidosResposta.length > 0) {
+                        data.resultados = produtosPreferidosResposta;
+                    }
+
                     appendMessage(data.transcricao, 'user');
 
                     if (data.acao === "ENCERRAR") {
@@ -1175,37 +1831,42 @@
                     // Check actions to perform after audio
                     let encerrarAposAudio = false;
                     let abrirMapaAposAudio = false;
-                    if (data.acao === "ABRIR_MAPA" || data.acao === "ABRIR_ROTAS") {
+                    const produtosPreferidos = obterProdutosPreferidosParaMapa(data.resultados || []);
+                    if (data.acao === "ABRIR_MAPA") {
                         abrirMapaAposAudio = true;
                         if (data.resultados && data.resultados.length > 0) {
+                            mesclarProdutosNotificacao(data.resultados);
                             loadProductData(data.resultados[0]);
-                            if (data.resultados.length > 1) {
-                                // Múltiplos produtos: destaca todas as seções no mapa lateral
-                                data.resultados.forEach(p => {
-                                    if (p.corredor) updateStoreMap(parseInt(p.corredor));
-                                });
-                            } else {
-                                updateStoreMap(parseInt(data.resultados[0].corredor));
-                            }
+                        }
+                    } else if (data.acao === "ABRIR_ROTAS") {
+                        abrirMapaAposAudio = true;
+                        if (produtosPreferidos && produtosPreferidos.length > 0) {
+                            mesclarProdutosNotificacao(produtosPreferidos);
+                            loadProductData(produtosPreferidos[0]);
+                            updateStoreMap(produtosPreferidos[0].corredor);
                         }
                     }
 
                     if (data.acao === "CHAMAR_ATENDENTE") {
                         console.log('[Atendente] Ação CHAMAR_ATENDENTE disparada pelo backend!');
+                        const produtosAtendente = formatarListaParaAtendente(
+                            selectedProducts.length > 0 ? selectedProducts : (data.resultados || [])
+                        );
+                        if (produtosAtendente.length > 0) {
+                            produtosNotificacaoAtendente = produtosAtendente;
+                        }
+                        // Captura o SVG do mapa e envia para o backend notificar via Telegram
                         setTimeout(async () => {
                             try {
                                 console.log('[Atendente] Capturando SVG do mapa...');
                                 let fotoBase64 = null;
                                 try {
-                                    // Captura o SVG do mapa inline do chat (o mais recente)
-                                    const mapSvgs = document.querySelectorAll('.map-grid svg');
-                                    const svg = mapSvgs.length ? mapSvgs[mapSvgs.length - 1] : null;
-                                    if (svg) {
-                                        fotoBase64 = await capturarSVGcomoPNG(svg);
-                                        console.log('[Atendente] SVG convertido para PNG com sucesso.');
+                                    fotoBase64 = await capturarMapaParaTelegram(produtosAtendente);
+                                    if (fotoBase64) {
+                                        console.log('[Atendente] Mapa capturado com sucesso.');
                                     }
-                                } catch (svgErr) {
-                                    console.warn('[Atendente] Falha ao capturar SVG (enviando só texto):', svgErr);
+                                } catch (canvasErr) {
+                                    console.warn('[Atendente] Falha ao capturar o mapa (sera enviado apenas texto):', canvasErr);
                                 }
 
                                 console.log('[Atendente] Disparando fetch para /chamar-atendente...');
@@ -1214,7 +1875,8 @@
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({
                                         foto_base64: fotoBase64,
-                                        totem_id: 'Totem 1'
+                                        totem_id: 'Totem 1',
+                                        produtos: produtosAtendente
                                     })
                                 });
 
@@ -1435,6 +2097,7 @@
             if (!sessaoPausada) {
                 // Pausar
                 sessaoPausada = true;
+                retomandoSessao = false;
                 
                 // Mudar texto e ícone do botão
                 btnPausarText.textContent = currentLang === 'pt' ? "Retomar" : "Resume";
@@ -1448,6 +2111,8 @@
                 // Parar gravação e áudio atual
                 if (audioAtual) {
                     audioAtual.pause();
+                    audioAtual.currentTime = 0;
+                    audioAtual = null;
                 }
                 
                 // Parar faixas de áudio temporariamente
@@ -1458,6 +2123,7 @@
             } else {
                 // Retomar
                 sessaoPausada = false;
+                retomandoSessao = true;
 
                 // Restaurar botão
                 btnPausarText.textContent = currentLang === 'pt' ? "Pausar" : "Pause";
@@ -1465,7 +2131,7 @@
                 btnPausar.className = "bg-yellow-400 text-black font-bold px-4 py-2 rounded-lg hover:bg-yellow-300 transition-colors text-sm md:text-base border border-yellow-300 shadow-md flex items-center gap-2";
 
                 // Atualizar status
-                if (statusEl) statusEl.innerText = currentLang === 'pt' ? "Ouvindo" : "Listening";
+                if (statusEl) statusEl.innerText = currentLang === 'pt' ? "Voltando" : "Resuming";
                 if (indicatorEl) indicatorEl.classList.add("listening-indicator");
 
                 // Retomar microfone e gravação
@@ -1475,38 +2141,53 @@
                     const source = ctx.createMediaStreamSource(streamGlobal);
                     analyserGlobal = ctx.createAnalyser();
                     source.connect(analyserGlobal);
-                    
-                    conversar();
+
+                    if (statusEl) statusEl.innerText = currentLang === 'pt' ? "Pronto" : "Ready";
+                    setTimeout(() => {
+                        if (!sessaoAtiva || sessaoPausada || !retomandoSessao) return;
+                        if (statusEl) statusEl.innerText = currentLang === 'pt' ? "Ouvindo" : "Listening";
+                        conversar();
+                        retomandoSessao = false;
+                    }, 700);
                 }).catch(err => {
                     console.error("Erro ao retomar microfone:", err);
+                    retomandoSessao = false;
                     if (statusEl) statusEl.innerText = "Erro Mic";
                 });
             }
         }
 
         // ====== INTEGRATED INLINE MAP FUNCTIONS ======
+        function buildInlineSectionRects(activeSections) {
+            return Object.entries(STORE_LAYOUTS).map(([num, layout]) => {
+                const active = activeSections.has(Number(num));
+                return `<rect x="${layout.rect.x}" y="${layout.rect.y}" width="${layout.rect.width}" height="${layout.rect.height}" rx="${layout.rect.rx}" fill="#131313" stroke="${active ? '#ffd700' : '#333'}" stroke-width="${active ? '4' : '2'}" />`;
+            }).join("");
+        }
+
+        function buildInlineSectionNumbers(activeSections) {
+            return Object.entries(STORE_LAYOUTS).map(([num, layout]) => `
+                <text x="${layout.text.x}" y="${layout.text.y}" fill="${activeSections.has(Number(num)) ? '#ffd700' : '#555'}">${num}</text>
+            `).join("");
+        }
+
+        function buildInlineSectionLabels(activeSections) {
+            return Object.entries(STORE_LAYOUTS).map(([num, layout]) => {
+                const fill = activeSections.has(Number(num)) ? '#ffd700' : '#d4d4d8';
+                const label = STORE_SECTIONS[Number(num)].label;
+                if (layout.label.multiline) {
+                    return `<text x="${layout.label.x}" y="${layout.label.y}" fill="${fill}" text-anchor="${layout.label.anchor}"><tspan x="${layout.label.x}" dy="0">Saias e</tspan><tspan x="${layout.label.x}" dy="15">Vestidos</tspan></text>`;
+                }
+                return `<text x="${layout.label.x}" y="${layout.label.y}" fill="${fill}" text-anchor="${layout.label.anchor}">${label}</text>`;
+            }).join("");
+        }
+
         function createMapCardHtml(productName, aisle) {
             const aisleNum = parseInt(aisle);
             const activeSectionNumber = STORE_SECTIONS[aisleNum] ? aisleNum : 1;
             const section = STORE_SECTIONS[activeSectionNumber];
-            const targetX = section.x;
-            const getStroke = (num) => num === activeSectionNumber ? 'stroke="#ffd700" stroke-width="4"' : 'stroke="#333" stroke-width="2"';
-            const getFill = (num) => num === activeSectionNumber ? '#ffd700' : '#555';
-            const sectionRects = Object.entries(STORE_SECTIONS).map(([num, item]) => {
-                const x = item.x - 39;
-                return `<rect x="${x}" y="70" width="78" height="330" rx="4" ${getStroke(Number(num))} />`;
-            }).join("");
-            const sectionNumbers = Object.keys(STORE_SECTIONS).map(num => {
-                const item = STORE_SECTIONS[num];
-                return `<text x="${item.x}" y="48" fill="${getFill(Number(num))}">${num}</text>`;
-            }).join("");
-            const sectionLabels = Object.entries(STORE_SECTIONS).map(([num, item]) => {
-                const fill = Number(num) === activeSectionNumber ? '#ffd700' : '#d4d4d8';
-                if (item.label === "Saias e Vestidos") {
-                    return `<text x="${item.x}" y="416" fill="${fill}"><tspan x="${item.x}" dy="0">Saias e</tspan><tspan x="${item.x}" dy="15">Vestidos</tspan></text>`;
-                }
-                return `<text x="${item.x}" y="424" fill="${fill}">${item.label}</text>`;
-            }).join("");
+            const activeSections = new Set([activeSectionNumber]);
+            const target = STORE_LAYOUTS[activeSectionNumber]?.pin || { x: section.x, y: 220 };
 
             return `
                 <div class="bg-zinc-900 border-2 border-zinc-800 rounded-2xl p-4 mt-4 w-full flex flex-col gap-4">
@@ -1536,25 +2217,19 @@
                             <text x="125" y="455" fill="#3b82f6" font-size="14" font-weight="bold" text-anchor="middle">VOCÊ</text>
 
                             <!-- Seções 1 a 7 -->
-                            <g fill="#131313">
-                                ${sectionRects}
-                            </g>
+                            <g>${buildInlineSectionRects(activeSections)}</g>
 
                             <!-- Números e nomes das seções -->
-                            <g font-size="24" font-family="sans-serif" font-weight="bold" text-anchor="middle">
-                                ${sectionNumbers}
-                            </g>
-                            <g font-size="13" font-family="sans-serif" font-weight="bold" text-anchor="middle">
-                                ${sectionLabels}
-                            </g>
+                            <g font-size="24" font-family="sans-serif" font-weight="bold" text-anchor="middle">${buildInlineSectionNumbers(activeSections)}</g>
+                            <g font-size="13" font-family="sans-serif" font-weight="bold">${buildInlineSectionLabels(activeSections)}</g>
 
                             <!-- Path -->
-                            <path d="M 125,480 L 125,450 L ${targetX},450 L ${targetX},220" fill="none" stroke="#FFD700" stroke-dasharray="15,10" stroke-width="6">
+                            <path d="M 125,480 L 125,${target.y} L ${target.x},${target.y} L ${target.x},${target.y}" fill="none" stroke="#FFD700" stroke-dasharray="15,10" stroke-width="6">
                                 <animate attributeName="stroke-dashoffset" from="100" to="0" dur="2s" repeatCount="indefinite" />
                             </path>
 
                             <!-- Target Pin -->
-                            <g transform="translate(${targetX}, 220)">
+                            <g transform="translate(${target.x}, ${target.y})">
                                 <circle cx="0" cy="0" fill="#ef4444" r="14" stroke="#fff" stroke-width="3"></circle>
                                 <path d="M 0,0 L -10,-30 L 10,-30 Z" fill="#ef4444" />
                             </g>
@@ -1580,35 +2255,18 @@
 
             routes.sort((a, b) => a.sectionNumber - b.sectionNumber);
             const activeSections = new Set(routes.map(route => route.sectionNumber));
-            const getStroke = (num) => activeSections.has(num) ? 'stroke="#ffd700" stroke-width="4"' : 'stroke="#333" stroke-width="2"';
-            const getFill = (num) => activeSections.has(num) ? '#ffd700' : '#555';
-            const sectionRects = Object.entries(STORE_SECTIONS).map(([num, item]) => {
-                const x = item.x - 39;
-                return `<rect x="${x}" y="70" width="78" height="330" rx="4" ${getStroke(Number(num))} />`;
-            }).join("");
-            const sectionNumbers = Object.keys(STORE_SECTIONS).map(num => {
-                const item = STORE_SECTIONS[num];
-                return `<text x="${item.x}" y="48" fill="${getFill(Number(num))}">${num}</text>`;
-            }).join("");
-            const sectionLabels = Object.entries(STORE_SECTIONS).map(([num, item]) => {
-                const fill = activeSections.has(Number(num)) ? '#ffd700' : '#d4d4d8';
-                if (item.label === "Saias e Vestidos") {
-                    return `<text x="${item.x}" y="416" fill="${fill}"><tspan x="${item.x}" dy="0">Saias e</tspan><tspan x="${item.x}" dy="15">Vestidos</tspan></text>`;
-                }
-                return `<text x="${item.x}" y="424" fill="${fill}">${item.label}</text>`;
-            }).join("");
             const routePaths = routes.map((route, index) => {
-                const y = 450 - index * 22;
-                const labelY = Math.max(92, 205 - index * 22);
+                const pin = STORE_LAYOUTS[route.sectionNumber]?.pin || { x: route.section.x, y: 220 };
+                const labelY = Math.max(40, pin.y - 28 - index * 16);
                 return `
-                    <path d="M 125,480 L 125,${y} L ${route.section.x},${y} L ${route.section.x},220" fill="none" stroke="#FFD700" stroke-dasharray="15,10" stroke-width="5" opacity="${Math.max(0.45, 1 - index * 0.12)}">
+                    <path d="M 125,480 L 125,${pin.y} L ${pin.x},${pin.y} L ${pin.x},${pin.y}" fill="none" stroke="#FFD700" stroke-dasharray="15,10" stroke-width="5" opacity="${Math.max(0.45, 1 - index * 0.12)}">
                         <animate attributeName="stroke-dashoffset" from="100" to="0" dur="2s" repeatCount="indefinite" />
                     </path>
-                    <g transform="translate(${route.section.x}, 220)">
+                    <g transform="translate(${pin.x}, ${pin.y})">
                         <circle cx="0" cy="0" fill="#ef4444" r="13" stroke="#fff" stroke-width="3"></circle>
                         <path d="M 0,0 L -9,-28 L 9,-28 Z" fill="#ef4444" />
                     </g>
-                    <text x="${route.section.x}" y="${labelY}" fill="#FFD700" font-size="18" font-family="sans-serif" font-weight="bold" text-anchor="middle">Rota ${index + 1}</text>
+                    <text x="${pin.x}" y="${labelY}" fill="#FFD700" font-size="18" font-family="sans-serif" font-weight="bold" text-anchor="middle">Rota ${index + 1}</text>
                 `;
             }).join("");
             const routeList = routes.map((route, index) => `
@@ -1640,9 +2298,9 @@
                             <text x="125" y="545" fill="#888" font-size="20" font-family="sans-serif" font-weight="bold" text-anchor="middle">ENTRADA</text>
                             <circle cx="125" cy="480" r="12" fill="#3b82f6" class="animate-pulse" />
                             <text x="125" y="455" fill="#3b82f6" font-size="14" font-weight="bold" text-anchor="middle">VOCÊ</text>
-                            <g fill="#131313">${sectionRects}</g>
-                            <g font-size="24" font-family="sans-serif" font-weight="bold" text-anchor="middle">${sectionNumbers}</g>
-                            <g font-size="13" font-family="sans-serif" font-weight="bold" text-anchor="middle">${sectionLabels}</g>
+                            <g>${buildInlineSectionRects(activeSections)}</g>
+                            <g font-size="24" font-family="sans-serif" font-weight="bold" text-anchor="middle">${buildInlineSectionNumbers(activeSections)}</g>
+                            <g font-size="13" font-family="sans-serif" font-weight="bold">${buildInlineSectionLabels(activeSections)}</g>
                             ${routePaths}
                         </svg>
                     </div>
@@ -1663,12 +2321,16 @@
             );
         }
 
-        // Carrega o tema salvo (padrão: modo escuro)
-        const savedDark = localStorage.getItem("totemDarkMode");
-        applyDarkMode(savedDark === null || savedDark === "1");
-        // Aplica o idioma padrão (português) sem navegar
-        setLanguage('pt', false);
+        applyStoreLayout();
+        updateStoreMap(3);
+        syncAdminAutoRefresh();
+        const adminKeyInput = document.getElementById('admin-key-input');
+        if (adminKeyInput) {
+            adminKeyInput.value = localStorage.getItem('totemAdminKey') || '';
+        }
+        applyHighContrast(localStorage.getItem("totemHighContrast") === "1");
         enhanceButtonLabels();
+        atualizarPainelListaSelecionada();
     </script>
 </body>
 

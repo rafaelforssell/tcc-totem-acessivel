@@ -1,22 +1,12 @@
-import os
-import sqlite3
 import unicodedata
 
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "..", "..", "database", "produtos.db")
-
-
-def conectar_bd():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+from services.db_service import fetchall
 
 
 def obter_campo(produto, campo, indice=None, padrao=""):
     try:
         return produto[campo]
-    except (IndexError, KeyError):
+    except (IndexError, KeyError, TypeError):
         if indice is None:
             return padrao
         return produto[indice] if len(produto) > indice else padrao
@@ -25,6 +15,23 @@ def obter_campo(produto, campo, indice=None, padrao=""):
 def normalizar_texto(texto):
     sem_acento = unicodedata.normalize("NFKD", texto or "")
     return "".join(ch for ch in sem_acento if not unicodedata.combining(ch)).lower()
+
+
+def normalizar_termo_busca(termo):
+    sinonimos = {
+        "camiseta": "camisa",
+        "camisetas": "camisa",
+    }
+    palavras = normalizar_texto(termo).replace("_", " ").split()
+    return " ".join(sinonimos.get(palavra, palavra) for palavra in palavras)
+
+
+def termos_busca_compativeis(termo):
+    termos = [termo]
+    termo_normalizado = normalizar_termo_busca(termo)
+    if termo_normalizado and termo_normalizado != normalizar_texto(termo).replace("_", " "):
+        termos.append(termo_normalizado)
+    return termos
 
 
 def produto_contem_termos(produto, termo):
@@ -60,12 +67,7 @@ def formatar_produto(produto):
 
 
 def listar_produtos_db():
-    conn = conectar_bd()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM produtos ORDER BY nome, cor, tamanho")
-    produtos = cursor.fetchall()
-    conn.close()
-
+    produtos = fetchall("SELECT * FROM produtos ORDER BY nome, cor, tamanho")
     return {"produtos": [formatar_produto(p) for p in produtos]}
 
 
@@ -74,40 +76,38 @@ def buscar_produto_db(nome):
     if not termo:
         return {"resultado": []}
 
-    conn = conectar_bd()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM produtos ORDER BY nome, cor, tamanho")
-    produtos = [p for p in cursor.fetchall() if produto_contem_termos(p, termo)]
+    produtos = fetchall("SELECT * FROM produtos ORDER BY nome, cor, tamanho")
+    termos = termos_busca_compativeis(termo)
+    produtos = [
+        p for p in produtos
+        if any(produto_contem_termos(p, termo_busca) for termo_busca in termos)
+    ]
 
     if produtos:
-        conn.close()
         return {"resultado": [formatar_produto(p) for p in produtos]}
 
-    cursor.execute(
-        """
-        SELECT * FROM produtos
-        WHERE nome LIKE ?
-           OR categoria LIKE ?
-           OR tipo LIKE ?
-           OR cor LIKE ?
-           OR marca LIKE ?
-           OR descricao LIKE ?
-           OR sku LIKE ?
-        ORDER BY nome, cor, tamanho
-        """,
-        tuple(f"%{termo}%" for _ in range(7)),
-    )
-    produtos = cursor.fetchall()
-
-    conn.close()
+    produtos = []
+    for termo_busca in termos:
+        produtos = fetchall(
+            """
+            SELECT * FROM produtos
+            WHERE nome LIKE ?
+               OR categoria LIKE ?
+               OR tipo LIKE ?
+               OR cor LIKE ?
+               OR marca LIKE ?
+               OR descricao LIKE ?
+               OR sku LIKE ?
+            ORDER BY nome, cor, tamanho
+            """,
+            tuple(f"%{termo_busca}%" for _ in range(7)),
+        )
+        if produtos:
+            break
 
     return {"resultado": [formatar_produto(p) for p in produtos]}
 
 
 def contar_produtos_db():
-    conn = conectar_bd()
-    cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM produtos")
-    total = cursor.fetchone()[0]
-    conn.close()
-    return total
+    resultado = fetchall("SELECT COUNT(*) AS total FROM produtos")
+    return resultado[0]["total"] if resultado else 0

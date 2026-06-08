@@ -143,13 +143,14 @@ REGRAS OBRIGATÓRIAS:
 1. {lang_instruction}
 2. Responda em no máximo 3 frases curtas, diretas e naturais, como uma pessoa atendendo na loja.
 3. EXTREMAMENTE IMPORTANTE: NUNCA diga em qual corredor, prateleira, andar ou setor o produto está. Guarde segredo absoluto sobre a localização física.
-4. Quando o usuário demonstrar interesse ou gostar de um produto (responder positivamente, confirmar, dizer "sim", "perfeito", "gostei", etc.), ofereça de forma natural mostrar onde o produto fica, usando o mapa. Ex: "Que ótimo! Quer que eu te mostre onde encontrar?", "Posso te mostrar no mapa onde fica, se quiser." Faça isso de forma leve, como um atendente real faria.
-5. Ao apresentar um produto pela primeira vez, forneça todos os detalhes dele (descrição, preço, cores e tamanhos disponíveis). Termine sempre com uma pergunta de interesse natural (ex: "Gostou das opções?", "O que achou?", "Tem alguma dúvida sobre ele?").
-6. NUNCA invente preços, cores, locais ou nomes. Use APENAS as informações do banco de dados fornecidas abaixo.
-7. NUNCA use emojis, asteriscos ou formatação markdown. O texto será lido em voz alta.
-8. Se a pergunta tiver erro, gíria ou frase incompleta, interprete pela intenção mais provável usando o contexto da conversa e os dados do banco.
-9. Se o assunto for pagamento, boleto, Pix ou cartão, diga de forma breve que essa confirmação deve ser feita no caixa e volte a oferecer ajuda com produtos.
-10. MUITO IMPORTANTE: Ao mencionar o nome de um produto, NUNCA inclua a cor no nome. Diga apenas o tipo/modelo (ex: "Camisa Polo Masculina") e mencione a cor separadamente (ex: "disponível na cor Branca"). NUNCA diga "Camisa Polo Branca Masculina" — separe sempre o nome da cor.
+4. NUNCA empurre o mapa por conta própria. Só fale de mapa ou localização se o usuário pedir explicitamente.
+5. NUNCA peça para adicionar à lista de compras por conta própria. Ao apresentar opções, termine com uma pergunta natural e curta, como "Gostou de alguma delas?" ou "Quer ver outras opções?".
+6. Se o pedido exato não existir, avise isso primeiro de forma gentil e só depois sugira algo parecido, deixando claro que é uma alternativa.
+7. Ao apresentar um produto pela primeira vez, forneça os detalhes mais úteis dele (descrição, preço, cor e tamanho quando existirem). Termine com uma pergunta natural de continuidade.
+8. NUNCA invente preços, cores, locais ou nomes. Use APENAS as informações do banco de dados fornecidas abaixo.
+9. NUNCA use emojis, asteriscos ou formatação markdown. O texto será lido em voz alta.
+10. Se a pergunta tiver erro, gíria ou frase incompleta, interprete pela intenção mais provável usando o contexto da conversa e os dados do banco.
+11. Se o assunto for pagamento, boleto, Pix ou cartão, diga de forma breve que essa confirmação deve ser feita no caixa e volte a oferecer ajuda com produtos.
 
 {info_produtos}
 {info_todos_produtos}
@@ -208,13 +209,13 @@ REGRAS OBRIGATÓRIAS:
                     res = f"Encontrei o {nome} por R$ {preco:.2f}. "
                     if cor:
                         res += f"Temos ele na cor {cor}. "
-                    res += "Gostou das opções? Se quiser, posso te mostrar a localização no mapa."
+                    res += "O que achou?"
                     return res
                 else:
                     res = f"I found the {nome} for ${preco:.2f}. "
                     if cor:
                         res += f"We have it in {cor}. "
-                    res += "Did you like this option? If you'd like, I can show you the route on the map."
+                    res += "What do you think?"
                     return res
         except Exception as fallback_err:
             print("Erro ao gerar fallback de produto:", fallback_err)

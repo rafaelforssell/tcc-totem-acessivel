@@ -147,6 +147,12 @@ def limpar_tokens_busca(palavras_chave):
         "nessa", "nesta", "encontra", "encontrar", "acha", "achar",
         "acho", "que", "dos", "das", "duas", "dois", "ambos", "ambas",
         "eles", "elas", "usar", "uso", "usando", "fechar", "so",
+        # Palavras de pessoa / relacionamento — NUNCA são produtos
+        "namorada", "namorado", "esposa", "esposo", "marido", "mulher",
+        "mae", "pai", "filho", "filha", "irma", "irmao", "amiga", "amigo",
+        "prima", "primo", "tia", "tio", "avo", "avoa", "neta", "neto",
+        "pessoa", "pessoas", "alguem", "ninguem", "minha", "meu", "sua", "seu",
+        "ela", "ele", "nos", "presente", "presentear",
     }
     sinonimos = {
         "short": "bermuda",

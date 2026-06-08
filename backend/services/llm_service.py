@@ -53,6 +53,8 @@ REGRAS OBRIGATÓRIAS PARA palavras_chave:
 - Extraia apenas as palavras-chave essenciais do produto (substantivos, adjetivos de cor/tipo/marca) no SINGULAR.
 - NUNCA inclua números ou quantidades (como "dois", "duas", "3").
 - NUNCA inclua verbos gerais em formato infinitivo/conjugado (como "treinar", "correr"). Em vez disso, converta para o substantivo/adjetivo correspondente que possa estar no banco de dados (ex: "treino", "corrida").
+- NUNCA inclua palavras de pessoa/relacionamento como "namorada", "namorado", "esposa", "marido", "mãe", "pai", "filho", "amiga", "amigo", "prima", "tia" ou pronomes possessivos. Extraia APENAS o produto em si.
+- Exemplo: "vestido pra minha namorada" -> {"intencao": "NOVA_BUSCA", "palavras_chave": ["vestido"]}
 - Exemplo: "duas camisas para treinar" -> {"intencao": "NOVA_BUSCA", "palavras_chave": ["camisa", "treino"]}
 - Exemplo: "calças azuis" -> {"intencao": "NOVA_BUSCA", "palavras_chave": ["calca", "azul"]}
 

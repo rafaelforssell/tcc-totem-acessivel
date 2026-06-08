@@ -986,11 +986,23 @@ async def pipeline_processar(pergunta, idioma="pt"):
         todos_mencionados = list(memoria["produtos_mencionados"].values())
         pool_mapa = todos_mencionados if is_pedido_resumo_rotas(texto_baixo) else produtos_memoria
         produtos_mapa = selecionar_produtos_para_mapa(texto_baixo, produtos_memoria)
+        
+        # Verifica se o usuário citou algum dos produtos especificamente
+        citou_produto_especifico = False
+        if len(produtos_memoria) > 1:
+            palavras_req = [normalizar_texto(w.strip(".,?!")) for w in texto_baixo.split()]
+            for prod in produtos_memoria:
+                nome_partes = [normalizar_texto(p) for p in prod["nome"].lower().split()]
+                if any(p in palavras_req for p in nome_partes):
+                    citou_produto_especifico = True
+                    break
+
         # Se a frase é genérica/afirmativa, mostra todas as seções da sessão
         if (
             is_confirmacao_positiva(texto_baixo)
             or is_pedido_resumo_rotas(texto_baixo)
             or menciona_todos_os_produtos(texto_baixo)
+            or (len(produtos_memoria) > 1 and not citou_produto_especifico)
         ):
             produtos_mapa = pool_mapa
         produtos_rota = produtos_por_secao(produtos_mapa)
@@ -1100,11 +1112,33 @@ async def pipeline_processar(pergunta, idioma="pt"):
 
     if intencao == "SOBRE_PRODUTO":
         produtos_relevantes = []
-        palavras_pergunta = texto_baixo.split()
-        for produto in produtos_memoria:
-            nome_partes = produto["nome"].lower().split()
-            if any(parte in palavras_pergunta for parte in nome_partes):
-                produtos_relevantes.append(produto)
+        palavras_pergunta = [w.strip(".,?!") for w in texto_baixo.split()]
+        palavras_pergunta_norm = [normalizar_texto(p) for p in palavras_pergunta]
+        
+        # 1. Busca primeiro nos produtos já mencionados na sessão
+        for produto in memoria.get("produtos_mencionados", {}).values():
+            nome_partes = [normalizar_texto(p) for p in produto["nome"].lower().split()]
+            if any(parte in palavras_pergunta_norm for parte in nome_partes):
+                if produto["id"] not in [p["id"] for p in produtos_relevantes]:
+                    produtos_relevantes.append(produto)
+
+        # 2. Se não achou nos mencionados, busca no banco pelas palavras-chave da intenção
+        if not produtos_relevantes:
+            palavras_busca = palavras if palavras else extrair_palavras_busca(texto_baixo)
+            resultados_db = buscar_produtos_sql(palavras_busca) if palavras_busca else []
+            if resultados_db:
+                disponiveis = [p for p in resultados_db if not p.get("_esgotado")]
+                if disponiveis:
+                    memoria["ultimos_produtos"] = disponiveis[:3]
+                    memoria["assunto_ativo"] = "produto"
+                    memoria["produtos_pendentes_confirmacao"] = disponiveis[:3]
+                    for p in disponiveis[:3]:
+                        memoria["produtos_mencionados"][p["id"]] = p
+                    produtos_relevantes = disponiveis[:3]
+        else:
+            # Atualiza os últimos produtos e pendentes com a seleção relevante filtrada da pergunta
+            memoria["ultimos_produtos"] = produtos_relevantes
+            memoria["produtos_pendentes_confirmacao"] = produtos_relevantes
 
         final_context = produtos_relevantes if produtos_relevantes else produtos_memoria
         return await responder_sobre_produtos(pergunta, final_context, idioma)
@@ -1114,10 +1148,22 @@ async def pipeline_processar(pergunta, idioma="pt"):
             todos_mencionados = list(memoria["produtos_mencionados"].values())
             pool_mapa = todos_mencionados if is_pedido_resumo_rotas(texto_baixo) else produtos_memoria
             produtos_mapa = selecionar_produtos_para_mapa(texto_baixo, produtos_memoria)
+            
+            # Verifica se o usuário citou algum dos produtos especificamente
+            citou_produto_especifico = False
+            if len(produtos_memoria) > 1:
+                palavras_req = [normalizar_texto(w.strip(".,?!")) for w in texto_baixo.split()]
+                for prod in produtos_memoria:
+                    nome_partes = [normalizar_texto(p) for p in prod["nome"].lower().split()]
+                    if any(p in palavras_req for p in nome_partes):
+                        citou_produto_especifico = True
+                        break
+
             if (
                 is_confirmacao_positiva(texto_baixo)
                 or is_pedido_resumo_rotas(texto_baixo)
                 or menciona_todos_os_produtos(texto_baixo)
+                or (len(produtos_memoria) > 1 and not citou_produto_especifico)
             ):
                 produtos_mapa = pool_mapa
             produtos_rota = produtos_por_secao(produtos_mapa)

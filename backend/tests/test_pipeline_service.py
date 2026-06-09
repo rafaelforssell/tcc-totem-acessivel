@@ -734,4 +734,51 @@ def test_pipeline_plural_shirts_search():
     assert res is False
 
 
+def test_pipeline_context_inheritance():
+    # Simulate searching for a shirt, setting tipo_ativo in memory
+    pipeline_service.limpar_memoria()
+    pipeline_service.memoria["tipo_ativo"] = "camisa"
+    
+    # If the user says "voce tem preta?", it should expand/inherit the type
+    tokens = pipeline_service.limpar_tokens_busca(["preta"])
+    # The pipeline processar context inheritance check:
+    tem_tipo = any(p in pipeline_service.TIPOS_CONHECIDOS for p in tokens)
+    assert tem_tipo is False
+    assert pipeline_service.memoria.get("tipo_ativo") == "camisa"
 
+
+def test_buscar_produtos_sql_exact_priority():
+    # If we search for "camisa polo preta", it should return the exact polo shirt,
+    # rather than returning a list of 3 items (bermuda, calça, polo) via selecionar_por_token.
+    resultados = pipeline_service.buscar_produtos_sql(["camisa", "polo", "preta"])
+    
+    # It should only contain the matching shirt(s), e.g. "Camisa Polo Preta Masculina"
+    assert resultados
+    assert len(resultados) == 1
+    assert "polo" in resultados[0]["nome"].lower()
+    assert "preta" in resultados[0]["nome"].lower() or resultados[0]["cor"].lower() == "preta"
+
+
+def test_pipeline_color_query_context_inheritance(monkeypatch):
+    # Set up scenario: active type is "Camisa" and active gender is "mas"
+    pipeline_service.limpar_memoria()
+    pipeline_service.memoria["tipo_ativo"] = "camisa"
+    pipeline_service.memoria["genero"] = "mas"
+    
+    # Mock classificar_intencao to return SOBRE_PRODUTO with "preta"
+    async def fake_classificar_intencao(pergunta, idioma="pt"):
+        return {"intencao": "SOBRE_PRODUTO", "palavras_chave": ["preta"]}
+        
+    async def fake_perguntar_llm(pergunta, contexto_produtos=None, idioma="pt", historico=None, todos_produtos=None):
+        return "Temos a camisa polo preta."
+
+    monkeypatch.setattr(pipeline_service, "classificar_intencao", fake_classificar_intencao)
+    monkeypatch.setattr(pipeline_service, "perguntar_llm", fake_perguntar_llm)
+    
+    # Run the query "Você tem preta?"
+    resposta = asyncio.run(pipeline_service.pipeline_processar("Você tem preta?"))
+    
+    # It should perform the database search, inherit "camisa", and return only the black polo shirt
+    assert resposta["resultados"]
+    assert len(resposta["resultados"]) == 1
+    assert resposta["resultados"][0]["nome"] == "Camisa Polo Preta Masculina"

@@ -25,6 +25,7 @@ def limpar_memoria():
     memoria["produtos_pendentes_confirmacao"] = []
     memoria["tentativas_silencio"] = 0
     memoria["genero"] = None
+    memoria["tipo_ativo"] = None
 
 
 def conectar_bd():
@@ -149,6 +150,8 @@ def limpar_tokens_busca(palavras_chave, palavras_validas=None):
         "nessa", "nesta", "encontra", "encontrar", "acha", "achar",
         "acho", "que", "dos", "das", "duas", "dois", "ambos", "ambas",
         "eles", "elas", "usar", "uso", "usando", "fechar", "so",
+        "esta", "está", "estao", "estão", "estou", "estava", "este", "estes", "estas",
+        "onde", "como",
         # Palavras de pessoa / relacionamento — NUNCA são produtos
         "namorada", "namorado", "esposa", "esposo", "marido", "mulher",
         "mae", "pai", "filho", "filha", "irma", "irmao", "amiga", "amigo",
@@ -421,6 +424,14 @@ def buscar_produtos_sql(palavras_chave):
     if not palavras_chave:
         return []
 
+    # Se nao houver nenhum tipo conhecido nas palavras_chave, e houver tipo_ativo na memoria, herda-o
+    tokens = limpar_tokens_busca(palavras_chave)
+    tem_tipo = any(t.lower() in TIPOS_CONHECIDOS or (len(t) > 3 and t.lower().endswith("s") and t.lower()[:-1] in TIPOS_CONHECIDOS) for t in tokens)
+    if not tem_tipo and memoria.get("tipo_ativo"):
+        tipo_herdado = memoria["tipo_ativo"]
+        if tipo_herdado.lower() not in [t.lower() for t in tokens]:
+            palavras_chave = list(palavras_chave) + [tipo_herdado]
+
     todos_produtos_raw = db_service.fetchall(
         "SELECT * FROM produtos ORDER BY nome, cor, tamanho"
     )
@@ -475,17 +486,21 @@ def buscar_produtos_sql(palavras_chave):
     com_estoque = [p for p in todos_produtos_raw if (p.get("estoque") or 0) > 0]
     sem_estoque = [p for p in todos_produtos_raw if (p.get("estoque") or 0) <= 0]
 
+    # 1. Busca exata (todos os tokens batem) com estoque primeiro
+    produtos = [p for p in com_estoque if produto_valido(p, exigir_todos=True)]
+    if produtos:
+        return [formatar_produto(p) for p in produtos]
+
+    # 2. Se nao achou exata, mas tem multiplos tokens, tenta selecionar um de cada (busca multi-produto)
     if len(tokens_sem_genero) > 1:
         multi_resultados = selecionar_por_token(com_estoque)
         if len(multi_resultados) >= 2:
             return [formatar_produto(p) for p in multi_resultados]
 
-    # Busca com estoque primeiro
-    produtos = [p for p in com_estoque if produto_valido(p, exigir_todos=True)]
-    if not produtos:
-        produtos = [p for p in com_estoque if produto_valido(p, exigir_todos=False)]
+    # 3. Busca parcial (qualquer token bate) com estoque
+    produtos = [p for p in com_estoque if produto_valido(p, exigir_todos=False)]
 
-    # Se não achou com estoque, verifica se existe esgotado para dar mensagem adequada
+    # 4. Se nao achou com estoque, verifica se existe esgotado para dar mensagem adequada
     if not produtos:
         esgotados = [p for p in sem_estoque if produto_valido(p, exigir_todos=True)]
         if not esgotados:
@@ -842,6 +857,8 @@ def extrair_palavras_busca(texto_baixo):
         "perfeito", "legal", "beleza", "certo", "ok", "entendi", "bom", "boa",
         "roupa", "roupas", "algum", "alguns", "alguma", "algumas", "hoje", "noite",
         "tudo", "bem", "vou", "numa", "num", "para", "pra",
+        "esta", "está", "estao", "estão", "estou", "estava", "este", "estes", "estas",
+        "onde", "como", "voce", "você", "voces", "pode", "poderia", "gostei",
     }
     return [
         normalizar_texto(w.strip(".,?!"))
@@ -1221,6 +1238,15 @@ async def pipeline_processar(pergunta, idioma="pt"):
     print(f"Intencao: {intencao} | Palavras: {palavras}")
 
     if intencao == "NOVA_BUSCA":
+        # Context inheritance / Query expansion
+        tem_tipo = any(p.lower() in TIPOS_CONHECIDOS or (len(p) > 3 and p.lower().endswith("s") and p.lower()[:-1] in TIPOS_CONHECIDOS) for p in palavras)
+        if not tem_tipo and memoria.get("tipo_ativo"):
+            tipo_herdado = memoria["tipo_ativo"]
+            palavras.append(tipo_herdado)
+            texto_baixo = f"{texto_baixo} {tipo_herdado}"
+            pergunta = f"{pergunta} {tipo_herdado}"
+            print(f"[Contexto] Herdando tipo ativo: {tipo_herdado}. Nova pergunta: {pergunta}")
+
         busca_segmentada = buscar_produtos_por_segmentos(texto_baixo, palavras_validas=palavras)
         if busca_segmentada and busca_segmentada.get("produtos"):
             disponiveis = busca_segmentada["produtos"][:3]
@@ -1229,6 +1255,9 @@ async def pipeline_processar(pergunta, idioma="pt"):
             memoria["produtos_pendentes_confirmacao"] = disponiveis
             for p in disponiveis:
                 memoria["produtos_mencionados"][p["id"]] = p
+            if disponiveis:
+                tipo_val = disponiveis[0].get("tipo")
+                memoria["tipo_ativo"] = tipo_val.lower() if tipo_val else None
 
             resposta = montar_resposta_busca_natural(disponiveis, busca_segmentada.get("faltas", []), idioma)
             memoria["historico_conversas"].append({"role": "assistant", "content": resposta})
@@ -1271,6 +1300,9 @@ async def pipeline_processar(pergunta, idioma="pt"):
             memoria["produtos_pendentes_confirmacao"] = disponiveis[:3]
             for p in disponiveis[:3]:
                 memoria["produtos_mencionados"][p["id"]] = p
+            if disponiveis:
+                tipo_val = disponiveis[0].get("tipo")
+                memoria["tipo_ativo"] = tipo_val.lower() if tipo_val else None
 
             contexto = "Produtos encontrados no banco de dados:\n" + "\n---\n".join(
                 [formatar_produto_para_contexto(p) for p in disponiveis[:3]]

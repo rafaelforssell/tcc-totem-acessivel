@@ -755,6 +755,33 @@
                                 </button>
                             </form>
                         </div>
+
+                        <!-- Adicionar Nova Sessão/Categoria -->
+                        <div class="bg-zinc-900 border-2 border-zinc-800 rounded-3xl p-5 md:p-6 flex flex-col gap-4">
+                            <div>
+                                <p class="text-zinc-400 text-xs uppercase tracking-[0.25em] font-bold">Nova Seção</p>
+                                <h2 class="text-white font-lexend font-bold text-2xl mt-1">Adicionar Sessão</h2>
+                            </div>
+                            <form id="new-category-form" onsubmit="event.preventDefault(); adicionarNovaCategoria();" class="flex flex-col gap-3">
+                                <label class="flex flex-col gap-1">
+                                    <span class="text-zinc-300 text-xs font-bold uppercase tracking-wider">Nome da Sessão / Categoria</span>
+                                    <input id="new-cat-nome" type="text" placeholder="Ex: Saias, Acessórios..." required class="bg-black border border-zinc-700 rounded-xl px-3 py-2 text-white focus:border-yellow-400 focus:outline-none text-sm">
+                                </label>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <label class="flex flex-col gap-1">
+                                        <span class="text-zinc-300 text-xs font-bold uppercase tracking-wider">Corredor (1-7)</span>
+                                        <input id="new-cat-corredor" type="text" required class="bg-black border border-zinc-700 rounded-xl px-3 py-2 text-white focus:border-yellow-400 focus:outline-none text-sm">
+                                    </label>
+                                    <label class="flex flex-col gap-1">
+                                        <span class="text-zinc-300 text-xs font-bold uppercase tracking-wider">Setor</span>
+                                        <input id="new-cat-setor" type="text" required class="bg-black border border-zinc-700 rounded-xl px-3 py-2 text-white focus:border-yellow-400 focus:outline-none text-sm">
+                                    </label>
+                                </div>
+                                <button type="submit" class="bg-yellow-400 text-black font-bold rounded-xl px-4 py-3 hover:bg-yellow-300 transition-colors mt-2 text-sm uppercase tracking-wide">
+                                    Criar Sessão
+                                </button>
+                            </form>
+                        </div>
                     </div>
 
                     <div class="bg-zinc-900 border-2 border-zinc-800 rounded-3xl p-4 md:p-5 flex flex-col gap-4 min-h-[520px]">
@@ -1114,11 +1141,16 @@
                 const countText = categorias[cat].length === 1 ? '1 item' : `${categorias[cat].length} itens`;
                 
                 html += `
-                    <div class="mt-8 mb-4">
+                    <div class="mt-8 mb-4 flex items-center justify-between border-b-2 border-yellow-400/30 pb-2">
                         <button type="button" data-category="${escapeHtml(cat)}" onclick="toggleAdminCategoryCollapse(this.getAttribute('data-category'))"
-                            class="w-full flex items-center justify-between text-left text-yellow-400 hover:text-yellow-300 font-lexend font-bold text-2xl uppercase tracking-wider border-b-2 border-yellow-400/30 pb-2 transition-colors focus:outline-none">
+                            class="flex-grow flex items-center justify-between text-left text-yellow-400 hover:text-yellow-300 font-lexend font-bold text-2xl uppercase tracking-wider transition-colors focus:outline-none">
                             <span>${escapeHtml(cat)} (${countText})</span>
-                            <span class="material-symbols-outlined text-2xl md:text-3xl select-none">${chevron}</span>
+                            <span class="material-symbols-outlined text-2xl md:text-3xl select-none mr-4">${chevron}</span>
+                        </button>
+                        <button type="button" data-category="${escapeHtml(cat)}" onclick="deleteAdminCategory(this.getAttribute('data-category'))"
+                            class="bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white font-bold rounded-xl px-3 py-1.5 transition-all text-xs uppercase tracking-wider shrink-0 focus:outline-none flex items-center gap-1">
+                            <span class="material-symbols-outlined text-sm select-none">delete</span>
+                            Excluir Sessão
                         </button>
                     </div>
                     <div class="flex flex-col gap-6 ${isCollapsed ? 'hidden' : ''}">
@@ -1135,10 +1167,16 @@
                                             class="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-1.5 text-white font-bold text-base focus:border-yellow-400 focus:outline-none w-full">
                                     </div>
                                 </div>
-                                <button type="button" onclick="saveAdminProduct(${produto.id})"
-                                    class="bg-yellow-400 text-black font-bold rounded-xl px-4 py-3 hover:bg-yellow-300 transition-colors shrink-0">
-                                    Salvar alterações
-                                </button>
+                                <div class="flex items-center gap-2 shrink-0">
+                                    <button type="button" onclick="saveAdminProduct(${produto.id})"
+                                        class="bg-yellow-400 text-black font-bold rounded-xl px-4 py-3 hover:bg-yellow-300 transition-colors shrink-0">
+                                        Salvar
+                                    </button>
+                                    <button type="button" onclick="deleteAdminProduct(${produto.id})"
+                                        class="bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white font-bold rounded-xl px-4 py-3 border border-red-900/40 hover:border-red-600 transition-colors shrink-0">
+                                        Excluir
+                                    </button>
+                                </div>
                             </div>
                             
                             <!-- Linha 1 de atributos -->
@@ -1309,6 +1347,111 @@
             } catch (error) {
                 console.error(error);
                 setAdminStatus(error.message || 'Erro ao salvar produto.', true);
+            }
+        }
+
+        async function deleteAdminProduct(productId) {
+            const adminKey = (document.getElementById('admin-key-input')?.value || '').trim();
+            if (!adminKey) {
+                setAdminStatus('Informe a chave administrativa antes de excluir.', true);
+                return;
+            }
+
+            if (!confirm('Tem certeza que deseja excluir este produto permanentemente?')) {
+                return;
+            }
+
+            setAdminStatus(`Excluindo produto ${productId}...`);
+            try {
+                const response = await fetch(`${BACKEND_URL}/admin/produto/${productId}`, {
+                    method: 'DELETE',
+                    headers: { 'X-Admin-Key': adminKey }
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Não foi possível excluir o produto.');
+                }
+
+                adminProducts = adminProducts.filter(p => p.id !== productId);
+                filterAdminProducts();
+                updateAdminSyncLabel();
+                setAdminStatus(`Produto ${productId} excluído com sucesso.`);
+            } catch (error) {
+                console.error(error);
+                setAdminStatus(error.message || 'Erro ao excluir produto.', true);
+            }
+        }
+
+        async function deleteAdminCategory(categoryName) {
+            const adminKey = (document.getElementById('admin-key-input')?.value || '').trim();
+            if (!adminKey) {
+                setAdminStatus('Informe a chave administrativa antes de excluir a sessão.', true);
+                return;
+            }
+
+            if (!confirm(`Tem certeza que deseja excluir a sessão "${categoryName}" e TODOS os seus produtos permanentemente?`)) {
+                return;
+            }
+
+            setAdminStatus(`Excluindo sessão "${categoryName}"...`);
+            try {
+                const response = await fetch(`${BACKEND_URL}/admin/categoria/${encodeURIComponent(categoryName)}`, {
+                    method: 'DELETE',
+                    headers: { 'X-Admin-Key': adminKey }
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Não foi possível excluir a sessão.');
+                }
+
+                adminProducts = adminProducts.filter(p => p.categoria !== categoryName);
+                filterAdminProducts();
+                updateAdminSyncLabel();
+                setAdminStatus(`Sessão "${categoryName}" excluída com sucesso.`);
+            } catch (error) {
+                console.error(error);
+                setAdminStatus(error.message || 'Erro ao excluir sessão.', true);
+            }
+        }
+
+        async function adicionarNovaCategoria() {
+            const adminKey = (document.getElementById('admin-key-input')?.value || '').trim();
+            if (!adminKey) {
+                setAdminStatus('Informe a chave administrativa antes de criar a sessão.', true);
+                return;
+            }
+
+            const payload = {
+                categoria: document.getElementById('new-cat-nome').value.trim(),
+                corredor: document.getElementById('new-cat-corredor').value.trim(),
+                setor: document.getElementById('new-cat-setor').value.trim()
+            };
+
+            setAdminStatus(`Criando sessão ${payload.categoria}...`);
+            try {
+                const response = await fetch(`${BACKEND_URL}/admin/categoria`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Key': adminKey
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Não foi possível criar a sessão.');
+                }
+
+                document.getElementById('new-cat-nome').value = '';
+                document.getElementById('new-cat-corredor').value = '';
+                document.getElementById('new-cat-setor').value = '';
+
+                // Recarrega os produtos do admin para mostrar a nova sessão
+                await loadAdminProducts(false);
+                setAdminStatus(`Sessão "${payload.categoria}" criada com sucesso.`);
+            } catch (error) {
+                console.error(error);
+                setAdminStatus(error.message || 'Erro ao criar sessão.', true);
             }
         }
 
@@ -1548,11 +1691,11 @@
         }
 
         function obterProdutosPreferidosParaMapa(produtosFallback = []) {
+            if (produtosFallback && produtosFallback.length > 0) {
+                return produtosFallback;
+            }
             if (selectedProducts.length > 0) {
                 return selectedProducts;
-            }
-            if (produtosFallback.length > 0) {
-                return produtosFallback;
             }
             return windowResults;
         }

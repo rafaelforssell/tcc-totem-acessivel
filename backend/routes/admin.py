@@ -251,3 +251,82 @@ def criar_produto(
         "produto": novo_produto[0] if novo_produto else None,
         "mensagem": "Produto cadastrado com sucesso.",
     }
+
+
+@router.delete("/produto/{produto_id}")
+def excluir_produto(produto_id: int, x_admin_key: str | None = Header(default=None)):
+    """Exclui um produto pelo ID."""
+    verificar_chave(x_admin_key)
+    linhas = execute("DELETE FROM produtos WHERE id = ?", (produto_id,))
+    if linhas == 0:
+        raise HTTPException(status_code=404, detail=f"Produto {produto_id} nao encontrado.")
+    return {"ok": True, "mensagem": "Produto excluido com sucesso."}
+
+
+@router.delete("/categoria/{categoria}")
+def excluir_categoria(categoria: str, x_admin_key: str | None = Header(default=None)):
+    """Exclui todos os produtos de uma categoria (excluindo a sessao)."""
+    verificar_chave(x_admin_key)
+    cat_nome = categoria.strip()
+    linhas = execute("DELETE FROM produtos WHERE categoria = ?", (cat_nome,))
+    if linhas == 0:
+        raise HTTPException(status_code=404, detail=f"Nenhum produto encontrado na categoria '{cat_nome}'.")
+    return {"ok": True, "mensagem": f"Categoria '{cat_nome}' excluida com sucesso."}
+
+
+class CriarCategoriaBody(BaseModel):
+    categoria: str
+    corredor: str
+    setor: str
+
+
+@router.post("/categoria")
+def criar_categoria(
+    body: CriarCategoriaBody,
+    x_admin_key: str | None = Header(default=None),
+):
+    """Cria uma nova sessao/categoria no totem inserindo um item inicial (placeholder com estoque 0)."""
+    verificar_chave(x_admin_key)
+    cat_nome = body.categoria.strip()
+    if not cat_nome:
+        raise HTTPException(status_code=400, detail="Nome da categoria nao pode ser vazio.")
+
+    # Verifica se a categoria já existe
+    existente = fetchall("SELECT id FROM produtos WHERE categoria = ?", (cat_nome,))
+    if existente:
+        raise HTTPException(status_code=400, detail="Esta categoria/sessao ja existe.")
+
+    sku = f"placeholder_{cat_nome.lower().replace(' ', '_')}"
+    # Garante que o SKU seja único
+    sku_orig = sku
+    i = 1
+    while fetchall("SELECT id FROM produtos WHERE sku = ?", (sku,)):
+        sku = f"{sku_orig}_{i}"
+        i += 1
+
+    execute(
+        """
+        INSERT INTO produtos (
+            nome, categoria, tipo, cor, tamanho, marca, preco, estoque,
+            setor, corredor, prateleira, descricao, sku, imagem, texto_alt
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            f"Item Inicial {cat_nome}",
+            cat_nome,
+            cat_nome,
+            "",
+            "",
+            "",
+            0.0,
+            0, # estoque = 0 (placeholder)
+            body.setor.strip(),
+            body.corredor.strip(),
+            "",
+            f"Item inicial para a categoria {cat_nome}.",
+            sku,
+            "",
+            "",
+        ),
+    )
+    return {"ok": True, "mensagem": f"Sessao '{cat_nome}' criada com sucesso."}

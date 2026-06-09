@@ -37,16 +37,8 @@ async def query_audio(audio: UploadFile = File(...), idioma: str = Form("pt")):
 
     print("STT concluído:", round(fim_stt - inicio_stt, 2), "seg")
     
-    if not texto:
-        # Se não ouviu nada ou deu erro, encerra rápido
-        if os.path.exists(caminho):
-            os.remove(caminho)
-        return {
-            "transcricao": "Não entendi.",
-            "resposta": "Desculpe, não consegui ouvir direito. Pode repetir?",
-            "resultados": [],
-            "audio": ""
-        }
+    if texto is None:
+        texto = ""
 
     # IA / Pipeline
     inicio_ia = time.time()

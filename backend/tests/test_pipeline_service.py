@@ -507,3 +507,33 @@ def test_pipeline_encerrar_nao_responde_com_fala(monkeypatch):
     resposta = asyncio.run(pipeline_service.pipeline_processar("encerrar"))
 
     assert resposta == {"resposta": "", "resultados": [], "acao": "ENCERRAR"}
+
+
+def test_pipeline_silencio_duplo_encerra(monkeypatch):
+    pipeline_service.limpar_memoria()
+    
+    # Primeiro silencio
+    resposta_1 = asyncio.run(pipeline_service.pipeline_processar("", idioma="pt"))
+    assert resposta_1["resposta"] == "Olá, tem alguém aí?"
+    assert resposta_1["acao"] == "NENHUM"
+    assert pipeline_service.memoria["tentativas_silencio"] == 1
+
+    # Segundo silencio
+    resposta_2 = asyncio.run(pipeline_service.pipeline_processar("", idioma="pt"))
+    assert resposta_2["resposta"] == ""
+    assert resposta_2["acao"] == "ENCERRAR"
+    # A memoria deve estar limpa e resetada apos encerrar
+    assert pipeline_service.memoria.get("tentativas_silencio", 0) == 0
+
+
+def test_pipeline_confirmacao_lista_oferece_mapa_ou_encerrar(monkeypatch):
+    pipeline_service.limpar_memoria()
+    pipeline_service.memoria["produtos_pendentes_confirmacao"] = [
+        {"nome": "Camisa Polo", "preco": 100.0}
+    ]
+    
+    resposta = asyncio.run(pipeline_service.pipeline_processar("sim", idioma="pt"))
+    assert resposta["acao"] == "MOSTRAR_PRODUTOS"
+    assert resposta["auto_add_lista"] is True
+    assert "mapa" in resposta["resposta"].lower()
+    assert "encerrar" in resposta["resposta"].lower()

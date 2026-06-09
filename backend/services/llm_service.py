@@ -8,11 +8,10 @@ ENV_PATH = os.path.join(BASE_DIR, "..", ".env")
 load_dotenv(ENV_PATH)
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 
 def obter_config_llm():
-    """Define a URL, headers e modelo conforme as chaves disponíveis."""
+    """Define a URL, headers e modelo conforme a chave da Groq disponível."""
     if GROQ_API_KEY:
         return {
             "url": "https://api.groq.com/openai/v1/chat/completions",
@@ -21,17 +20,6 @@ def obter_config_llm():
                 "Content-Type": "application/json"
             },
             "model": "llama-3.3-70b-versatile"
-        }
-    elif OPENROUTER_API_KEY:
-        return {
-            "url": "https://openrouter.ai/api/v1/chat/completions",
-            "headers": {
-                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                "Content-Type": "application/json",
-                "HTTP-Referer": "https://github.com/yeagerdavo/tcc-totem-acessivel",
-                "X-Title": "Totem Acessivel"
-            },
-            "model": "google/gemini-2.5-flash"
         }
     return None
 
@@ -75,7 +63,7 @@ REGRAS DE INTENÇÃO:
             {"role": "user", "content": pergunta}
         ],
         "temperature": 0.0,
-        "max_tokens": 100
+        "max_tokens": 512
     }
     
     if "groq" in config["url"]:
@@ -170,7 +158,7 @@ REGRAS OBRIGATÓRIAS:
         "model": config["model"],
         "messages": messages,
         "temperature": 0.0,
-        "max_tokens": 150
+        "max_tokens": 1000
     }
 
     try:

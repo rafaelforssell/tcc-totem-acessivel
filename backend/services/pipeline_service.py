@@ -23,6 +23,7 @@ def limpar_memoria():
     memoria["historico_conversas"] = []
     memoria["produtos_mencionados"] = {}
     memoria["produtos_pendentes_confirmacao"] = []
+    memoria["tentativas_silencio"] = 0
 
 
 def conectar_bd():
@@ -826,14 +827,34 @@ async def responder_por_occasiao(pergunta, idioma):
 
 async def pipeline_processar(pergunta, idioma="pt"):
     print(f"\n--- Nova Requisicao: {pergunta} --- Idioma: {idioma}")
-    texto_baixo = pergunta.lower()
     
-    # Garante a inicialização do histórico e adiciona a pergunta do usuário
+    # Garante a inicialização do histórico e variáveis
     if "historico_conversas" not in memoria:
         memoria["historico_conversas"] = []
     if "produtos_mencionados" not in memoria:
         memoria["produtos_mencionados"] = {}
-        
+    if "tentativas_silencio" not in memoria:
+        memoria["tentativas_silencio"] = 0
+
+    if not pergunta or not pergunta.strip():
+        memoria["tentativas_silencio"] += 1
+        if memoria["tentativas_silencio"] == 1:
+            resposta_texto = (
+                "Olá, tem alguém aí?"
+                if idioma == "pt"
+                else "Hello, is anyone there?"
+            )
+            memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
+            return {"resposta": resposta_texto, "resultados": [], "acao": "NENHUM"}
+        else:
+            limpar_memoria()
+            return {"resposta": "", "resultados": [], "acao": "ENCERRAR"}
+
+    # Se o usuário falou algo, reseta as tentativas de silêncio
+    memoria["tentativas_silencio"] = 0
+
+    texto_baixo = pergunta.lower()
+    
     memoria["historico_conversas"].append({"role": "user", "content": pergunta})
     
     produtos_memoria = memoria.get("ultimos_produtos", [])
@@ -904,9 +925,17 @@ async def pipeline_processar(pergunta, idioma="pt"):
         else:
             memoria["produtos_pendentes_confirmacao"] = []
             if idioma == "pt":
-                resposta_texto = "Perfeito, ja coloquei essa opcao na sua lista." if len(produtos_pendentes) == 1 else "Perfeito, ja coloquei essas opcoes na sua lista."
+                resposta_texto = (
+                    "Perfeito, já adicionei essa opção à sua lista. Gostaria de ver o mapa para saber como chegar até ela, ou podemos encerrar o atendimento?"
+                    if len(produtos_pendentes) == 1
+                    else "Perfeito, já adicionei essas opções à sua lista. Gostaria de ver o mapa para saber como chegar até elas, ou podemos encerrar o atendimento?"
+                )
             else:
-                resposta_texto = "Great, I already added this option to your list." if len(produtos_pendentes) == 1 else "Great, I already added these options to your list."
+                resposta_texto = (
+                    "Perfect! I have added this option to your list. Would you like to see the map to locate it, or can we end the session?"
+                    if len(produtos_pendentes) == 1
+                    else "Perfect! I have added these options to your list. Would you like to see the map to locate them, or can we end the session?"
+                )
             memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
             return {
                 "resposta": resposta_texto,

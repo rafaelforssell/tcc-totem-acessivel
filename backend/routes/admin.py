@@ -36,6 +36,24 @@ class AtualizarProdutoBody(BaseModel):
     descricao: str
 
 
+class CriarProdutoBody(BaseModel):
+    nome: str
+    categoria: str
+    tipo: str
+    cor: str
+    tamanho: str
+    marca: str
+    preco: float
+    estoque: int = 1
+    setor: str
+    corredor: str
+    prateleira: str
+    descricao: str
+    sku: str
+    imagem: str | None = ""
+    texto_alt: str | None = ""
+
+
 @router.get("/produtos")
 def listar_produtos_admin(x_admin_key: str | None = Header(default=None)):
     """Lista todos os produtos com campos usados no totem."""
@@ -132,5 +150,70 @@ def atualizar_produto(
         "ok": True,
         "produto_id": produto_id,
         "produto": produto[0] if produto else None,
-        "mensagem": "Produto atualizado com sucesso.",
+        "mensagem": "Produto updated com sucesso.",
+    }
+
+
+@router.post("/produto")
+def criar_produto(
+    body: CriarProdutoBody,
+    x_admin_key: str | None = Header(default=None),
+):
+    """Cadastra um novo produto no estoque do totem."""
+    verificar_chave(x_admin_key)
+
+    if body.estoque < 0:
+        raise HTTPException(status_code=400, detail="Estoque nao pode ser negativo.")
+    if body.preco < 0:
+        raise HTTPException(status_code=400, detail="Preco nao pode ser negativo.")
+
+    sku_limpo = body.sku.strip()
+    # Verifica se SKU já existe
+    existente = fetchall("SELECT id FROM produtos WHERE sku = ?", (sku_limpo,))
+    if existente:
+        raise HTTPException(status_code=400, detail="Produto com este SKU ja cadastrado.")
+
+    try:
+        execute(
+            """
+            INSERT INTO produtos (
+                nome, categoria, tipo, cor, tamanho, marca, preco, estoque,
+                setor, corredor, prateleira, descricao, sku, imagem, texto_alt
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                body.nome.strip(),
+                body.categoria.strip(),
+                body.tipo.strip(),
+                body.cor.strip(),
+                body.tamanho.strip(),
+                body.marca.strip(),
+                body.preco,
+                body.estoque,
+                body.setor.strip(),
+                body.corredor.strip(),
+                body.prateleira.strip(),
+                body.descricao.strip(),
+                sku_limpo,
+                body.imagem.strip() if body.imagem else "",
+                body.texto_alt.strip() if body.texto_alt else "",
+            ),
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao inserir no banco: {e}")
+
+    # Retorna o produto recém cadastrado
+    novo_produto = fetchall(
+        """
+        SELECT id, nome, categoria, cor, tamanho, preco, estoque, sku, setor, corredor, prateleira, descricao
+        FROM produtos
+        WHERE sku = ?
+        """,
+        (sku_limpo,),
+    )
+
+    return {
+        "ok": True,
+        "produto": novo_produto[0] if novo_produto else None,
+        "mensagem": "Produto cadastrado com sucesso.",
     }

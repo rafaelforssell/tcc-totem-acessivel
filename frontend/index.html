@@ -484,6 +484,10 @@
                     <svg class="absolute inset-0 w-full h-full p-4 md:p-8" viewBox="0 0 1000 600"
                         preserveAspectRatio="xMidYMid meet">
 
+                        <!-- Provadores -->
+                        <rect x="40" y="30" width="120" height="65" rx="8" fill="#1a1a1a" stroke="#444" stroke-width="2" />
+                        <text x="100" y="68" fill="#888" font-size="16" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-i18n="fitting_rooms">PROVADORES</text>
+
                         <!-- Caixas -->
                         <rect x="800" y="500" width="150" height="80" rx="8" fill="#1a1a1a" stroke="#444"
                             stroke-width="2" />
@@ -619,39 +623,121 @@
         <main class="flex-grow mt-20 md:mt-32 mb-24 md:mb-32 bg-black p-4 md:p-8 overflow-y-auto">
             <div class="max-w-[1700px] mx-auto flex flex-col gap-6">
                 <section class="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)] gap-6">
-                    <div class="bg-zinc-900 border-2 border-zinc-800 rounded-3xl p-5 md:p-6 flex flex-col gap-4">
-                        <div>
-                            <p class="text-zinc-400 text-xs uppercase tracking-[0.25em] font-bold">Acesso</p>
-                            <h2 class="text-white font-lexend font-bold text-2xl mt-2">Banco em tempo real</h2>
-                            <p class="text-zinc-300 text-sm md:text-base mt-3 leading-relaxed">
-                                Altere preco, estoque, corredor e descricao. O totem passa a usar esses dados atualizados nas proximas buscas.
-                            </p>
+                    <div class="flex flex-col gap-6">
+                        <!-- Autenticação e Busca -->
+                        <div class="bg-zinc-900 border-2 border-zinc-800 rounded-3xl p-5 md:p-6 flex flex-col gap-4">
+                            <div>
+                                <p class="text-zinc-400 text-xs uppercase tracking-[0.25em] font-bold">Acesso</p>
+                                <h2 class="text-white font-lexend font-bold text-2xl mt-2">Banco em tempo real</h2>
+                                <p class="text-zinc-300 text-sm md:text-base mt-3 leading-relaxed">
+                                    Altere preco, estoque, corredor e descricao. O totem passa a usar esses dados atualizados nas proximas buscas.
+                                </p>
+                            </div>
+                            <label class="flex flex-col gap-2">
+                                <span class="text-white font-bold text-sm uppercase tracking-wider">Chave admin</span>
+                                <input id="admin-key-input" type="password" placeholder="X-Admin-Key"
+                                    class="bg-black border-2 border-zinc-700 rounded-xl px-4 py-3 text-white focus:border-yellow-400 focus:outline-none">
+                            </label>
+                            <label class="flex flex-col gap-2">
+                                <span class="text-white font-bold text-sm uppercase tracking-wider">Buscar produto</span>
+                                <input id="admin-search-input" type="text" placeholder="Nome, SKU, categoria..."
+                                    class="bg-black border-2 border-zinc-700 rounded-xl px-4 py-3 text-white focus:border-yellow-400 focus:outline-none"
+                                    oninput="filterAdminProducts()">
+                            </label>
+                            <div class="grid grid-cols-2 gap-3">
+                                <button type="button" onclick="loadAdminProducts(true)"
+                                    class="bg-yellow-400 text-black font-bold rounded-xl px-4 py-3 hover:bg-yellow-300 transition-colors">
+                                    Carregar
+                                </button>
+                                <button type="button" onclick="toggleAdminAutoRefresh()"
+                                    id="admin-auto-refresh-btn"
+                                    class="bg-zinc-800 text-white font-bold rounded-xl px-4 py-3 border border-zinc-700 hover:border-yellow-400 transition-colors">
+                                    Auto sync ligado
+                                </button>
+                            </div>
+                            <div class="bg-black/60 border border-zinc-800 rounded-2xl p-4 flex flex-col gap-2">
+                                <p id="admin-status" class="text-zinc-300 text-sm">Informe a chave e clique em carregar.</p>
+                                <p id="admin-last-sync" class="text-zinc-500 text-xs uppercase tracking-[0.2em]">Sem sincronizacao</p>
+                            </div>
                         </div>
-                        <label class="flex flex-col gap-2">
-                            <span class="text-white font-bold text-sm uppercase tracking-wider">Chave admin</span>
-                            <input id="admin-key-input" type="password" placeholder="X-Admin-Key"
-                                class="bg-black border-2 border-zinc-700 rounded-xl px-4 py-3 text-white focus:border-yellow-400 focus:outline-none">
-                        </label>
-                        <label class="flex flex-col gap-2">
-                            <span class="text-white font-bold text-sm uppercase tracking-wider">Buscar produto</span>
-                            <input id="admin-search-input" type="text" placeholder="Nome, SKU, categoria..."
-                                class="bg-black border-2 border-zinc-700 rounded-xl px-4 py-3 text-white focus:border-yellow-400 focus:outline-none"
-                                oninput="filterAdminProducts()">
-                        </label>
-                        <div class="grid grid-cols-2 gap-3">
-                            <button type="button" onclick="loadAdminProducts(true)"
-                                class="bg-yellow-400 text-black font-bold rounded-xl px-4 py-3 hover:bg-yellow-300 transition-colors">
-                                Carregar
-                            </button>
-                            <button type="button" onclick="toggleAdminAutoRefresh()"
-                                id="admin-auto-refresh-btn"
-                                class="bg-zinc-800 text-white font-bold rounded-xl px-4 py-3 border border-zinc-700 hover:border-yellow-400 transition-colors">
-                                Auto sync ligado
-                            </button>
-                        </div>
-                        <div class="bg-black/60 border border-zinc-800 rounded-2xl p-4 flex flex-col gap-2">
-                            <p id="admin-status" class="text-zinc-300 text-sm">Informe a chave e clique em carregar.</p>
-                            <p id="admin-last-sync" class="text-zinc-500 text-xs uppercase tracking-[0.2em]">Sem sincronizacao</p>
+
+                        <!-- Cadastrar Novo Produto -->
+                        <div class="bg-zinc-900 border-2 border-zinc-800 rounded-3xl p-5 md:p-6 flex flex-col gap-4">
+                            <div>
+                                <p class="text-zinc-400 text-xs uppercase tracking-[0.25em] font-bold">Novo Item</p>
+                                <h2 class="text-white font-lexend font-bold text-2xl mt-1">Cadastrar Produto</h2>
+                            </div>
+                            <form id="new-product-form" onsubmit="event.preventDefault(); cadastrarNovoProduto();" class="flex flex-col gap-3">
+                                <label class="flex flex-col gap-1">
+                                    <span class="text-zinc-300 text-xs font-bold uppercase tracking-wider">Nome</span>
+                                    <input id="new-prod-nome" type="text" required class="bg-black border border-zinc-700 rounded-xl px-3 py-2 text-white focus:border-yellow-400 focus:outline-none text-sm">
+                                </label>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <label class="flex flex-col gap-1">
+                                        <span class="text-zinc-300 text-xs font-bold uppercase tracking-wider">SKU</span>
+                                        <input id="new-prod-sku" type="text" required class="bg-black border border-zinc-700 rounded-xl px-3 py-2 text-white focus:border-yellow-400 focus:outline-none text-sm">
+                                    </label>
+                                    <label class="flex flex-col gap-1">
+                                        <span class="text-zinc-300 text-xs font-bold uppercase tracking-wider">Categoria</span>
+                                        <input id="new-prod-categoria" type="text" required class="bg-black border border-zinc-700 rounded-xl px-3 py-2 text-white focus:border-yellow-400 focus:outline-none text-sm">
+                                    </label>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <label class="flex flex-col gap-1">
+                                        <span class="text-zinc-300 text-xs font-bold uppercase tracking-wider">Preço (R$)</span>
+                                        <input id="new-prod-preco" type="number" min="0" step="0.01" required class="bg-black border border-zinc-700 rounded-xl px-3 py-2 text-white focus:border-yellow-400 focus:outline-none text-sm">
+                                    </label>
+                                    <label class="flex flex-col gap-1">
+                                        <span class="text-zinc-300 text-xs font-bold uppercase tracking-wider">Estoque</span>
+                                        <input id="new-prod-estoque" type="number" min="0" step="1" value="1" required class="bg-black border border-zinc-700 rounded-xl px-3 py-2 text-white focus:border-yellow-400 focus:outline-none text-sm">
+                                    </label>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <label class="flex flex-col gap-1">
+                                        <span class="text-zinc-300 text-xs font-bold uppercase tracking-wider">Corredor (1-7)</span>
+                                        <input id="new-prod-corredor" type="text" required class="bg-black border border-zinc-700 rounded-xl px-3 py-2 text-white focus:border-yellow-400 focus:outline-none text-sm">
+                                    </label>
+                                    <label class="flex flex-col gap-1">
+                                        <span class="text-zinc-300 text-xs font-bold uppercase tracking-wider">Setor</span>
+                                        <input id="new-prod-setor" type="text" required class="bg-black border border-zinc-700 rounded-xl px-3 py-2 text-white focus:border-yellow-400 focus:outline-none text-sm">
+                                    </label>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <label class="flex flex-col gap-1">
+                                        <span class="text-zinc-300 text-xs font-bold uppercase tracking-wider">Prateleira</span>
+                                        <input id="new-prod-prateleira" type="text" required class="bg-black border border-zinc-700 rounded-xl px-3 py-2 text-white focus:border-yellow-400 focus:outline-none text-sm">
+                                    </label>
+                                    <label class="flex flex-col gap-1">
+                                        <span class="text-zinc-300 text-xs font-bold uppercase tracking-wider">Tipo</span>
+                                        <input id="new-prod-tipo" type="text" required class="bg-black border border-zinc-700 rounded-xl px-3 py-2 text-white focus:border-yellow-400 focus:outline-none text-sm">
+                                    </label>
+                                </div>
+                                <div class="grid grid-cols-3 gap-1">
+                                    <label class="flex flex-col gap-1 col-span-1">
+                                        <span class="text-zinc-300 text-xs font-bold uppercase tracking-wider">Cor</span>
+                                        <input id="new-prod-cor" type="text" required class="bg-black border border-zinc-700 rounded-xl px-2 py-2 text-white focus:border-yellow-400 focus:outline-none text-xs">
+                                    </label>
+                                    <label class="flex flex-col gap-1 col-span-1">
+                                        <span class="text-zinc-300 text-xs font-bold uppercase tracking-wider">Tamanho</span>
+                                        <input id="new-prod-tamanho" type="text" required class="bg-black border border-zinc-700 rounded-xl px-2 py-2 text-white focus:border-yellow-400 focus:outline-none text-xs">
+                                    </label>
+                                    <label class="flex flex-col gap-1 col-span-1">
+                                        <span class="text-zinc-300 text-xs font-bold uppercase tracking-wider">Marca</span>
+                                        <input id="new-prod-marca" type="text" required class="bg-black border border-zinc-700 rounded-xl px-2 py-2 text-white focus:border-yellow-400 focus:outline-none text-xs">
+                                    </label>
+                                </div>
+                                <label class="flex flex-col gap-1">
+                                    <span class="text-zinc-300 text-xs font-bold uppercase tracking-wider">Descrição</span>
+                                    <textarea id="new-prod-descricao" rows="2" required class="bg-black border border-zinc-700 rounded-xl px-3 py-2 text-white focus:border-yellow-400 focus:outline-none text-sm"></textarea>
+                                </label>
+                                <label class="flex flex-col gap-1">
+                                    <span class="text-zinc-300 text-xs font-bold uppercase tracking-wider">URL Imagem</span>
+                                    <input id="new-prod-imagem" type="text" placeholder="Opcional" class="bg-black border border-zinc-700 rounded-xl px-3 py-2 text-white focus:border-yellow-400 focus:outline-none text-sm">
+                                </label>
+                                <button type="submit" class="bg-yellow-400 text-black font-bold rounded-xl px-4 py-3 hover:bg-yellow-300 transition-colors mt-2 text-sm uppercase tracking-wide">
+                                    Cadastrar Produto
+                                </button>
+                            </form>
                         </div>
                     </div>
 
@@ -745,7 +831,8 @@
                 lang_title: "IDIOMA / LANGUAGE",
                 cancel_btn: "Cancelar",
                 offer: "Oferta",
-                end_session_btn: "Encerrar"
+                end_session_btn: "Encerrar",
+                fitting_rooms: "PROVADORES"
             },
             en: {
                 start_btn: "START",
@@ -776,7 +863,8 @@
                 lang_title: "LANGUAGE / IDIOMA",
                 cancel_btn: "Cancel",
                 offer: "Sale",
-                end_session_btn: "End Session"
+                end_session_btn: "End Session",
+                fitting_rooms: "FITTING ROOMS"
             }
         };
 
@@ -1069,10 +1157,59 @@
                 adminProducts = adminProducts.map(produto => produto.id === productId ? { ...produto, ...payload } : produto);
                 filterAdminProducts();
                 updateAdminSyncLabel();
-                setAdminStatus(`Produto ${productId} atualizado. O totem ja passa a usar os novos dados.`);
+                setAdminStatus(`Produto ${productId} updated. O totem ja passa a usar os novos dados.`);
             } catch (error) {
                 console.error(error);
                 setAdminStatus(error.message || 'Erro ao salvar produto.', true);
+            }
+        }
+
+        async function cadastrarNovoProduto() {
+            const adminKey = (document.getElementById('admin-key-input')?.value || '').trim();
+            if (!adminKey) {
+                setAdminStatus('Informe a chave administrativa antes de cadastrar.', true);
+                return;
+            }
+
+            const payload = {
+                nome: document.getElementById('new-prod-nome').value.trim(),
+                sku: document.getElementById('new-prod-sku').value.trim(),
+                categoria: document.getElementById('new-prod-categoria').value.trim(),
+                preco: Number(document.getElementById('new-prod-preco').value || 0),
+                estoque: Number(document.getElementById('new-prod-estoque').value || 0),
+                corredor: document.getElementById('new-prod-corredor').value.trim(),
+                setor: document.getElementById('new-prod-setor').value.trim(),
+                prateleira: document.getElementById('new-prod-prateleira').value.trim(),
+                tipo: document.getElementById('new-prod-tipo').value.trim(),
+                cor: document.getElementById('new-prod-cor').value.trim(),
+                tamanho: document.getElementById('new-prod-tamanho').value.trim(),
+                marca: document.getElementById('new-prod-marca').value.trim(),
+                descricao: document.getElementById('new-prod-descricao').value.trim(),
+                imagem: document.getElementById('new-prod-imagem').value.trim() || "",
+                texto_alt: document.getElementById('new-prod-nome').value.trim()
+            };
+
+            setAdminStatus('Cadastrando novo produto...');
+            try {
+                const response = await fetch(`${BACKEND_URL}/admin/produto`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Key': adminKey,
+                    },
+                    body: JSON.stringify(payload),
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Não foi possível cadastrar o produto.');
+                }
+
+                setAdminStatus('Produto cadastrado com sucesso!');
+                document.getElementById('new-product-form').reset();
+                await loadAdminProducts(false);
+            } catch (error) {
+                console.error(error);
+                setAdminStatus(error.message || 'Erro ao cadastrar produto.', true);
             }
         }
 
@@ -1473,6 +1610,8 @@
             return `
                 <svg xmlns="http://www.w3.org/2000/svg" width="1000" height="600" viewBox="0 0 1000 600">
                     <rect x="0" y="0" width="1000" height="600" fill="#111111" />
+                    <rect x="40" y="30" width="120" height="65" rx="8" fill="#1a1a1a" stroke="#444" stroke-width="2" />
+                    <text x="100" y="68" fill="#888" font-size="16" font-family="sans-serif" font-weight="bold" text-anchor="middle">PROVADORES</text>
                     <rect x="800" y="500" width="150" height="80" rx="8" fill="#1a1a1a" stroke="#444" stroke-width="2" />
                     <text x="875" y="545" fill="#888" font-size="20" font-family="sans-serif" font-weight="bold" text-anchor="middle">CAIXAS</text>
                     <rect x="50" y="500" width="150" height="80" rx="8" fill="#1a1a1a" stroke="#444" stroke-width="2" />
@@ -1566,7 +1705,10 @@
 
                 div.append(bubble, avatar);
             } else {
-                div.className = "flex items-end gap-3 self-start w-[90%] md:w-3/4";
+                const isWide = (results && results.length > 0) || acao !== "NENHUM";
+                div.className = isWide 
+                    ? "flex items-end gap-3 self-start w-full" 
+                    : "flex items-end gap-3 self-start w-[90%] md:w-3/4";
 
                 const avatar = document.createElement("div");
                 avatar.className = "w-10 h-10 md:w-14 md:h-14 rounded-full bg-zinc-800 flex items-center justify-center border-2 border-zinc-700 shrink-0";
@@ -1576,7 +1718,9 @@
                 avatar.appendChild(icon);
 
                 const bubble = document.createElement("div");
-                bubble.className = "bg-zinc-800 border-2 border-zinc-700 p-4 md:p-6 rounded-2xl rounded-bl-sm w-full max-w-[85%]";
+                bubble.className = isWide 
+                    ? "bg-zinc-800 border-2 border-zinc-700 p-4 md:p-6 rounded-2xl rounded-bl-sm w-full" 
+                    : "bg-zinc-800 border-2 border-zinc-700 p-4 md:p-6 rounded-2xl rounded-bl-sm w-full max-w-[85%]";
 
                 const paragraph = document.createElement("p");
                 paragraph.className = "text-white text-base md:text-2xl leading-relaxed";
@@ -1587,7 +1731,7 @@
                     windowResults = results;
                     mesclarProdutosNotificacao(results);
                     const cards = document.createElement("div");
-                    cards.className = "flex gap-4 mt-4 overflow-x-auto pb-2 chat-scroll";
+                    cards.className = "grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4 w-full";
 
                     // Pré-computa a lista de imagens para o Lightbox
                     const lightboxItems = results.map(r => ({
@@ -1598,7 +1742,7 @@
 
                     results.forEach((p, index) => {
                         const card = document.createElement("div");
-                        card.className = "text-left bg-zinc-900 border-2 border-zinc-700 p-3 rounded-xl min-w-[160px] md:min-w-[220px] flex-shrink-0";
+                        card.className = "text-left bg-zinc-900 border-2 border-zinc-700 p-3 rounded-xl w-full";
 
                         const openBtn = document.createElement("button");
                         openBtn.type = "button";
@@ -1753,9 +1897,41 @@
             }
         }
 
-        function voltarDoChat() {
+        let countdownInterval = null;
+
+        function iniciarEncerramentoSessao() {
+            if (countdownInterval) return;
+
             encerrarSessao();
-            navigateTo('screen1');
+
+            let segundos = 10;
+            const obterTextoMsg = (s) => currentLang === 'pt' 
+                ? `Totem encerrando em ${s} segundos...` 
+                : `Kiosk closing in ${s} seconds...`;
+
+            appendMessage(obterTextoMsg(segundos), 'totem');
+
+            const chatMessages = document.getElementById("chat-messages");
+            const ultimaDiv = chatMessages.lastElementChild;
+            const paragrafo = ultimaDiv?.querySelector("p");
+
+            countdownInterval = setInterval(() => {
+                segundos--;
+                if (segundos > 0) {
+                    if (paragrafo) {
+                        paragrafo.textContent = obterTextoMsg(segundos);
+                    }
+                } else {
+                    clearInterval(countdownInterval);
+                    countdownInterval = null;
+                    if (chatMessages) chatMessages.innerHTML = '';
+                    navigateTo('screen1');
+                }
+            }, 1000);
+        }
+
+        function voltarDoChat() {
+            iniciarEncerramentoSessao();
         }
 
         async function conversar() {
@@ -1965,7 +2141,7 @@
 
                 if (volume < 0.02) {
                     if (!silencioInicio) silencioInicio = Date.now();
-                    if (Date.now() - silencioInicio > 1500) {
+                    if (Date.now() - silencioInicio > 5000) {
                         recorder.stop();
                         return;
                     }
@@ -2206,6 +2382,10 @@
                     
                     <div class="w-full bg-zinc-950 rounded-xl relative overflow-hidden map-grid aspect-[5/3] border border-zinc-800">
                         <svg class="w-full h-full p-2" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet">
+                            <!-- Provadores -->
+                            <rect x="40" y="30" width="120" height="65" rx="8" fill="#1a1a1a" stroke="#444" stroke-width="2" />
+                            <text x="100" y="68" fill="#888" font-size="16" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-i18n="fitting_rooms">PROVADORES</text>
+
                             <!-- Caixas -->
                             <rect x="800" y="500" width="150" height="80" rx="8" fill="#1a1a1a" stroke="#444" stroke-width="2" />
                             <text x="875" y="545" fill="#888" font-size="20" font-family="sans-serif" font-weight="bold" text-anchor="middle">CAIXAS</text>
@@ -2292,6 +2472,8 @@
                     </ol>
                     <div class="w-full bg-zinc-950 rounded-xl relative overflow-hidden map-grid aspect-[5/3] border border-zinc-800">
                         <svg class="w-full h-full p-2" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet">
+                            <rect x="40" y="30" width="120" height="65" rx="8" fill="#1a1a1a" stroke="#444" stroke-width="2" />
+                            <text x="100" y="68" fill="#888" font-size="16" font-family="sans-serif" font-weight="bold" text-anchor="middle" data-i18n="fitting_rooms">PROVADORES</text>
                             <rect x="800" y="500" width="150" height="80" rx="8" fill="#1a1a1a" stroke="#444" stroke-width="2" />
                             <text x="875" y="545" fill="#888" font-size="20" font-family="sans-serif" font-weight="bold" text-anchor="middle">CAIXAS</text>
                             <rect x="50" y="500" width="150" height="80" rx="8" fill="#1a1a1a" stroke="#444" stroke-width="2" />

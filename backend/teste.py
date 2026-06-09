@@ -9,7 +9,6 @@ load_dotenv(ENV_PATH)
 print("--- ENV VARS LOADED FROM .env ---")
 print("DATABASE_URL:", os.getenv("DATABASE_URL"))
 print("GROQ_API_KEY:", os.getenv("GROQ_API_KEY"))
-print("OPENROUTER_API_KEY:", os.getenv("OPENROUTER_API_KEY"))
 print("TELEGRAM_BOT_TOKEN:", os.getenv("TELEGRAM_BOT_TOKEN"))
 print("TELEGRAM_CHAT_ID:", os.getenv("TELEGRAM_CHAT_ID"))
 

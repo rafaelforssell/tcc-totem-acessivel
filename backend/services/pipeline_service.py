@@ -24,6 +24,7 @@ def limpar_memoria():
     memoria["produtos_mencionados"] = {}
     memoria["produtos_pendentes_confirmacao"] = []
     memoria["tentativas_silencio"] = 0
+    memoria["genero"] = None
 
 
 def conectar_bd():
@@ -224,6 +225,8 @@ def buscar_produtos_por_segmentos(texto_baixo):
     todos_produtos_raw = db_service.fetchall("SELECT * FROM produtos ORDER BY nome, cor, tamanho")
     com_estoque = [p for p in todos_produtos_raw if (p.get("estoque") or 0) > 0]
 
+    genero = memoria.get("genero")
+
     resultados = []
     faltas = []
     ids_escolhidos = set()
@@ -234,6 +237,8 @@ def buscar_produtos_por_segmentos(texto_baixo):
 
         candidatos_exatos = []
         for produto in com_estoque:
+            if genero and genero_produto(produto) != genero:
+                continue
             texto = texto_produto(produto)
             if all(token_match(texto, token) for token in tokens):
                 candidatos_exatos.append(produto)
@@ -253,6 +258,8 @@ def buscar_produtos_por_segmentos(texto_baixo):
 
         candidatos_tipo = []
         for produto in com_estoque:
+            if genero and genero_produto(produto) != genero:
+                continue
             texto = texto_produto(produto)
             if token_match(texto, tipo):
                 candidatos_tipo.append(produto)
@@ -365,7 +372,7 @@ def buscar_produtos_sql(palavras_chave):
     )
 
     tokens = limpar_tokens_busca(palavras_chave)
-    genero = detectar_genero(tokens)
+    genero = detectar_genero(tokens) or memoria.get("genero")
     tokens_sem_genero = [
         token for token in tokens
         if token not in {"feminino", "feminina", "femininos", "femininas", "fem", "masculino", "masculina", "masculinos", "masculinas", "masc", "mas"}
@@ -437,16 +444,22 @@ def buscar_produtos_sql(palavras_chave):
 
 
 def listar_amostra_catalogo(limite=6):
+    genero = memoria.get("genero")
     produtos = db_service.fetchall(
         "SELECT * FROM produtos WHERE estoque > 0 ORDER BY corredor, nome"
     )
+    if genero:
+        produtos = [p for p in produtos if genero_produto(p) == genero]
     return produtos_por_secao([formatar_produto(p) for p in produtos])[:limite]
 
 
 def listar_todos_produtos_formatados():
+    genero = memoria.get("genero")
     produtos = db_service.fetchall(
         "SELECT * FROM produtos WHERE estoque > 0 ORDER BY corredor, nome"
     )
+    if genero:
+        produtos = [p for p in produtos if genero_produto(p) == genero]
     return [formatar_produto(p) for p in produtos]
 
 
@@ -854,6 +867,15 @@ async def pipeline_processar(pergunta, idioma="pt"):
     memoria["tentativas_silencio"] = 0
 
     texto_baixo = pergunta.lower()
+
+    # Detecta gênero na pergunta atual e armazena na memória
+    tokens_pergunta = normalizar_texto(texto_baixo).split()
+    genero_detectado = detectar_genero(tokens_pergunta)
+    if "genero" not in memoria:
+        memoria["genero"] = None
+    if genero_detectado:
+        memoria["genero"] = genero_detectado
+        print(f"[Memoria] Genero atualizado para: {genero_detectado}")
     
     memoria["historico_conversas"].append({"role": "user", "content": pergunta})
     

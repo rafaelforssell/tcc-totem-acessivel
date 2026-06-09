@@ -191,6 +191,7 @@ def test_pipeline_catalogo_por_genero_mostra_produtos_reais(monkeypatch):
 
 
 def test_busca_segmentada_ignora_pedido_de_mostrar(monkeypatch):
+    pipeline_service.limpar_memoria()
     produtos = [
         {
             "id": 1,
@@ -236,6 +237,7 @@ def test_busca_segmentada_ignora_pedido_de_mostrar(monkeypatch):
 
 
 def test_busca_segmentada_entende_lista_repetida_do_mesmo_produto(monkeypatch):
+    pipeline_service.limpar_memoria()
     produtos = [
         {
             "id": 1,
@@ -281,6 +283,7 @@ def test_busca_segmentada_entende_lista_repetida_do_mesmo_produto(monkeypatch):
 
 
 def test_busca_segmentada_remove_contexto_de_confirmacao(monkeypatch):
+    pipeline_service.limpar_memoria()
     produtos = [
         {
             "id": 1,
@@ -537,3 +540,71 @@ def test_pipeline_confirmacao_lista_oferece_mapa_ou_encerrar(monkeypatch):
     assert resposta["auto_add_lista"] is True
     assert "mapa" in resposta["resposta"].lower()
     assert "encerrar" in resposta["resposta"].lower()
+
+
+def test_pipeline_memoria_genero(monkeypatch):
+    pipeline_service.limpar_memoria()
+    
+    # 1. Faz uma busca com genero "masculina"
+    # Deve detectar e salvar "mas" na memoria
+    async def fake_classificar_intencao(pergunta, idioma="pt"):
+        return {"intencao": "NOVA_BUSCA", "palavras_chave": ["roupa", "masculina"]}
+    
+    monkeypatch.setattr(pipeline_service, "classificar_intencao", fake_classificar_intencao)
+    
+    asyncio.run(pipeline_service.pipeline_processar("roupa masculina"))
+    assert pipeline_service.memoria["genero"] == "mas"
+
+    # 2. Faz uma busca sem genero
+    # Deve herdar o "mas" da memoria
+    async def fake_classificar_intencao_2(pergunta, idioma="pt"):
+        return {"intencao": "NOVA_BUSCA", "palavras_chave": ["opcao"]}
+        
+    monkeypatch.setattr(pipeline_service, "classificar_intencao", fake_classificar_intencao_2)
+    
+    # Mock database results with mixed genders
+    produtos = [
+        {
+            "id": 1,
+            "nome": "Camisa Polo Masculina",
+            "categoria": "Roupa",
+            "tipo": "Camisa",
+            "cor": "Branca",
+            "tamanho": "M",
+            "marca": "Nike",
+            "preco": 100.0,
+            "estoque": 2,
+            "setor": "Masculino",
+            "corredor": "5",
+            "prateleira": "Arara 1",
+            "descricao": "Camisa polo masculina",
+            "sku": "POLO-MAS",
+            "imagem": "",
+            "texto_alt": ""
+        },
+        {
+            "id": 2,
+            "nome": "Saia Feminina",
+            "categoria": "Roupa",
+            "tipo": "Saia",
+            "cor": "Preta",
+            "tamanho": "M",
+            "marca": "Zara",
+            "preco": 120.0,
+            "estoque": 2,
+            "setor": "Feminino",
+            "corredor": "7",
+            "prateleira": "Arara 2",
+            "descricao": "Saia feminina elegante",
+            "sku": "SAIA-FEM",
+            "imagem": "",
+            "texto_alt": ""
+        }
+    ]
+    monkeypatch.setattr(pipeline_service.db_service, "fetchall", lambda *args, **kwargs: produtos)
+    
+    resposta = asyncio.run(pipeline_service.pipeline_processar("tem mais alguma opcao?"))
+    assert resposta["resultados"]
+    # So deve retornar a camisa masculina (id 1), nao a saia feminina
+    assert len(resposta["resultados"]) == 1
+    assert resposta["resultados"][0]["id"] == 1

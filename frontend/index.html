@@ -1022,7 +1022,7 @@
                     produto.nome,
                     produto.sku,
                     produto.categoria,
-                    produto.setor,
+                produto.setor,
                     produto.corredor,
                     produto.prateleira,
                 ].join(' ').toLowerCase();
@@ -1042,85 +1042,134 @@
                 return;
             }
 
-            list.innerHTML = adminFilteredProducts.map(produto => `
-                <article class="bg-black/40 border border-zinc-800 rounded-3xl p-4 md:p-5">
-                    <div class="flex flex-col gap-4">
-                        <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
-                            <div>
-                                <p class="text-zinc-400 text-xs uppercase tracking-[0.2em] font-bold">${escapeHtml(produto.categoria || 'Sem categoria')}</p>
-                                <h3 class="text-white font-lexend font-bold text-xl">${escapeHtml(produto.nome || 'Produto')}</h3>
-                                <p class="text-zinc-500 text-sm mt-1">SKU ${escapeHtml(produto.sku || '-')} • ID ${produto.id}</p>
-                            </div>
-                            <button type="button" onclick="saveAdminProduct(${produto.id})"
-                                class="bg-yellow-400 text-black font-bold rounded-xl px-4 py-3 hover:bg-yellow-300 transition-colors">
-                                Salvar alteracoes
-                            </button>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
-                            <label class="flex flex-col gap-2">
-                                <span class="text-zinc-300 text-xs uppercase tracking-wider">Preco</span>
-                                <input id="admin-price-${produto.id}" type="number" min="0" step="0.01" value="${formatCurrencyInput(produto.preco)}"
-                                    class="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-3 text-white focus:border-yellow-400 focus:outline-none">
-                            </label>
-                            <label class="flex flex-col gap-2">
-                                <span class="text-zinc-300 text-xs uppercase tracking-wider">Estoque</span>
-                                <input id="admin-stock-${produto.id}" type="number" min="0" step="1" value="${Number(produto.estoque || 0)}"
-                                    class="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-3 text-white focus:border-yellow-400 focus:outline-none">
-                            </label>
-                            <label class="flex flex-col gap-2">
-                                <span class="text-zinc-300 text-xs uppercase tracking-wider">Corredor</span>
-                                <input id="admin-aisle-${produto.id}" type="text" value="${escapeHtml(produto.corredor || '')}"
-                                    class="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-3 text-white focus:border-yellow-400 focus:outline-none">
-                            </label>
-                            <label class="flex flex-col gap-2">
-                                <span class="text-zinc-300 text-xs uppercase tracking-wider">Setor</span>
-                                <input id="admin-sector-${produto.id}" type="text" value="${escapeHtml(produto.setor || '')}"
-                                    class="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-3 text-white focus:border-yellow-400 focus:outline-none">
-                            </label>
-                            <label class="flex flex-col gap-2">
-                                <span class="text-zinc-300 text-xs uppercase tracking-wider">Prateleira</span>
-                                <input id="admin-shelf-${produto.id}" type="text" value="${escapeHtml(produto.prateleira || '')}"
-                                    class="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-3 text-white focus:border-yellow-400 focus:outline-none">
-                            </label>
-                        </div>
-                        <label class="flex flex-col gap-2">
-                            <span class="text-zinc-300 text-xs uppercase tracking-wider">Descricao</span>
-                            <textarea id="admin-description-${produto.id}" rows="3"
-                                class="bg-zinc-950 border border-zinc-700 rounded-2xl px-3 py-3 text-white focus:border-yellow-400 focus:outline-none">${escapeHtml(produto.descricao || '')}</textarea>
-                        </label>
-                    </div>
-                </article>
-            `).join('');
-        }
-
-        async function loadAdminProducts(showMessage = true) {
-            const keyInput = document.getElementById('admin-key-input');
-            const adminKey = keyInput?.value?.trim();
-            if (!adminKey) {
-                setAdminStatus('Informe a chave administrativa para carregar os produtos.', true);
-                return;
-            }
-
-            localStorage.setItem('totemAdminKey', adminKey);
-            if (showMessage) setAdminStatus('Carregando produtos...');
-
-            try {
-                const response = await fetch(`${BACKEND_URL}/admin/produtos`, {
-                    headers: { 'X-Admin-Key': adminKey }
-                });
-                const data = await response.json();
-                if (!response.ok) {
-                    throw new Error(data.detail || 'Nao foi possivel carregar os produtos.');
+            // Agrupa por categoria
+            const categorias = {};
+            adminFilteredProducts.forEach(p => {
+                const cat = (p.categoria || 'Sem categoria').trim();
+                if (!categorias[cat]) {
+                    categorias[cat] = [];
                 }
+                categorias[cat].push(p);
+            });
 
-                adminProducts = Array.isArray(data.produtos) ? data.produtos : [];
-                filterAdminProducts();
-                updateAdminSyncLabel();
-                setAdminStatus(`Produtos carregados com sucesso. Total: ${adminProducts.length}.`);
-            } catch (error) {
-                console.error(error);
-                setAdminStatus(error.message || 'Erro ao carregar produtos.', true);
-            }
+            // Ordena as categorias alfabeticamente
+            const sortedCategories = Object.keys(categorias).sort();
+
+            let html = '';
+            sortedCategories.forEach(cat => {
+                html += `
+                    <div class="mt-8 mb-4">
+                        <h3 class="text-yellow-400 font-lexend font-bold text-2xl uppercase tracking-wider border-b-2 border-yellow-400/30 pb-2">${escapeHtml(cat)}</h3>
+                    </div>
+                    <div class="flex flex-col gap-6">
+                `;
+                html += categorias[cat].map(produto => `
+                    <article class="bg-black/40 border border-zinc-800 rounded-3xl p-4 md:p-5">
+                        <div class="flex flex-col gap-4">
+                            <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                                <div class="w-full max-w-xl">
+                                    <p class="text-zinc-500 text-xs uppercase tracking-[0.2em] font-bold">Categoria original: ${escapeHtml(produto.categoria || 'Sem categoria')} • ID: ${produto.id}</p>
+                                    <div class="flex items-center gap-2 mt-2">
+                                        <span class="text-zinc-300 text-xs font-bold uppercase tracking-wider shrink-0">Nome:</span>
+                                        <input id="admin-name-${produto.id}" type="text" value="${escapeHtml(produto.nome || '')}"
+                                            class="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-1.5 text-white font-bold text-base focus:border-yellow-400 focus:outline-none w-full">
+                                    </div>
+                                </div>
+                                <button type="button" onclick="saveAdminProduct(${produto.id})"
+                                    class="bg-yellow-400 text-black font-bold rounded-xl px-4 py-3 hover:bg-yellow-300 transition-colors shrink-0">
+                                    Salvar alterações
+                                </button>
+                            </div>
+                            
+                            <!-- Linha 1 de atributos -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+                                <label class="flex flex-col gap-1">
+                                    <span class="text-zinc-400 text-xs font-bold uppercase tracking-wider">SKU</span>
+                                    <input id="admin-sku-${produto.id}" type="text" value="${escapeHtml(produto.sku || '')}"
+                                        class="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-2 text-white focus:border-yellow-400 focus:outline-none text-sm">
+                                </label>
+                                <label class="flex flex-col gap-1">
+                                    <span class="text-zinc-400 text-xs font-bold uppercase tracking-wider">Preço (R$)</span>
+                                    <input id="admin-price-${produto.id}" type="number" min="0" step="0.01" value="${formatCurrencyInput(produto.preco)}"
+                                        class="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-2 text-white focus:border-yellow-400 focus:outline-none text-sm">
+                                </label>
+                                <label class="flex flex-col gap-1">
+                                    <span class="text-zinc-400 text-xs font-bold uppercase tracking-wider">Estoque</span>
+                                    <input id="admin-stock-${produto.id}" type="number" min="0" step="1" value="${Number(produto.estoque || 0)}"
+                                        class="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-2 text-white focus:border-yellow-400 focus:outline-none text-sm">
+                                </label>
+                                <label class="flex flex-col gap-1">
+                                    <span class="text-zinc-400 text-xs font-bold uppercase tracking-wider">Categoria</span>
+                                    <input id="admin-category-${produto.id}" type="text" value="${escapeHtml(produto.categoria || '')}"
+                                        class="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-2 text-white focus:border-yellow-400 focus:outline-none text-sm">
+                                </label>
+                                <label class="flex flex-col gap-1">
+                                    <span class="text-zinc-400 text-xs font-bold uppercase tracking-wider">Tipo</span>
+                                    <input id="admin-type-${produto.id}" type="text" value="${escapeHtml(produto.tipo || '')}"
+                                        class="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-2 text-white focus:border-yellow-400 focus:outline-none text-sm">
+                                </label>
+                            </div>
+
+                            <!-- Linha 2 de atributos -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+                                <label class="flex flex-col gap-1">
+                                    <span class="text-zinc-400 text-xs font-bold uppercase tracking-wider">Cor</span>
+                                    <input id="admin-color-${produto.id}" type="text" value="${escapeHtml(produto.cor || '')}"
+                                        class="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-2 text-white focus:border-yellow-400 focus:outline-none text-sm">
+                                </label>
+                                <label class="flex flex-col gap-1">
+                                    <span class="text-zinc-400 text-xs font-bold uppercase tracking-wider">Tamanho</span>
+                                    <input id="admin-size-${produto.id}" type="text" value="${escapeHtml(produto.tamanho || '')}"
+                                        class="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-2 text-white focus:border-yellow-400 focus:outline-none text-sm">
+                                </label>
+                                <label class="flex flex-col gap-1">
+                                    <span class="text-zinc-400 text-xs font-bold uppercase tracking-wider">Marca</span>
+                                    <input id="admin-brand-${produto.id}" type="text" value="${escapeHtml(produto.marca || '')}"
+                                        class="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-2 text-white focus:border-yellow-400 focus:outline-none text-sm">
+                                </label>
+                                <label class="flex flex-col gap-1">
+                                    <span class="text-zinc-400 text-xs font-bold uppercase tracking-wider">Setor</span>
+                                    <input id="admin-sector-${produto.id}" type="text" value="${escapeHtml(produto.setor || '')}"
+                                        class="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-2 text-white focus:border-yellow-400 focus:outline-none text-sm">
+                                </label>
+                                <label class="flex flex-col gap-1">
+                                    <span class="text-zinc-400 text-xs font-bold uppercase tracking-wider">Corredor</span>
+                                    <input id="admin-aisle-${produto.id}" type="text" value="${escapeHtml(produto.corredor || '')}"
+                                        class="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-2 text-white focus:border-yellow-400 focus:outline-none text-sm">
+                                </label>
+                            </div>
+
+                            <!-- Linha 3 de atributos -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <label class="flex flex-col gap-1">
+                                    <span class="text-zinc-400 text-xs font-bold uppercase tracking-wider">Prateleira</span>
+                                    <input id="admin-shelf-${produto.id}" type="text" value="${escapeHtml(produto.prateleira || '')}"
+                                        class="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-2 text-white focus:border-yellow-400 focus:outline-none text-sm">
+                                </label>
+                                <label class="flex flex-col gap-1">
+                                    <span class="text-zinc-400 text-xs font-bold uppercase tracking-wider">Imagem URL</span>
+                                    <input id="admin-image-${produto.id}" type="text" value="${escapeHtml(produto.imagem || '')}"
+                                        class="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-2 text-white focus:border-yellow-400 focus:outline-none text-sm">
+                                </label>
+                                <label class="flex flex-col gap-1">
+                                    <span class="text-zinc-400 text-xs font-bold uppercase tracking-wider">Texto Alt Imagem</span>
+                                    <input id="admin-alt-${produto.id}" type="text" value="${escapeHtml(produto.texto_alt || '')}"
+                                        class="bg-zinc-950 border border-zinc-700 rounded-xl px-3 py-2 text-white focus:border-yellow-400 focus:outline-none text-sm">
+                                </label>
+                            </div>
+
+                            <label class="flex flex-col gap-1">
+                                <span class="text-zinc-400 text-xs font-bold uppercase tracking-wider">Descrição</span>
+                                <textarea id="admin-description-${produto.id}" rows="2"
+                                    class="bg-zinc-950 border border-zinc-700 rounded-2xl px-3 py-2 text-white focus:border-yellow-400 focus:outline-none text-sm">${escapeHtml(produto.descricao || '')}</textarea>
+                            </label>
+                        </div>
+                    </article>
+                `).join('');
+                html += `</div>`;
+            });
+
+            list.innerHTML = html;
         }
 
         async function saveAdminProduct(productId) {
@@ -1131,11 +1180,20 @@
             }
 
             const payload = {
+                nome: document.getElementById(`admin-name-${productId}`)?.value || '',
+                sku: document.getElementById(`admin-sku-${productId}`)?.value || '',
+                categoria: document.getElementById(`admin-category-${productId}`)?.value || '',
+                tipo: document.getElementById(`admin-type-${productId}`)?.value || '',
+                cor: document.getElementById(`admin-color-${productId}`)?.value || '',
+                tamanho: document.getElementById(`admin-size-${productId}`)?.value || '',
+                marca: document.getElementById(`admin-brand-${productId}`)?.value || '',
                 preco: Number(document.getElementById(`admin-price-${productId}`)?.value || 0),
                 estoque: Number(document.getElementById(`admin-stock-${productId}`)?.value || 0),
-                corredor: document.getElementById(`admin-aisle-${productId}`)?.value || '',
                 setor: document.getElementById(`admin-sector-${productId}`)?.value || '',
+                corredor: document.getElementById(`admin-aisle-${productId}`)?.value || '',
                 prateleira: document.getElementById(`admin-shelf-${productId}`)?.value || '',
+                imagem: document.getElementById(`admin-image-${productId}`)?.value || '',
+                texto_alt: document.getElementById(`admin-alt-${productId}`)?.value || '',
                 descricao: document.getElementById(`admin-description-${productId}`)?.value || '',
             };
 
@@ -1151,13 +1209,13 @@
                 });
                 const data = await response.json();
                 if (!response.ok) {
-                    throw new Error(data.detail || 'Nao foi possivel salvar o produto.');
+                    throw new Error(data.detail || 'Não foi possível salvar o produto.');
                 }
 
                 adminProducts = adminProducts.map(produto => produto.id === productId ? { ...produto, ...payload } : produto);
                 filterAdminProducts();
                 updateAdminSyncLabel();
-                setAdminStatus(`Produto ${productId} updated. O totem ja passa a usar os novos dados.`);
+                setAdminStatus(`Produto ${productId} atualizado com sucesso. O totem já passa a usar os novos dados.`);
             } catch (error) {
                 console.error(error);
                 setAdminStatus(error.message || 'Erro ao salvar produto.', true);
@@ -1408,7 +1466,17 @@
 
         function getSectionRoutePath(sectionNumber) {
             const target = STORE_LAYOUTS[sectionNumber]?.pin || STORE_LAYOUTS[1].pin;
-            return `M 125,480 L 125,${target.y} L ${target.x},${target.y} L ${target.x},${target.y}`;
+            if (sectionNumber === 1 || sectionNumber === 2 || sectionNumber === 3) {
+                // Esquerda: sobe pelo corredor da esquerda (x=125) e vira à direita para o pin
+                return `M 125,480 L 125,${target.y} L ${target.x},${target.y}`;
+            } else if (sectionNumber === 4 || sectionNumber === 5 || sectionNumber === 6) {
+                // Direita: vai pelo corredor inferior até o centro (x=500), sobe e vira à direita para o pin (x=600)
+                return `M 125,480 L 500,480 L 500,${target.y} L ${target.x},${target.y}`;
+            } else if (sectionNumber === 7) {
+                // Topo central: vai pelo corredor inferior até o centro (x=500) e sobe direto
+                return `M 125,480 L 500,480 L 500,${target.y}`;
+            }
+            return `M 125,480 L 125,${target.y} L ${target.x},${target.y}`;
         }
 
         function applyStoreLayout() {
@@ -1577,33 +1645,17 @@
 
             routes.sort((a, b) => a.sectionNumber - b.sectionNumber);
             const activeSections = new Set(routes.map(route => route.sectionNumber));
-            const getStroke = (num) => activeSections.has(num) ? 'stroke="#ffd700" stroke-width="4"' : 'stroke="#333" stroke-width="2"';
-            const getFill = (num) => activeSections.has(num) ? '#ffd700' : '#555';
-            const sectionRects = Object.entries(STORE_SECTIONS).map(([num, item]) => {
-                const x = item.x - 39;
-                return `<rect x="${x}" y="70" width="78" height="330" rx="4" ${getStroke(Number(num))} />`;
-            }).join("");
-            const sectionNumbers = Object.keys(STORE_SECTIONS).map(num => {
-                const item = STORE_SECTIONS[num];
-                return `<text x="${item.x}" y="48" fill="${getFill(Number(num))}">${num}</text>`;
-            }).join("");
-            const sectionLabels = Object.entries(STORE_SECTIONS).map(([num, item]) => {
-                const fill = activeSections.has(Number(num)) ? '#ffd700' : '#d4d4d8';
-                if (item.label === "Saias e Vestidos") {
-                    return `<text x="${item.x}" y="416" fill="${fill}"><tspan x="${item.x}" dy="0">Saias e</tspan><tspan x="${item.x}" dy="15">Vestidos</tspan></text>`;
-                }
-                return `<text x="${item.x}" y="424" fill="${fill}">${item.label}</text>`;
-            }).join("");
             const routePaths = routes.map((route, index) => {
-                const y = 450 - index * 22;
-                const labelY = Math.max(92, 205 - index * 22);
+                const pathD = getSectionRoutePath(route.sectionNumber);
+                const pin = STORE_LAYOUTS[route.sectionNumber]?.pin || { x: route.section.x, y: 220 };
+                const labelY = Math.max(40, pin.y - 28 - index * 16);
                 return `
-                    <path d="M 125,480 L 125,${y} L ${route.section.x},${y} L ${route.section.x},220" fill="none" stroke="#FFD700" stroke-dasharray="15,10" stroke-width="5" opacity="${Math.max(0.45, 1 - index * 0.12)}" />
-                    <g transform="translate(${route.section.x}, 220)">
+                    <path d="${pathD}" fill="none" stroke="#FFD700" stroke-dasharray="15,10" stroke-width="5" opacity="${Math.max(0.45, 1 - index * 0.12)}" />
+                    <g transform="translate(${pin.x}, ${pin.y})">
                         <circle cx="0" cy="0" fill="#ef4444" r="13" stroke="#fff" stroke-width="3"></circle>
                         <path d="M 0,0 L -9,-28 L 9,-28 Z" fill="#ef4444" />
                     </g>
-                    <text x="${route.section.x}" y="${labelY}" fill="#FFD700" font-size="18" font-family="sans-serif" font-weight="bold" text-anchor="middle">Rota ${index + 1}</text>
+                    <text x="${pin.x}" y="${labelY}" fill="#FFD700" font-size="18" font-family="sans-serif" font-weight="bold" text-anchor="middle">Rota ${index + 1}</text>
                 `;
             }).join("");
 
@@ -1618,9 +1670,9 @@
                     <text x="125" y="545" fill="#888" font-size="20" font-family="sans-serif" font-weight="bold" text-anchor="middle">ENTRADA</text>
                     <circle cx="125" cy="480" r="12" fill="#3b82f6" />
                     <text x="125" y="455" fill="#3b82f6" font-size="14" font-family="sans-serif" font-weight="bold" text-anchor="middle">VOCE</text>
-                    <g fill="#131313" stroke-width="2">${sectionRects}</g>
-                    <g font-size="24" font-family="sans-serif" font-weight="bold" text-anchor="middle">${sectionNumbers}</g>
-                    <g font-size="13" font-family="sans-serif" font-weight="bold" text-anchor="middle">${sectionLabels}</g>
+                    <g fill="#131313" stroke-width="2">${buildInlineSectionRects(activeSections)}</g>
+                    <g font-size="24" font-family="sans-serif" font-weight="bold" text-anchor="middle">${buildInlineSectionNumbers(activeSections)}</g>
+                    <g font-size="13" font-family="sans-serif" font-weight="bold">${buildInlineSectionLabels(activeSections)}</g>
                     ${routePaths}
                 </svg>
             `;
@@ -1656,29 +1708,8 @@
         }
 
         async function capturarMapaParaTelegram(produtos = []) {
-            if (produtos.length > 1) {
-                return gerarPngDeSvgString(criarSvgResumoRotas(produtos));
-            }
-
-            const svgOriginal = document.querySelector('#map-svg-container svg');
-            if (!svgOriginal) return null;
-
-            const svgClone = svgOriginal.cloneNode(true);
-            svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-            svgClone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
-            svgClone.setAttribute('width', '1000');
-            svgClone.setAttribute('height', '600');
-
-            const fundo = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-            fundo.setAttribute('x', '0');
-            fundo.setAttribute('y', '0');
-            fundo.setAttribute('width', '1000');
-            fundo.setAttribute('height', '600');
-            fundo.setAttribute('fill', '#111111');
-            svgClone.insertBefore(fundo, svgClone.firstChild);
-
-            const serializer = new XMLSerializer();
-            const svgString = serializer.serializeToString(svgClone);
+            if (!produtos || produtos.length === 0) return null;
+            const svgString = criarSvgResumoRotas(produtos);
             return gerarPngDeSvgString(svgString);
         }
 
@@ -2059,16 +2090,9 @@
                                 const respostaServidor = await response.json();
                                 console.log('[Atendente] Resposta do servidor:', respostaServidor);
 
-                                // Exibe mensagem de confirmação e se despede
-                                const msgConfirmacao = currentLang === 'pt'
-                                    ? 'Um atendente está a caminho! Obrigado pela visita. Até logo!'
-                                    : 'An attendant is on the way! Thank you for visiting. Goodbye!';
-                                setTimeout(() => {
-                                    appendMessage(msgConfirmacao, 'totem');
-                                    // Para a sessão e encerra após 6 segundos
-                                    sessaoAtiva = false;
-                                    setTimeout(() => voltarDoChat(), 6000);
-                                }, 1500);
+                                // Para a sessão e inicia o encerramento da sessão diretamente
+                                sessaoAtiva = false;
+                                setTimeout(() => voltarDoChat(), 3000);
 
                             } catch (err) {
                                 console.error('[Atendente] Erro ao notificar atendente:', err);
@@ -2404,7 +2428,7 @@
                             <g font-size="13" font-family="sans-serif" font-weight="bold">${buildInlineSectionLabels(activeSections)}</g>
 
                             <!-- Path -->
-                            <path d="M 125,480 L 125,${target.y} L ${target.x},${target.y} L ${target.x},${target.y}" fill="none" stroke="#FFD700" stroke-dasharray="15,10" stroke-width="6">
+                            <path d="${getSectionRoutePath(activeSectionNumber)}" fill="none" stroke="#FFD700" stroke-dasharray="15,10" stroke-width="6">
                                 <animate attributeName="stroke-dashoffset" from="100" to="0" dur="2s" repeatCount="indefinite" />
                             </path>
 
@@ -2439,7 +2463,7 @@
                 const pin = STORE_LAYOUTS[route.sectionNumber]?.pin || { x: route.section.x, y: 220 };
                 const labelY = Math.max(40, pin.y - 28 - index * 16);
                 return `
-                    <path d="M 125,480 L 125,${pin.y} L ${pin.x},${pin.y} L ${pin.x},${pin.y}" fill="none" stroke="#FFD700" stroke-dasharray="15,10" stroke-width="5" opacity="${Math.max(0.45, 1 - index * 0.12)}">
+                    <path d="${getSectionRoutePath(route.sectionNumber)}" fill="none" stroke="#FFD700" stroke-dasharray="15,10" stroke-width="5" opacity="${Math.max(0.45, 1 - index * 0.12)}">
                         <animate attributeName="stroke-dashoffset" from="100" to="0" dur="2s" repeatCount="indefinite" />
                     </path>
                     <g transform="translate(${pin.x}, ${pin.y})">

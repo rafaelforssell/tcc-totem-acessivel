@@ -28,12 +28,21 @@ class AtualizarEstoqueBody(BaseModel):
 
 
 class AtualizarProdutoBody(BaseModel):
+    nome: str
+    categoria: str
+    tipo: str
+    cor: str
+    tamanho: str
+    marca: str
     preco: float
     estoque: int
     setor: str
     corredor: str
     prateleira: str
     descricao: str
+    sku: str
+    imagem: str | None = ""
+    texto_alt: str | None = ""
 
 
 class CriarProdutoBody(BaseModel):
@@ -60,7 +69,7 @@ def listar_produtos_admin(x_admin_key: str | None = Header(default=None)):
     verificar_chave(x_admin_key)
     produtos = fetchall(
         """
-        SELECT id, nome, categoria, cor, tamanho, preco, estoque, sku, setor, corredor, prateleira, descricao
+        SELECT id, nome, categoria, tipo, cor, tamanho, marca, preco, estoque, sku, setor, corredor, prateleira, descricao, imagem, texto_alt
         FROM produtos
         ORDER BY categoria, nome
         """
@@ -111,7 +120,7 @@ def atualizar_produto(
     body: AtualizarProdutoBody,
     x_admin_key: str | None = Header(default=None),
 ):
-    """Atualiza os campos principais usados pelo totem em tempo real."""
+    """Atualiza todos os campos de um produto em tempo real."""
     verificar_chave(x_admin_key)
 
     if body.estoque < 0:
@@ -119,19 +128,36 @@ def atualizar_produto(
     if body.preco < 0:
         raise HTTPException(status_code=400, detail="Preco nao pode ser negativo.")
 
+    sku_limpo = body.sku.strip()
+    # Verifica se o novo SKU já existe em outro produto
+    existente = fetchall("SELECT id FROM produtos WHERE sku = ? AND id != ?", (sku_limpo, produto_id))
+    if existente:
+        raise HTTPException(status_code=400, detail="Outro produto com este SKU ja esta cadastrado.")
+
     linhas = execute(
         """
         UPDATE produtos
-        SET preco = ?, estoque = ?, setor = ?, corredor = ?, prateleira = ?, descricao = ?
+        SET nome = ?, categoria = ?, tipo = ?, cor = ?, tamanho = ?, marca = ?,
+            preco = ?, estoque = ?, setor = ?, corredor = ?, prateleira = ?,
+            descricao = ?, sku = ?, imagem = ?, texto_alt = ?
         WHERE id = ?
         """,
         (
+            body.nome.strip(),
+            body.categoria.strip(),
+            body.tipo.strip(),
+            body.cor.strip(),
+            body.tamanho.strip(),
+            body.marca.strip(),
             body.preco,
             body.estoque,
             body.setor.strip(),
             body.corredor.strip(),
             body.prateleira.strip(),
             body.descricao.strip(),
+            sku_limpo,
+            body.imagem.strip() if body.imagem else "",
+            body.texto_alt.strip() if body.texto_alt else "",
             produto_id,
         ),
     )
@@ -140,7 +166,7 @@ def atualizar_produto(
 
     produto = fetchall(
         """
-        SELECT id, nome, categoria, cor, tamanho, preco, estoque, sku, setor, corredor, prateleira, descricao
+        SELECT id, nome, categoria, tipo, cor, tamanho, marca, preco, estoque, sku, setor, corredor, prateleira, descricao, imagem, texto_alt
         FROM produtos
         WHERE id = ?
         """,
@@ -150,7 +176,7 @@ def atualizar_produto(
         "ok": True,
         "produto_id": produto_id,
         "produto": produto[0] if produto else None,
-        "mensagem": "Produto updated com sucesso.",
+        "mensagem": "Produto atualizado com sucesso.",
     }
 
 

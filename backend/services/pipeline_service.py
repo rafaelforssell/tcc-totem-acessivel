@@ -686,6 +686,7 @@ def is_pedido_resumo_rotas(texto_baixo):
     tem_total = any(palavra in texto for palavra in [
         "todos", "todas", "tudo", "geral", "resumo", "final",
         "falamos", "vimos", "conversamos", "mencionados", "vistos",
+        "eles", "elas", "esses", "essas", "estes", "estas",
     ])
     # Detecta frases naturais como "onde ficam todos", "me mostra tudo no mapa"
     frases_naturais = [
@@ -694,6 +695,8 @@ def is_pedido_resumo_rotas(texto_baixo):
         "todos no mapa", "tudo no mapa", "mapa de tudo",
         "quero ver todos", "quero ver tudo", "onde tem tudo",
         "como chegar em todos", "caminho de todos",
+        "mostrar eles", "mostra eles", "mostrar elas", "mostra elas",
+        "mostrar esses", "mostra esses", "mostrar essas", "mostra essas",
     ]
     return (tem_rota and tem_total) or any(frase in texto for frase in frases_naturais)
 
@@ -706,7 +709,14 @@ def menciona_todos_os_produtos(texto_baixo):
         "os dois no mapa", "as duas no mapa",
         "todos eles", "todas elas",
     ]
-    return any(expressao in texto for expressao in expressoes)
+    if any(expressao in texto for expressao in expressoes):
+        return True
+    
+    palavras_plurais = {"eles", "elas", "esses", "essas", "estes", "estas"}
+    if palavras_plurais.intersection(set(texto.split())):
+        return True
+        
+    return False
 
 
 def produtos_por_secao(produtos):
@@ -880,6 +890,11 @@ async def pipeline_processar(pergunta, idioma="pt"):
     memoria["historico_conversas"].append({"role": "user", "content": pergunta})
     
     produtos_memoria = memoria.get("ultimos_produtos", [])
+    # Se a memoria de ultimos produtos estiver vazia mas temos produtos mencionados na sessao,
+    # usamos os produtos mencionados como fallback para o contexto da conversa.
+    if not produtos_memoria and memoria.get("produtos_mencionados"):
+        produtos_memoria = list(memoria["produtos_mencionados"].values())
+        
     produtos_pendentes = memoria.get("produtos_pendentes_confirmacao", [])
     ia_ofereceu_mapa = ia_ofereceu_mapa_no_historico()
     confirmacao_mapa_pendente = (
@@ -1035,7 +1050,7 @@ async def pipeline_processar(pergunta, idioma="pt"):
         memoria["produtos_pendentes_confirmacao"] = []
         # Usa todos os produtos já mencionados na sessão, não só os últimos
         todos_mencionados = list(memoria["produtos_mencionados"].values())
-        pool_mapa = todos_mencionados if is_pedido_resumo_rotas(texto_baixo) else produtos_memoria
+        pool_mapa = todos_mencionados if (is_pedido_resumo_rotas(texto_baixo) or menciona_todos_os_produtos(texto_baixo)) else produtos_memoria
         produtos_mapa = selecionar_produtos_para_mapa(texto_baixo, produtos_memoria)
         
         # Verifica se o usuário citou algum dos produtos especificamente
@@ -1197,7 +1212,7 @@ async def pipeline_processar(pergunta, idioma="pt"):
     if intencao_mapa_valida:
         if produtos_memoria:
             todos_mencionados = list(memoria["produtos_mencionados"].values())
-            pool_mapa = todos_mencionados if is_pedido_resumo_rotas(texto_baixo) else produtos_memoria
+            pool_mapa = todos_mencionados if (is_pedido_resumo_rotas(texto_baixo) or menciona_todos_os_produtos(texto_baixo)) else produtos_memoria
             produtos_mapa = selecionar_produtos_para_mapa(texto_baixo, produtos_memoria)
             
             # Verifica se o usuário citou algum dos produtos especificamente

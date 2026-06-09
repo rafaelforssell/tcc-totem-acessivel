@@ -608,3 +608,65 @@ def test_pipeline_memoria_genero(monkeypatch):
     # So deve retornar a camisa masculina (id 1), nao a saia feminina
     assert len(resposta["resultados"]) == 1
     assert resposta["resultados"][0]["id"] == 1
+
+
+def test_pipeline_mapa_pronome_plural(monkeypatch):
+    pipeline_service.limpar_memoria()
+    
+    # Adiciona dois produtos na memória de mencionados e zera ultimos_produtos
+    produto1 = {
+        "id": 10,
+        "nome": "Calça Bege Masculina",
+        "categoria": "Calça",
+        "tipo": "Calça",
+        "cor": "Bege",
+        "tamanho": "42",
+        "marca": "Levi's",
+        "preco": 159.90,
+        "estoque": 2,
+        "setor": "Masculino",
+        "corredor": "4",
+        "prateleira": "Arara 1",
+        "descricao": "Calça masculina bege",
+        "sku": "CALCA-BEGE",
+        "imagem": "",
+        "texto_alt": ""
+    }
+    produto2 = {
+        "id": 20,
+        "nome": "Camiseta Branca",
+        "categoria": "Camiseta",
+        "tipo": "Camiseta",
+        "cor": "Branca",
+        "tamanho": "G",
+        "marca": "Hering",
+        "preco": 59.90,
+        "estoque": 5,
+        "setor": "Masculino",
+        "corredor": "5",
+        "prateleira": "Arara 2",
+        "descricao": "Camiseta masculina branca",
+        "sku": "CAM-BRANCA",
+        "imagem": "",
+        "texto_alt": ""
+    }
+    
+    pipeline_service.memoria["produtos_mencionados"] = {
+        10: produto1,
+        20: produto2
+    }
+    pipeline_service.memoria["ultimos_produtos"] = [] # Simula esvaziamento por busca falha
+    
+    async def fake_classificar_intencao(pergunta, idioma="pt"):
+        return {"intencao": "IR_PARA_MAPA", "palavras_chave": []}
+        
+    monkeypatch.setattr(pipeline_service, "classificar_intencao", fake_classificar_intencao)
+    
+    resposta = asyncio.run(pipeline_service.pipeline_processar("mostra eles no mapa por favor"))
+    
+    # Deve encontrar e retornar os dois produtos mencionados pelo fallback
+    assert resposta["resultados"]
+    assert len(resposta["resultados"]) == 2
+    assert {r["id"] for r in resposta["resultados"]} == {10, 20}
+    assert resposta["acao"] == "ABRIR_ROTAS"
+

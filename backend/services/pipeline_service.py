@@ -135,7 +135,7 @@ def genero_produto(produto):
     return None
 
 
-def limpar_tokens_busca(palavras_chave):
+def limpar_tokens_busca(palavras_chave, palavras_validas=None):
     stopwords = {
         "eu", "quero", "queria", "saber", "mais", "sobre", "a", "o", "as", "os",
         "de", "da", "do", "tem", "ha", "me", "fale", "uma", "um", "por", "favor",
@@ -155,6 +155,12 @@ def limpar_tokens_busca(palavras_chave):
         "prima", "primo", "tia", "tio", "avo", "avoa", "neta", "neto",
         "pessoa", "pessoas", "alguem", "ninguem", "minha", "meu", "sua", "seu",
         "ela", "ele", "nos", "presente", "presentear",
+        # Palavras de ocasião/tempo
+        "aniversario", "aniversário", "festa", "festas", "casamento", "casamentos",
+        "trabalho", "academia", "noite", "noites", "dia", "dias", "presente",
+        "presentes", "presentear", "amanha", "amanhã", "ontem", "hoje", "balada",
+        "baladas", "evento", "eventos", "encontro", "encontros", "passeio",
+        "passeios", "casual", "casuais",
     }
     sinonimos = {
         "short": "bermuda",
@@ -166,11 +172,31 @@ def limpar_tokens_busca(palavras_chave):
         "camiseta": "camisa",
         "camisetas": "camisa",
     }
-    return [
-        sinonimos.get(normalizar_texto(palavra.strip(".,?!")), normalizar_texto(palavra.strip(".,?!")))
-        for palavra in palavras_chave
-        if len(palavra.strip(".,?!")) > 2 and normalizar_texto(palavra.strip(".,?!")) not in stopwords
-    ]
+    
+    limpos = []
+    for palavra in palavras_chave:
+        p_clean = normalizar_texto(palavra.strip(".,?!"))
+        if len(p_clean) <= 2 or p_clean in stopwords:
+            continue
+        p_norm = sinonimos.get(p_clean, p_clean)
+        
+        # Se temos palavras válidas da IA, filtramos tipos conhecidos que não estejam nas válidas
+        if palavras_validas is not None:
+            # Verifica se é um tipo conhecido
+            is_tipo = p_norm in TIPOS_CONHECIDOS or (len(p_norm) > 3 and p_norm.endswith("s") and p_norm[:-1] in TIPOS_CONHECIDOS)
+            if is_tipo:
+                # Se for tipo, tem que bater com alguma palavra válida
+                match_valida = False
+                for v in palavras_validas:
+                    v_norm = normalizar_texto(v)
+                    if p_norm == v_norm or (len(p_norm) > 3 and p_norm.endswith("s") and p_norm[:-1] == v_norm):
+                        match_valida = True
+                        break
+                if not match_valida:
+                    # Ignora este tipo pois não foi extraído pela IA
+                    continue
+        limpos.append(p_norm)
+    return limpos
 
 
 TIPOS_CONHECIDOS = {
@@ -184,14 +210,14 @@ CORES_CONHECIDAS = {
 }
 
 
-def extrair_segmentos_busca(texto_baixo):
+def extrair_segmentos_busca(texto_baixo, palavras_validas=None):
     texto = normalizar_texto(texto_baixo)
     for tipo in sorted(TIPOS_CONHECIDOS, key=len, reverse=True):
         texto = re.sub(rf"\b(?:um|uma|o|a)\s+({tipo})\b", r", \1", texto)
     partes = re.split(r"\s*(?:,|;|\b(?:e|ou|com)\b)\s*", texto)
     segmentos = []
     for parte in partes:
-        tokens = limpar_tokens_busca(parte.split())
+        tokens = limpar_tokens_busca(parte.split(), palavras_validas)
         if tokens:
             segmentos.append(tokens)
     return segmentos
@@ -217,8 +243,8 @@ def ordenar_por_aderencia(produtos, tipo_base=None, atributos=None):
     return ordenados
 
 
-def buscar_produtos_por_segmentos(texto_baixo):
-    segmentos = extrair_segmentos_busca(texto_baixo)
+def buscar_produtos_por_segmentos(texto_baixo, palavras_validas=None):
+    segmentos = extrair_segmentos_busca(texto_baixo, palavras_validas)
     if not segmentos:
         return None
 
@@ -585,6 +611,22 @@ def is_pedido_catalogo_geral(texto_baixo):
     return not tokens
 
 
+def is_pedido_provador(texto_baixo):
+    texto = normalizar_texto(texto_baixo)
+    return "provador" in texto or "provadores" in texto or "vestiario" in texto
+
+
+def is_pedido_caixa(texto_baixo):
+    texto = normalizar_texto(texto_baixo)
+    # Detecta se pergunta onde pagar, onde é o caixa, ou onde finalizar/efetuar a compra
+    termos_onde = ["onde", "aonde", "como chego", "como ir", "caminho", "localizacao", "onde fica", "onde e"]
+    if "caixa" in texto:
+        return True
+    if any(o in texto for o in termos_onde) and any(c in texto for c in ["pagar", "pagamento", "comprar", "compra", "finalizar", "efetuar"]):
+        return True
+    return False
+
+
 def is_pergunta_pagamento(texto_baixo):
     texto = normalizar_texto(texto_baixo)
     termos_pagamento = ["boleto", "pix", "cartao", "credito", "debito", "parcelar", "pagamento", "pagar"]
@@ -907,6 +949,58 @@ async def pipeline_processar(pergunta, idioma="pt"):
         limpar_memoria()
         return {"resposta": "", "resultados": [], "acao": "ENCERRAR"}
 
+    # Verifica se o usuário está pedindo para ir ao provador
+    if is_pedido_provador(texto_baixo):
+        todos_mencionados = list(memoria.get("produtos_mencionados", {}).values())
+        base_produtos = todos_mencionados if todos_mencionados else produtos_memoria
+        
+        # Cria lista de destinos: produtos + provador + caixa
+        destinos = [p for p in base_produtos]
+        destinos.append({
+            "id": "provador",
+            "nome": "Provadores",
+            "corredor": "8",
+            "setor": "Provadores"
+        })
+        destinos.append({
+            "id": "caixa",
+            "nome": "Caixas",
+            "corredor": "9",
+            "setor": "Caixas"
+        })
+        
+        resposta_texto = (
+            "Os produtos estão aqui e o provador está aqui, se gostar só ir no caixa."
+            if idioma == "pt"
+            else "The products are here and the fitting room is here, if you like them just go to the checkout."
+        )
+        memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
+        return {
+            "resposta": resposta_texto,
+            "resultados": destinos,
+            "acao": "ABRIR_ROTAS"
+        }
+
+    # Verifica se o usuário está pedindo para efetuar a compra / ir ao caixa
+    if is_pedido_caixa(texto_baixo):
+        destino_caixa = [{
+            "id": "caixa",
+            "nome": "Caixas",
+            "corredor": "9",
+            "setor": "Caixas"
+        }]
+        resposta_texto = (
+            "Você pode efetuar a compra nos caixas. Mostrando o caminho no mapa."
+            if idioma == "pt"
+            else "You can complete your purchase at the registers. Showing the route on the map."
+        )
+        memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
+        return {
+            "resposta": resposta_texto,
+            "resultados": destino_caixa,
+            "acao": "ABRIR_MAPA"
+        }
+
     # Verifica se o usuário está pedindo um atendente humano
     if is_pedido_atendente(texto_baixo):
         produtos_alerta = list(memoria["produtos_mencionados"].values())
@@ -996,9 +1090,15 @@ async def pipeline_processar(pergunta, idioma="pt"):
         if produtos_rota:
             memoria["produtos_pendentes_confirmacao"] = []
             if idioma == "pt":
-                resposta_texto = f"Claro! Aqui estão as {len(produtos_rota)} seção(ões) dos produtos que conversamos."
+                if len(produtos_rota) == 1:
+                    resposta_texto = "Claro! Aqui está a seção do produto que conversamos."
+                else:
+                    resposta_texto = f"Claro! Aqui estão as {len(produtos_rota)} seções dos produtos que conversamos."
             else:
-                resposta_texto = f"Sure! Here are the {len(produtos_rota)} section(s) for the products we discussed."
+                if len(produtos_rota) == 1:
+                    resposta_texto = "Sure! Here is the section for the product we discussed."
+                else:
+                    resposta_texto = f"Sure! Here are the {len(produtos_rota)} sections for the products we discussed."
             memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
             return {"resposta": resposta_texto, "resultados": produtos_rota, "acao": "ABRIR_ROTAS"}
 
@@ -1089,7 +1189,7 @@ async def pipeline_processar(pergunta, idioma="pt"):
     print(f"Intencao: {intencao} | Palavras: {palavras}")
 
     if intencao == "NOVA_BUSCA":
-        busca_segmentada = buscar_produtos_por_segmentos(texto_baixo)
+        busca_segmentada = buscar_produtos_por_segmentos(texto_baixo, palavras_validas=palavras)
         if busca_segmentada and busca_segmentada.get("produtos"):
             disponiveis = busca_segmentada["produtos"][:3]
             memoria["ultimos_produtos"] = disponiveis

@@ -1482,6 +1482,8 @@
             5: { label: "Camisas", x: 633 },
             6: { label: "Casacos", x: 729 },
             7: { label: "Saias e Vestidos", x: 825 },
+            8: { label: "Provadores", x: 100 },
+            9: { label: "Caixas", x: 875 },
         };
 
         const STORE_LAYOUTS = {
@@ -1492,10 +1494,20 @@
             5: { rect: { x: 600, y: 235, width: 220, height: 72, rx: 18 }, text: { x: 628, y: 278 }, label: { x: 665, y: 279, anchor: "start" }, pin: { x: 600, y: 271 } },
             6: { rect: { x: 600, y: 360, width: 220, height: 72, rx: 18 }, text: { x: 628, y: 403 }, label: { x: 665, y: 404, anchor: "start" }, pin: { x: 600, y: 396 } },
             7: { rect: { x: 420, y: 40, width: 160, height: 54, rx: 16 }, text: { x: 448, y: 75 }, label: { x: 500, y: 73, anchor: "middle", multiline: true }, pin: { x: 500, y: 94 } },
+            8: { pin: { x: 100, y: 95 } },
+            9: { pin: { x: 875, y: 500 } },
         };
 
         function getSectionRoutePath(sectionNumber) {
             const target = STORE_LAYOUTS[sectionNumber]?.pin || STORE_LAYOUTS[1].pin;
+            if (sectionNumber === 8) {
+                // Provadores: sobe pelo corredor esquerdo (x=125) até y=95, depois vira à esquerda para x=100
+                return `M 125,480 L 125,95 L 100,95`;
+            }
+            if (sectionNumber === 9) {
+                // Caixas: vai pela base inferior (y=480) até x=875, depois desce até y=500
+                return `M 125,480 L 875,480 L 875,500`;
+            }
             if (sectionNumber === 1 || sectionNumber === 2 || sectionNumber === 3) {
                 // Esquerda: sobe pelo corredor da esquerda (x=125) e vira à direita para o pin
                 return `M 125,480 L 125,${target.y} L ${target.x},${target.y}`;
@@ -1510,35 +1522,39 @@
         }
 
         function applyStoreLayout() {
-            Object.entries(STORE_LAYOUTS).forEach(([num, layout]) => {
-                const rect = document.getElementById(`rect-corredor-${num}`);
-                const text = document.getElementById(`text-corredor-${num}`);
-                if (rect) {
-                    rect.setAttribute("x", layout.rect.x);
-                    rect.setAttribute("y", layout.rect.y);
-                    rect.setAttribute("width", layout.rect.width);
-                    rect.setAttribute("height", layout.rect.height);
-                    rect.setAttribute("rx", layout.rect.rx);
-                }
-                if (text) {
-                    text.setAttribute("x", layout.text.x);
-                    text.setAttribute("y", layout.text.y);
-                }
-            });
+            Object.entries(STORE_LAYOUTS)
+                .filter(([num]) => Number(num) <= 7)
+                .forEach(([num, layout]) => {
+                    const rect = document.getElementById(`rect-corredor-${num}`);
+                    const text = document.getElementById(`text-corredor-${num}`);
+                    if (rect) {
+                        rect.setAttribute("x", layout.rect.x);
+                        rect.setAttribute("y", layout.rect.y);
+                        rect.setAttribute("width", layout.rect.width);
+                        rect.setAttribute("height", layout.rect.height);
+                        rect.setAttribute("rx", layout.rect.rx);
+                    }
+                    if (text) {
+                        text.setAttribute("x", layout.text.x);
+                        text.setAttribute("y", layout.text.y);
+                    }
+                });
 
             const labelNodes = document.querySelectorAll('#map-svg-container svg g[fill="#d4d4d8"] text');
-            Object.values(STORE_LAYOUTS).forEach((layout, index) => {
-                const labelNode = labelNodes[index];
-                if (!labelNode) return;
-                labelNode.setAttribute("x", layout.label.x);
-                labelNode.setAttribute("y", layout.label.y);
-                labelNode.setAttribute("text-anchor", layout.label.anchor);
-                if (layout.label.multiline) {
-                    labelNode.innerHTML = `<tspan x="${layout.label.x}" dy="0">Saias e</tspan><tspan x="${layout.label.x}" dy="15">Vestidos</tspan>`;
-                } else {
-                    labelNode.textContent = STORE_SECTIONS[index + 1].label;
-                }
-            });
+            Object.entries(STORE_LAYOUTS)
+                .filter(([num]) => Number(num) <= 7)
+                .forEach(([num, layout], index) => {
+                    const labelNode = labelNodes[index];
+                    if (!labelNode) return;
+                    labelNode.setAttribute("x", layout.label.x);
+                    labelNode.setAttribute("y", layout.label.y);
+                    labelNode.setAttribute("text-anchor", layout.label.anchor);
+                    if (layout.label.multiline) {
+                        labelNode.innerHTML = `<tspan x="${layout.label.x}" dy="0">Saias e</tspan><tspan x="${layout.label.x}" dy="15">Vestidos</tspan>`;
+                    } else {
+                        labelNode.textContent = STORE_SECTIONS[Number(num)].label;
+                    }
+                });
         }
 
         function getProductSection(product) {
@@ -2037,7 +2053,8 @@
                         atualizarPainelListaSelecionada();
                     }
 
-                    const produtosPreferidosResposta = obterProdutosPreferidosParaMapa(data.resultados || []);
+                    const temRotaEspecial = data.resultados && data.resultados.some(r => r.id === 'provador' || r.id === 'caixa' || r.corredor === '8' || r.corredor === '9' || r.corredor === 8 || r.corredor === 9);
+                    const produtosPreferidosResposta = temRotaEspecial ? (data.resultados || []) : obterProdutosPreferidosParaMapa(data.resultados || []);
                     if (data.acao === "ABRIR_MAPA" && produtosPreferidosResposta.length > 1) {
                         data.acao = "ABRIR_ROTAS";
                         data.resultados = produtosPreferidosResposta;
@@ -2068,7 +2085,7 @@
                     // Check actions to perform after audio
                     let encerrarAposAudio = false;
                     let abrirMapaAposAudio = false;
-                    const produtosPreferidos = obterProdutosPreferidosParaMapa(data.resultados || []);
+                    const produtosPreferidos = temRotaEspecial ? (data.resultados || []) : obterProdutosPreferidosParaMapa(data.resultados || []);
                     if (data.acao === "ABRIR_MAPA") {
                         abrirMapaAposAudio = true;
                         if (data.resultados && data.resultados.length > 0) {
@@ -2389,27 +2406,33 @@
 
         // ====== INTEGRATED INLINE MAP FUNCTIONS ======
         function buildInlineSectionRects(activeSections) {
-            return Object.entries(STORE_LAYOUTS).map(([num, layout]) => {
-                const active = activeSections.has(Number(num));
-                return `<rect x="${layout.rect.x}" y="${layout.rect.y}" width="${layout.rect.width}" height="${layout.rect.height}" rx="${layout.rect.rx}" fill="#131313" stroke="${active ? '#ffd700' : '#333'}" stroke-width="${active ? '4' : '2'}" />`;
-            }).join("");
+            return Object.entries(STORE_LAYOUTS)
+                .filter(([num]) => Number(num) <= 7)
+                .map(([num, layout]) => {
+                    const active = activeSections.has(Number(num));
+                    return `<rect x="${layout.rect.x}" y="${layout.rect.y}" width="${layout.rect.width}" height="${layout.rect.height}" rx="${layout.rect.rx}" fill="#131313" stroke="${active ? '#ffd700' : '#333'}" stroke-width="${active ? '4' : '2'}" />`;
+                }).join("");
         }
 
         function buildInlineSectionNumbers(activeSections) {
-            return Object.entries(STORE_LAYOUTS).map(([num, layout]) => `
-                <text x="${layout.text.x}" y="${layout.text.y}" fill="${activeSections.has(Number(num)) ? '#ffd700' : '#555'}">${num}</text>
-            `).join("");
+            return Object.entries(STORE_LAYOUTS)
+                .filter(([num]) => Number(num) <= 7)
+                .map(([num, layout]) => `
+                    <text x="${layout.text.x}" y="${layout.text.y}" fill="${activeSections.has(Number(num)) ? '#ffd700' : '#555'}">${num}</text>
+                `).join("");
         }
 
         function buildInlineSectionLabels(activeSections) {
-            return Object.entries(STORE_LAYOUTS).map(([num, layout]) => {
-                const fill = activeSections.has(Number(num)) ? '#ffd700' : '#d4d4d8';
-                const label = STORE_SECTIONS[Number(num)].label;
-                if (layout.label.multiline) {
-                    return `<text x="${layout.label.x}" y="${layout.label.y}" fill="${fill}" text-anchor="${layout.label.anchor}"><tspan x="${layout.label.x}" dy="0">Saias e</tspan><tspan x="${layout.label.x}" dy="15">Vestidos</tspan></text>`;
-                }
-                return `<text x="${layout.label.x}" y="${layout.label.y}" fill="${fill}" text-anchor="${layout.label.anchor}">${label}</text>`;
-            }).join("");
+            return Object.entries(STORE_LAYOUTS)
+                .filter(([num]) => Number(num) <= 7)
+                .map(([num, layout]) => {
+                    const fill = activeSections.has(Number(num)) ? '#ffd700' : '#d4d4d8';
+                    const label = STORE_SECTIONS[Number(num)].label;
+                    if (layout.label.multiline) {
+                        return `<text x="${layout.label.x}" y="${layout.label.y}" fill="${fill}" text-anchor="${layout.label.anchor}"><tspan x="${layout.label.x}" dy="0">Saias e</tspan><tspan x="${layout.label.x}" dy="15">Vestidos</tspan></text>`;
+                    }
+                    return `<text x="${layout.label.x}" y="${layout.label.y}" fill="${fill}" text-anchor="${layout.label.anchor}">${label}</text>`;
+                }).join("");
         }
 
         function createMapCardHtml(productName, aisle) {
@@ -2503,12 +2526,17 @@
                     <text x="${pin.x}" y="${labelY}" fill="#FFD700" font-size="18" font-family="sans-serif" font-weight="bold" text-anchor="middle">Rota ${index + 1}</text>
                 `;
             }).join("");
-            const routeList = routes.map((route, index) => `
-                <li class="flex items-start gap-3">
-                    <span class="bg-yellow-400 text-black font-lexend font-black px-2 py-1 rounded-md text-sm shrink-0">Rota ${index + 1}</span>
-                    <span class="text-white text-sm"><b>Sessão ${route.sectionNumber} - ${route.section.label}</b><br><span class="text-zinc-300">${route.productName}</span></span>
-                </li>
-            `).join("");
+            const routeList = routes.map((route, index) => {
+                const isSpecial = route.sectionNumber >= 8;
+                const headerText = isSpecial ? route.section.label : `Sessão ${route.sectionNumber} - ${route.section.label}`;
+                const detailText = isSpecial ? "" : `<br><span class="text-zinc-300">${route.productName}</span>`;
+                return `
+                    <li class="flex items-start gap-3">
+                        <span class="bg-yellow-400 text-black font-lexend font-black px-2 py-1 rounded-md text-sm shrink-0">Rota ${index + 1}</span>
+                        <span class="text-white text-sm"><b>${headerText}</b>${detailText}</span>
+                    </li>
+                `;
+            }).join("");
 
             return `
                 <div class="bg-zinc-900 border-2 border-zinc-800 rounded-2xl p-4 mt-4 w-full flex flex-col gap-4">

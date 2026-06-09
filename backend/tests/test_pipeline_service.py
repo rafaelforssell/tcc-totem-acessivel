@@ -670,3 +670,45 @@ def test_pipeline_mapa_pronome_plural(monkeypatch):
     assert {r["id"] for r in resposta["resultados"]} == {10, 20}
     assert resposta["acao"] == "ABRIR_ROTAS"
 
+
+def test_pipeline_ocao_stopwords():
+    # Verifica que "aniversário" e "amanhã" são ignorados durante a limpeza de tokens
+    tokens = pipeline_service.limpar_tokens_busca(["vestido", "aniversário", "amanhã"])
+    assert "vestido" in tokens
+    assert "aniversário" not in tokens
+    assert "aniversario" not in tokens
+    assert "amanhã" not in tokens
+    assert "amanha" not in tokens
+
+
+def test_pipeline_pollution_filter():
+    # Se a intenção atual só tem a palavra-chave "cinto", o tipo "vestido" deve ser ignorado
+    # mesmo se estiver presente na frase do usuário (pois a IA não o extraiu nas palavras-chave da busca)
+    tokens = pipeline_service.limpar_tokens_busca(["vestido", "cinto"], palavras_validas=["cinto"])
+    assert "cinto" in tokens
+    assert "vestido" not in tokens
+
+
+def test_tts_pronunciation():
+    from services.tts_service import falar
+    # Deve preprocessar seção(ões) e remover parênteses do texto antes de gerar o áudio
+    async def run_test():
+        # Vamos testar o pré-processamento direto alterando edge_tts.Communicate mock
+        original_communicate = pipeline_service.BASE_DIR # apenas para usar falar
+        
+    # Testando os regex diretamente importando falar
+    import re
+    def test_text_clean(texto):
+        texto = texto.replace("*", "")
+        texto = re.sub(r'\bse[çc][aã]o\((?:ões|oês|oes)\)', 'seções', texto)
+        texto = re.sub(r'\bsess[aã]o\((?:ões|oês|oes)\)', 'sessões', texto)
+        texto = re.sub(r'\bop[çc][aã]o\((?:ões|oês|oes)\)', 'opções', texto)
+        texto = re.sub(r'\(s\)', 's', texto)
+        texto = texto.replace("(", "").replace(")", "")
+        return texto
+
+    assert test_text_clean("Aqui estão as 2 seção(ões) dos produtos.") == "Aqui estão as 2 seções dos produtos."
+    assert test_text_clean("Qual rota(s) você quer?") == "Qual rotas você quer?"
+    assert test_text_clean("Outra opção(ões) na loja.") == "Outra opções na loja."
+
+

@@ -94,12 +94,17 @@ REGRAS DE INTENÇÃO:
             return {"intencao": "IR_PARA_MAPA", "palavras_chave": []}
             
         # Extrai palavras e remove stopwords para busca
+        TAMANHOS_CONHECIDOS = {
+            "p", "m", "g", "gg", "pp", "xg", "xxg", "unico",
+            "34", "36", "38", "40", "42", "44", "46", "48", "50",
+            "35", "37", "39", "41", "43", "45"
+        }
         stopwords = {
             "eu", "quero", "queria", "saber", "mais", "sobre", "tem", "voce", "roupa", "roupas",
             "qual", "quais", "uma", "um", "de", "da", "do", "comprar", "buscar", "procurar"
         }
         palavras_pergunta = [w.strip(".,?!") for w in texto.split()]
-        palavras_chave = [w for w in palavras_pergunta if len(w) > 2 and w not in stopwords]
+        palavras_chave = [w for w in palavras_pergunta if (len(w) > 2 or w in TAMANHOS_CONHECIDOS) and w not in stopwords]
         
         if palavras_chave:
             # Mapeamento simples de sinônimo "short" -> "bermuda" para o banco

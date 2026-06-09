@@ -99,7 +99,7 @@ def texto_produto(produto):
     return normalizar_texto(
         " ".join(
             str(obter_campo(produto, campo))
-            for campo in ["nome", "categoria", "tipo", "cor", "marca", "descricao", "sku", "setor"]
+            for campo in ["nome", "categoria", "tipo", "cor", "tamanho", "marca", "descricao", "sku", "setor"]
         ).replace("_", " ")
     )
 
@@ -176,7 +176,8 @@ def limpar_tokens_busca(palavras_chave, palavras_validas=None):
     limpos = []
     for palavra in palavras_chave:
         p_clean = normalizar_texto(palavra.strip(".,?!"))
-        if len(p_clean) <= 2 or p_clean in stopwords:
+        is_tamanho = p_clean in TAMANHOS_CONHECIDOS
+        if (len(p_clean) <= 2 and not is_tamanho) or p_clean in stopwords:
             continue
         p_norm = sinonimos.get(p_clean, p_clean)
         
@@ -207,6 +208,12 @@ TIPOS_CONHECIDOS = {
 CORES_CONHECIDAS = {
     "preto", "preta", "branco", "branca", "vermelho", "vermelha", "azul", "verde",
     "marrom", "cinza", "bege", "jeans",
+}
+
+TAMANHOS_CONHECIDOS = {
+    "p", "m", "g", "gg", "pp", "xg", "xxg", "unico",
+    "34", "36", "38", "40", "42", "44", "46", "48", "50",
+    "35", "37", "39", "41", "43", "45"
 }
 
 
@@ -815,7 +822,8 @@ def extrair_palavras_busca(texto_baixo):
     return [
         normalizar_texto(w.strip(".,?!"))
         for w in texto_baixo.split()
-        if len(w.strip(".,?!")) > 2 and normalizar_texto(w.strip(".,?!")) not in stopwords
+        if (len(w.strip(".,?!")) > 2 or normalizar_texto(w.strip(".,?!")) in TAMANHOS_CONHECIDOS)
+        and normalizar_texto(w.strip(".,?!")) not in stopwords
     ]
 
 

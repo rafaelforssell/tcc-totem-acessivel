@@ -2595,6 +2595,59 @@
         applyHighContrast(localStorage.getItem("totemHighContrast") === "1");
         enhanceButtonLabels();
         atualizarPainelListaSelecionada();
+
+        // Suporte ao Controle do PS5 (L3/R3 para iniciar o Totem)
+        let gamepadLoopActive = false;
+        const lastGamepadButtonState = {};
+
+        function handleGamepadClick() {
+            console.log("Gamepad analog click (L3/R3) detectado.");
+            if (currentScreenId === 'screen1') {
+                iniciarSessaoEIrParaChat();
+            }
+        }
+
+        function gamepadTick() {
+            const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+            for (let i = 0; i < gamepads.length; i++) {
+                const gp = gamepads[i];
+                if (!gp) continue;
+
+                // PS5 DualSense mapeia L3 (botão index 10) e R3 (botão index 11)
+                if (gp.buttons && gp.buttons.length > 11) {
+                    const l3Pressed = gp.buttons[10].pressed;
+                    const r3Pressed = gp.buttons[11].pressed;
+                    
+                    const l3Key = `gp-${gp.index}-button-10`;
+                    const r3Key = `gp-${gp.index}-button-11`;
+                    
+                    if (l3Pressed && !lastGamepadButtonState[l3Key]) {
+                        handleGamepadClick();
+                    }
+                    if (r3Pressed && !lastGamepadButtonState[r3Key]) {
+                        handleGamepadClick();
+                    }
+                    
+                    lastGamepadButtonState[l3Key] = l3Pressed;
+                    lastGamepadButtonState[r3Key] = r3Pressed;
+                }
+            }
+            requestAnimationFrame(gamepadTick);
+        }
+
+        function startGamepadLoop() {
+            if (gamepadLoopActive) return;
+            gamepadLoopActive = true;
+            gamepadTick();
+        }
+
+        window.addEventListener("gamepadconnected", (event) => {
+            console.log("Gamepad conectado:", event.gamepad.id);
+            startGamepadLoop();
+        });
+
+        // Tenta iniciar a escuta automaticamente
+        startGamepadLoop();
     </script>
 </body>
 

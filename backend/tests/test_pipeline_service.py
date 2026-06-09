@@ -712,3 +712,16 @@ def test_tts_pronunciation():
     assert test_text_clean("Outra opção(ões) na loja.") == "Outra opções na loja."
 
 
+def test_pipeline_size_filtering():
+    # Vestido tamanho M: o "m" não deve ser descartado por ter comprimento <= 2
+    tokens = pipeline_service.limpar_tokens_busca(["vestido", "m"])
+    assert "vestido" in tokens
+    assert "m" in tokens
+
+    # Sapato tamanho 38: o "38" não deve ser descartado
+    tokens_calcado = pipeline_service.limpar_tokens_busca(["sapato", "38"])
+    assert "sapato" in tokens_calcado
+    assert "38" in tokens_calcado
+
+
+

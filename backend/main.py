@@ -94,6 +94,10 @@ def _auto_init_postgres():
         else:
             print(f"[DB] PostgreSQL já tem {total} produtos. Nenhuma migração necessária.")
 
+        # Sincroniza a sequence do ID para evitar conflito de ID duplicado em novos inserts
+        cur.execute("SELECT setval('produtos_id_seq', COALESCE((SELECT MAX(id) FROM produtos), 1))")
+        conn.commit()
+
         conn.close()
     except Exception as e:
         print(f"[DB] Erro na inicialização do PostgreSQL: {e}")

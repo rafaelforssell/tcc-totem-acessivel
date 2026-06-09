@@ -140,7 +140,7 @@ def limpar_tokens_busca(palavras_chave, palavras_validas=None):
     stopwords = {
         "eu", "quero", "queria", "saber", "mais", "sobre", "a", "o", "as", "os",
         "de", "da", "do", "tem", "ha", "me", "fale", "uma", "um", "por", "favor",
-        "voce", "voces", "disponivel", "disponiveis", "produto", "produtos", "outro",
+        "voce", "você", "voces", "disponivel", "disponiveis", "produto", "produtos", "outro",
         "outros", "outra", "outras", "opcao", "opcoes", "qual", "quais",
         "perfeito", "legal", "beleza", "certo", "ok", "entendi", "bom", "boa",
         "roupa", "roupas", "algum", "alguns", "alguma", "algumas", "hoje", "noite",
@@ -152,6 +152,9 @@ def limpar_tokens_busca(palavras_chave, palavras_validas=None):
         "eles", "elas", "usar", "uso", "usando", "fechar", "so",
         "esta", "está", "estao", "estão", "estou", "estava", "este", "estes", "estas",
         "onde", "como",
+        # Stopwords de ação de compras e experimentação
+        "comprar", "compra", "compras", "buscar", "busca", "procurar", "procura",
+        "adquirir", "pegar", "levar", "olhar", "consigo", "experimentar", "provar", "vestir", "trocar",
         # Palavras de pessoa / relacionamento — NUNCA são produtos
         "namorada", "namorado", "esposa", "esposo", "marido", "mulher",
         "mae", "pai", "filho", "filha", "irma", "irmao", "amiga", "amigo",
@@ -659,7 +662,8 @@ def is_pedido_catalogo_geral(texto_baixo):
 
 def is_pedido_provador(texto_baixo):
     texto = normalizar_texto(texto_baixo)
-    return "provador" in texto or "provadores" in texto or "vestiario" in texto
+    termos = ["provador", "provadores", "vestiario", "experimentar", "provar", "vestir", "trocar", "cabine"]
+    return any(t in texto for t in termos)
 
 
 def is_pedido_caixa(texto_baixo):
@@ -859,6 +863,9 @@ def extrair_palavras_busca(texto_baixo):
         "tudo", "bem", "vou", "numa", "num", "para", "pra",
         "esta", "está", "estao", "estão", "estou", "estava", "este", "estes", "estas",
         "onde", "como", "voce", "você", "voces", "pode", "poderia", "gostei",
+        # Stopwords de ação de compras e experimentação
+        "comprar", "compra", "compras", "buscar", "busca", "procurar", "procura",
+        "adquirir", "pegar", "levar", "olhar", "consigo", "experimentar", "provar", "vestir", "trocar",
     }
     return [
         normalizar_texto(w.strip(".,?!"))
@@ -939,6 +946,12 @@ async def responder_por_occasiao(pergunta, idioma):
 
 
 
+def is_pedido_mais_opcoes(texto_baixo):
+    texto = normalizar_texto(texto_baixo)
+    termos_mais = ["mais opcao", "mais opcoes", "outra opcao", "outras opcoes", "outros", "outras", "tem mais", "mostra mais", "mostre mais", "ver mais"]
+    return any(t in texto for t in termos_mais)
+
+
 async def pipeline_processar(pergunta, idioma="pt"):
     print(f"\n--- Nova Requisicao: {pergunta} --- Idioma: {idioma}")
     
@@ -997,6 +1010,40 @@ async def pipeline_processar(pergunta, idioma="pt"):
     if is_encerramento(texto_baixo):
         limpar_memoria()
         return {"resposta": "", "resultados": [], "acao": "ENCERRAR"}
+
+    # Verifica se o usuário está pedindo mais opções / variação do tipo ativo
+    if is_pedido_mais_opcoes(texto_baixo) and memoria.get("tipo_ativo"):
+        tipo_ativo = memoria["tipo_ativo"]
+        genero = memoria.get("genero")
+        
+        # Busca produtos do mesmo tipo
+        todos = listar_todos_produtos_formatados()
+        candidatos = [p for p in todos if token_match(texto_produto(p), tipo_ativo)]
+        
+        # Exclui os que já foram mostrados recentemente
+        ids_mostrados = {p["id"] for p in memoria.get("ultimos_produtos", [])}
+        novos_candidatos = [p for p in candidatos if p["id"] not in ids_mostrados]
+        
+        if novos_candidatos:
+            disponiveis = novos_candidatos[:3]
+            memoria["ultimos_produtos"] = disponiveis
+            memoria["assunto_ativo"] = "produto"
+            memoria["produtos_pendentes_confirmacao"] = disponiveis
+            for p in disponiveis:
+                memoria["produtos_mencionados"][p["id"]] = p
+                
+            resposta = montar_resposta_busca_natural(disponiveis, idioma=idioma)
+            memoria["historico_conversas"].append({"role": "assistant", "content": resposta})
+            return {"resposta": resposta, "resultados": disponiveis, "acao": "MOSTRAR_PRODUTOS"}
+        else:
+            if idioma == "pt":
+                resposta = f"Ja te mostrei todas as opcoes de {tipo_ativo} disponiveis no momento. Gostaria de ver outros tipos de roupas?"
+            else:
+                resposta = f"I have already shown you all available options for {tipo_ativo}. Would you like to see other types of clothing?"
+            
+            sugestoes = listar_amostra_catalogo(3)
+            memoria["historico_conversas"].append({"role": "assistant", "content": resposta})
+            return {"resposta": resposta, "resultados": sugestoes, "acao": "MOSTRAR_PRODUTOS"}
 
     # Verifica se o usuário está pedindo para ir ao provador
     if is_pedido_provador(texto_baixo):
@@ -1153,22 +1200,53 @@ async def pipeline_processar(pergunta, idioma="pt"):
 
     # Se o usuário pediu explicitamente um mapa e citou um produto na mesma frase
     if is_pedido_mapa(texto_baixo):
-        palavras_busca = extrair_palavras_busca(texto_baixo)
-        termos_excluir = {"mapa", "localizacao", "caminho", "onde", "fica", "ficar", "como", "chegar", "ir", "para", "sessao", "corredor", "ver", "mostra", "mostrar", "me", "rotas", "rota"}
-        palavras_filtradas = [p for p in palavras_busca if p not in termos_excluir]
-        
-        resultados = buscar_produtos_sql(palavras_filtradas) if palavras_filtradas else []
-        if resultados:
-            disponiveis = [p for p in resultados if not p.get("_esgotado")]
-            if disponiveis:
-                memoria["ultimos_produtos"] = disponiveis[:3]
-                memoria["assunto_ativo"] = "produto"
-                memoria["produtos_pendentes_confirmacao"] = []
-                for p in disponiveis[:3]:
-                    memoria["produtos_mencionados"][p["id"]] = p
-                resposta = montar_resposta_mapa(disponiveis[:3], idioma)
-                memoria["historico_conversas"].append({"role": "assistant", "content": resposta})
-                return {"resposta": resposta, "resultados": disponiveis[:3], "acao": "ABRIR_MAPA"}
+        # 1. Primeiro tenta ver se os produtos já estão na memória de mencionados na conversa
+        produtos_do_mapa = []
+        mencionados = list(memoria.get("produtos_mencionados", {}).values())
+        if mencionados:
+            # Filtra os mencionados que combinam com os termos citados na pergunta
+            tokens_busca = [
+                t for t in normalizar_texto(texto_baixo).replace(",", " ").replace("?", " ").split()
+                if len(t) > 2 and t not in {"mapa", "caminho", "onde", "fica", "como", "chegar", "mostrar", "mostra", "ver", "rotas", "rota"}
+            ]
+            # Usa selecionar_produtos_para_mapa para extrair do pool de mencionados
+            produtos_do_mapa = selecionar_produtos_para_mapa(texto_baixo, mencionados)
+            # Confirma se realmente houve algum match de token na busca de mapa
+            has_match = False
+            for p in produtos_do_mapa:
+                texto_p = texto_produto(p)
+                if any(token_match(texto_p, token) for token in tokens_busca):
+                    has_match = True
+                    break
+            if not has_match:
+                produtos_do_mapa = []
+
+        # 2. Se não encontrou correspondência na memória, faz a busca segmentada no banco de dados
+        if not produtos_do_mapa:
+            palavras_busca = extrair_palavras_busca(texto_baixo)
+            termos_excluir = {"mapa", "localizacao", "caminho", "onde", "fica", "ficar", "como", "chegar", "ir", "para", "sessao", "corredor", "ver", "mostra", "mostrar", "me", "rotas", "rota"}
+            palavras_filtradas = [p for p in palavras_busca if p not in termos_excluir]
+            
+            # Usar buscar_produtos_por_segmentos para respeitar os múltiplos produtos (ex: "camisa e calça")
+            busca_seg = buscar_produtos_por_segmentos(texto_baixo, palavras_validas=palavras_filtradas) if palavras_filtradas else None
+            resultados = busca_seg["produtos"] if (busca_seg and busca_seg.get("produtos")) else []
+            if resultados:
+                disponiveis = [p for p in resultados if not p.get("_esgotado")]
+                produtos_do_mapa = disponiveis[:3]
+
+        if produtos_do_mapa:
+            memoria["ultimos_produtos"] = produtos_do_mapa
+            memoria["assunto_ativo"] = "produto"
+            memoria["produtos_pendentes_confirmacao"] = []
+            for p in produtos_do_mapa:
+                memoria["produtos_mencionados"][p["id"]] = p
+            
+            produtos_rota = produtos_por_secao(produtos_do_mapa)
+            resposta = montar_resposta_mapa(produtos_do_mapa, idioma) # Mostra a contagem real de produtos no texto
+            memoria["historico_conversas"].append({"role": "assistant", "content": resposta})
+            
+            acao_mapa = "ABRIR_ROTAS" if len(produtos_rota) > 1 else "ABRIR_MAPA"
+            return {"resposta": resposta, "resultados": produtos_rota, "acao": acao_mapa}
 
     if is_pedido_catalogo_por_genero(texto_baixo):
         return await responder_catalogo_por_genero(pergunta, idioma)
@@ -1257,7 +1335,7 @@ async def pipeline_processar(pergunta, idioma="pt"):
                 memoria["produtos_mencionados"][p["id"]] = p
             if disponiveis:
                 tipo_val = disponiveis[0].get("tipo")
-                memoria["tipo_ativo"] = tipo_val.lower() if tipo_val else None
+                memoria["tipo_ativo"] = normalizar_texto(tipo_val) if tipo_val else None
 
             resposta = montar_resposta_busca_natural(disponiveis, busca_segmentada.get("faltas", []), idioma)
             memoria["historico_conversas"].append({"role": "assistant", "content": resposta})
@@ -1302,7 +1380,7 @@ async def pipeline_processar(pergunta, idioma="pt"):
                 memoria["produtos_mencionados"][p["id"]] = p
             if disponiveis:
                 tipo_val = disponiveis[0].get("tipo")
-                memoria["tipo_ativo"] = tipo_val.lower() if tipo_val else None
+                memoria["tipo_ativo"] = normalizar_texto(tipo_val) if tipo_val else None
 
             contexto = "Produtos encontrados no banco de dados:\n" + "\n---\n".join(
                 [formatar_produto_para_contexto(p) for p in disponiveis[:3]]

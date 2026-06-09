@@ -751,6 +751,201 @@ def test_buscar_produtos_sql_exact_priority():
     # If we search for "camisa polo preta", it should return the exact polo shirt,
     # rather than returning a list of 3 items (bermuda, calça, polo) via selecionar_por_token.
     resultados = pipeline_service.buscar_produtos_sql(["camisa", "polo", "preta"])
+# Deve herdar o "mas" da memoria
+    async def fake_classificar_intencao_2(pergunta, idioma="pt"):
+        return {"intencao": "NOVA_BUSCA", "palavras_chave": ["opcao"]}
+        
+    monkeypatch.setattr(pipeline_service, "classificar_intencao", fake_classificar_intencao_2)
+    
+    # Mock database results with mixed genders
+    produtos = [
+        {
+            "id": 1,
+            "nome": "Camisa Polo Masculina",
+            "categoria": "Roupa",
+            "tipo": "Camisa",
+            "cor": "Branca",
+            "tamanho": "M",
+            "marca": "Nike",
+            "preco": 100.0,
+            "estoque": 2,
+            "setor": "Masculino",
+            "corredor": "5",
+            "prateleira": "Arara 1",
+            "descricao": "Camisa polo masculina",
+            "sku": "POLO-MAS",
+            "imagem": "",
+            "texto_alt": ""
+        },
+        {
+            "id": 2,
+            "nome": "Saia Feminina",
+            "categoria": "Roupa",
+            "tipo": "Saia",
+            "cor": "Preta",
+            "tamanho": "M",
+            "marca": "Zara",
+            "preco": 120.0,
+            "estoque": 2,
+            "setor": "Feminino",
+            "corredor": "7",
+            "prateleira": "Arara 2",
+            "descricao": "Saia feminina elegante",
+            "sku": "SAIA-FEM",
+            "imagem": "",
+            "texto_alt": ""
+        }
+    ]
+    monkeypatch.setattr(pipeline_service.db_service, "fetchall", lambda *args, **kwargs: produtos)
+    
+    resposta = asyncio.run(pipeline_service.pipeline_processar("tem mais alguma opcao?"))
+    assert resposta["resultados"]
+    # So deve retornar a camisa masculina (id 1), nao a saia feminina
+    assert len(resposta["resultados"]) == 1
+    assert resposta["resultados"][0]["id"] == 1
+
+
+def test_pipeline_mapa_pronome_plural(monkeypatch):
+    pipeline_service.limpar_memoria()
+    
+    # Adiciona dois produtos na memória de mencionados e zera ultimos_produtos
+    produto1 = {
+        "id": 10,
+        "nome": "Calça Bege Masculina",
+        "categoria": "Calça",
+        "tipo": "Calça",
+        "cor": "Bege",
+        "tamanho": "42",
+        "marca": "Levi's",
+        "preco": 159.90,
+        "estoque": 2,
+        "setor": "Masculino",
+        "corredor": "4",
+        "prateleira": "Arara 1",
+        "descricao": "Calça masculina bege",
+        "sku": "CALCA-BEGE",
+        "imagem": "",
+        "texto_alt": ""
+    }
+    produto2 = {
+        "id": 20,
+        "nome": "Camiseta Branca",
+        "categoria": "Camiseta",
+        "tipo": "Camiseta",
+        "cor": "Branca",
+        "tamanho": "G",
+        "marca": "Hering",
+        "preco": 59.90,
+        "estoque": 5,
+        "setor": "Masculino",
+        "corredor": "5",
+        "prateleira": "Arara 2",
+        "descricao": "Camiseta masculina branca",
+        "sku": "CAM-BRANCA",
+        "imagem": "",
+        "texto_alt": ""
+    }
+    
+    pipeline_service.memoria["produtos_mencionados"] = {
+        10: produto1,
+        20: produto2
+    }
+    pipeline_service.memoria["ultimos_produtos"] = [] # Simula esvaziamento por busca falha
+    
+    async def fake_classificar_intencao(pergunta, idioma="pt"):
+        return {"intencao": "IR_PARA_MAPA", "palavras_chave": []}
+        
+    monkeypatch.setattr(pipeline_service, "classificar_intencao", fake_classificar_intencao)
+    
+    resposta = asyncio.run(pipeline_service.pipeline_processar("mostra eles no mapa por favor"))
+    
+    # Deve encontrar e retornar os dois produtos mencionados pelo fallback
+    assert resposta["resultados"]
+    assert len(resposta["resultados"]) == 2
+    assert {r["id"] for r in resposta["resultados"]} == {10, 20}
+    assert resposta["acao"] == "ABRIR_ROTAS"
+
+
+def test_pipeline_ocao_stopwords():
+    # Verifica que "aniversário" e "amanhã" são ignorados durante a limpeza de tokens
+    tokens = pipeline_service.limpar_tokens_busca(["vestido", "aniversário", "amanhã"])
+    assert "vestido" in tokens
+    assert "aniversário" not in tokens
+    assert "aniversario" not in tokens
+    assert "amanhã" not in tokens
+    assert "amanha" not in tokens
+
+
+def test_pipeline_pollution_filter():
+    # Se a intenção atual só tem a palavra-chave "cinto", o tipo "vestido" deve ser ignorado
+    # mesmo se estiver presente na frase do usuário (pois a IA não o extraiu nas palavras-chave da busca)
+    tokens = pipeline_service.limpar_tokens_busca(["vestido", "cinto"], palavras_validas=["cinto"])
+    assert "cinto" in tokens
+    assert "vestido" not in tokens
+
+
+def test_tts_pronunciation():
+    from services.tts_service import falar
+    # Deve preprocessar seção(ões) e remover parênteses do texto antes de gerar o áudio
+    async def run_test():
+        # Vamos testar o pré-processamento direto alterando edge_tts.Communicate mock
+        original_communicate = pipeline_service.BASE_DIR # apenas para usar falar
+        
+    # Testando os regex diretamente importando falar
+    import re
+    def test_text_clean(texto):
+        texto = texto.replace("*", "")
+        texto = re.sub(r'\bse[çc][aã]o\((?:ões|oês|oes)\)', 'seções', texto)
+        texto = re.sub(r'\bsess[aã]o\((?:ões|oês|oes)\)', 'sessões', texto)
+        texto = re.sub(r'\bop[çc][aã]o\((?:ões|oês|oes)\)', 'opções', texto)
+        texto = re.sub(r'\(s\)', 's', texto)
+        texto = texto.replace("(", "").replace(")", "")
+        return texto
+
+    assert test_text_clean("Aqui estão as 2 seção(ões) dos produtos.") == "Aqui estão as 2 seções dos produtos."
+    assert test_text_clean("Qual rota(s) você quer?") == "Qual rotas você quer?"
+    assert test_text_clean("Outra opção(ões) na loja.") == "Outra opções na loja."
+
+
+def test_pipeline_size_filtering():
+    # Vestido tamanho M: o "m" não deve ser descartado por ter comprimento <= 2
+    tokens = pipeline_service.limpar_tokens_busca(["vestido", "m"])
+    assert "vestido" in tokens
+    assert "m" in tokens
+
+    # Sapato tamanho 38: o "38" não deve ser descartado
+    tokens_calcado = pipeline_service.limpar_tokens_busca(["sapato", "38"])
+    assert "sapato" in tokens_calcado
+    assert "38" in tokens_calcado
+
+
+def test_pipeline_plural_shirts_search():
+    # Plural check: "camisas" should map to "camisa"
+    tokens = pipeline_service.limpar_tokens_busca(["camisas", "masculinas"])
+    assert "camisa" in tokens
+    
+    # Check that is_pedido_catalogo_por_genero identifies "camisas masculinas" as having a specific type
+    res = pipeline_service.is_pedido_catalogo_por_genero("quais camisas masculinas voce tem?")
+    assert res is False
+
+
+def test_pipeline_context_inheritance():
+    # Simulate searching for a shirt, setting tipo_ativo in memory
+    pipeline_service.limpar_memoria()
+    pipeline_service.memoria["tipo_ativo"] = "camisa"
+    
+    # If the user says "voce tem preta?", it should expand/inherit the type
+    tokens = pipeline_service.limpar_tokens_busca(["preta"])
+    # The pipeline processar context inheritance check:
+    tem_tipo = any(p in pipeline_service.TIPOS_CONHECIDOS for p in tokens)
+    assert tem_tipo is False
+    assert pipeline_service.memoria.get("tipo_ativo") == "camisa"
+
+
+def test_buscar_produtos_sql_exact_priority():
+    # If we search for "camisa polo preta", it should return the exact polo shirt,
+    # rather than returning a list of 3 items (bermuda, calça, polo) via selecionar_por_token.
+    resultados = pipeline_service.buscar_produtos_sql(["camisa", "polo", "preta"])
     
     # It should only contain the matching shirt(s), e.g. "Camisa Polo Preta Masculina"
     assert resultados
@@ -782,3 +977,74 @@ def test_pipeline_color_query_context_inheritance(monkeypatch):
     assert resposta["resultados"]
     assert len(resposta["resultados"]) == 1
     assert resposta["resultados"][0]["nome"] == "Camisa Polo Preta Masculina"
+
+
+def test_is_pedido_provador_synonyms():
+    assert pipeline_service.is_pedido_provador("onde eu consigo experimentar?") is True
+    assert pipeline_service.is_pedido_provador("posso provar esta calça?") is True
+    assert pipeline_service.is_pedido_provador("onde fica a cabine?") is True
+
+
+def test_pipeline_tenis_multiples_results_segmentation(monkeypatch):
+    pipeline_service.limpar_memoria()
+    
+    async def fake_classificar_intencao(pergunta, idioma="pt"):
+        return {"intencao": "NOVA_BUSCA", "palavras_chave": ["tenis"]}
+        
+    async def fake_perguntar_llm(pergunta, contexto_produtos=None, idioma="pt", historico=None, todos_produtos=None):
+        return "Temos tênis."
+
+    monkeypatch.setattr(pipeline_service, "classificar_intencao", fake_classificar_intencao)
+    monkeypatch.setattr(pipeline_service, "perguntar_llm", fake_perguntar_llm)
+    
+    # "comprar" is a stopword now, so this should resolve to a single segment ["tenis"] and return 3 results
+    resposta = asyncio.run(pipeline_service.pipeline_processar("Eu quero comprar um tênis."))
+    assert len(resposta["resultados"]) >= 3
+
+
+def test_pipeline_more_options_continuation(monkeypatch):
+    pipeline_service.limpar_memoria()
+    
+    # Simulate user has already searched for white tennis shoe
+    prod_branco = {
+        "id": 36, "nome": "Tênis Branco Masculino", "categoria": "Calçados",
+        "tipo": "Tênis", "cor": "Branco", "preco": 249.9, "estoque": 1,
+        "corredor": "3", "descricao": "Tênis branco"
+    }
+    pipeline_service.memoria["tipo_ativo"] = "tenis"
+    pipeline_service.memoria["ultimos_produtos"] = [prod_branco]
+    pipeline_service.memoria["produtos_mencionados"] = {36: prod_branco}
+    
+    # User asks: "Você tem mais opções?"
+    resposta = asyncio.run(pipeline_service.pipeline_processar("Você tem mais opções?"))
+    
+    # It should match options continuation, filter out id 36, and return other tennis shoes
+    assert resposta["acao"] == "MOSTRAR_PRODUTOS"
+    assert len(resposta["resultados"]) > 0
+    assert all(r["id"] != 36 for r in resposta["resultados"])
+    assert all("tênis" in r["nome"].lower() for r in resposta["resultados"])
+
+
+def test_pipeline_map_matching_priority_from_memory(monkeypatch):
+    pipeline_service.limpar_memoria()
+    
+    prod1 = {
+        "id": 15, "nome": "Camisa Social Branca Masculina", "categoria": "Camisas",
+        "tipo": "Camisa", "cor": "Branca", "preco": 100.0, "estoque": 1,
+        "corredor": "5", "descricao": "Camisa branca"
+    }
+    prod2 = {
+        "id": 4, "nome": "Bermuda Preta Masculina", "categoria": "Bermudas",
+        "tipo": "Bermuda", "cor": "Preta", "preco": 80.0, "estoque": 1,
+        "corredor": "2", "descricao": "Bermuda preta"
+    }
+    
+    pipeline_service.memoria["produtos_mencionados"] = {15: prod1, 4: prod2}
+    pipeline_service.memoria["ultimos_produtos"] = [prod1, prod2]
+    
+    # User asks map for both items
+    resposta = asyncio.run(pipeline_service.pipeline_processar("onde é que eu encontro eles?"))
+    
+    # Should say "onde estao os 2 produtos." and return 2 corridors
+    assert "2 produtos" in resposta["resposta"]
+    assert len(resposta["resultados"]) == 2

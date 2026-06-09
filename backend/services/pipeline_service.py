@@ -176,6 +176,13 @@ def limpar_tokens_busca(palavras_chave, palavras_validas=None):
     limpos = []
     for palavra in palavras_chave:
         p_clean = normalizar_texto(palavra.strip(".,?!"))
+        
+        # Singulariza tipos conhecidos terminados em 's' (ex: camisas -> camisa)
+        if len(p_clean) > 3 and p_clean.endswith("s"):
+            p_sing = p_clean[:-1]
+            if p_sing in TIPOS_CONHECIDOS:
+                p_clean = p_sing
+
         is_tamanho = p_clean in TAMANHOS_CONHECIDOS
         if (len(p_clean) <= 2 and not is_tamanho) or p_clean in stopwords:
             continue
@@ -190,7 +197,9 @@ def limpar_tokens_busca(palavras_chave, palavras_validas=None):
                 match_valida = False
                 for v in palavras_validas:
                     v_norm = normalizar_texto(v)
-                    if p_norm == v_norm or (len(p_norm) > 3 and p_norm.endswith("s") and p_norm[:-1] == v_norm):
+                    v_sing = v_norm[:-1] if (len(v_norm) > 3 and v_norm.endswith("s")) else v_norm
+                    p_sing = p_norm[:-1] if (len(p_norm) > 3 and p_norm.endswith("s")) else p_norm
+                    if p_sing == v_sing:
                         match_valida = True
                         break
                 if not match_valida:
@@ -216,6 +225,11 @@ TAMANHOS_CONHECIDOS = {
     "35", "37", "39", "41", "43", "45"
 }
 
+TOKENS_GENERO = {
+    "feminino", "feminina", "femininos", "femininas", "fem", "mulher", "mulheres",
+    "masculino", "masculina", "masculinos", "masculinas", "masc", "mas", "homem", "homens"
+}
+
 
 def extrair_segmentos_busca(texto_baixo, palavras_validas=None):
     texto = normalizar_texto(texto_baixo)
@@ -234,6 +248,8 @@ def obter_tipo_segmento(tokens):
     for token in tokens:
         if token in TIPOS_CONHECIDOS:
             return token
+        if len(token) > 3 and token.endswith("s") and token[:-1] in TIPOS_CONHECIDOS:
+            return token[:-1]
     return None
 
 
@@ -265,15 +281,18 @@ def buscar_produtos_por_segmentos(texto_baixo, palavras_validas=None):
     ids_escolhidos = set()
 
     for tokens in segmentos:
-        tipo = obter_tipo_segmento(tokens)
-        atributos = [token for token in tokens if token != tipo]
+        tokens_sem_genero = [t for t in tokens if t not in TOKENS_GENERO]
+        if not tokens_sem_genero:
+            continue
+        tipo = obter_tipo_segmento(tokens_sem_genero)
+        atributos = [token for token in tokens_sem_genero if token != tipo]
 
         candidatos_exatos = []
         for produto in com_estoque:
             if genero and genero_produto(produto) != genero:
                 continue
             texto = texto_produto(produto)
-            if all(token_match(texto, token) for token in tokens):
+            if all(token_match(texto, token) for token in tokens_sem_genero):
                 candidatos_exatos.append(produto)
 
         if candidatos_exatos:
@@ -283,7 +302,8 @@ def buscar_produtos_por_segmentos(texto_baixo, palavras_validas=None):
                 if produto_id not in ids_escolhidos:
                     resultados.append(formatar_produto(produto))
                     ids_escolhidos.add(produto_id)
-                    break
+                    if len(segmentos) > 1 or len(resultados) >= 3:
+                        break
             continue
 
         if not tipo:
@@ -308,7 +328,8 @@ def buscar_produtos_por_segmentos(texto_baixo, palavras_validas=None):
                 resultados.append(formatar_produto(produto))
                 ids_escolhidos.add(produto_id)
                 produto_referencia_falta = produto
-                break
+                if len(segmentos) > 1 or len(resultados) >= 3:
+                    break
 
         texto_referencia = texto_produto(produto_referencia_falta) if produto_referencia_falta else ""
         faltando = [
@@ -511,7 +532,10 @@ def is_pedido_catalogo_por_genero(texto_baixo):
         return False
 
     tokens = set(limpar_tokens_busca(texto.split()))
-    tem_tipo_especifico = any(token in TIPOS_CONHECIDOS for token in tokens)
+    tem_tipo_especifico = any(
+        token in TIPOS_CONHECIDOS or (len(token) > 3 and token.endswith("s") and token[:-1] in TIPOS_CONHECIDOS)
+        for token in tokens
+    )
     if tem_tipo_especifico:
         return False
 

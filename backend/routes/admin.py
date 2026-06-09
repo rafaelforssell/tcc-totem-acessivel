@@ -134,6 +134,10 @@ def atualizar_produto(
     if existente:
         raise HTTPException(status_code=400, detail="Outro produto com este SKU ja esta cadastrado.")
 
+    imagem_val = body.imagem.strip() if body.imagem else ""
+    if imagem_val.lower() in ("opcional", "optional"):
+        imagem_val = ""
+
     linhas = execute(
         """
         UPDATE produtos
@@ -156,7 +160,7 @@ def atualizar_produto(
             body.prateleira.strip(),
             body.descricao.strip(),
             sku_limpo,
-            body.imagem.strip() if body.imagem else "",
+            imagem_val,
             body.texto_alt.strip() if body.texto_alt else "",
             produto_id,
         ),
@@ -176,7 +180,7 @@ def atualizar_produto(
         "ok": True,
         "produto_id": produto_id,
         "produto": produto[0] if produto else None,
-        "mensagem": "Produto atualizado com sucesso.",
+        "mensagem": "Produto updated successfully.",
     }
 
 
@@ -198,6 +202,10 @@ def criar_produto(
     existente = fetchall("SELECT id FROM produtos WHERE sku = ?", (sku_limpo,))
     if existente:
         raise HTTPException(status_code=400, detail="Produto com este SKU ja cadastrado.")
+
+    imagem_val = body.imagem.strip() if body.imagem else ""
+    if imagem_val.lower() in ("opcional", "optional"):
+        imagem_val = ""
 
     try:
         execute(
@@ -221,7 +229,7 @@ def criar_produto(
                 body.prateleira.strip(),
                 body.descricao.strip(),
                 sku_limpo,
-                body.imagem.strip() if body.imagem else "",
+                imagem_val,
                 body.texto_alt.strip() if body.texto_alt else "",
             ),
         )
@@ -231,7 +239,7 @@ def criar_produto(
     # Retorna o produto recém cadastrado
     novo_produto = fetchall(
         """
-        SELECT id, nome, categoria, cor, tamanho, preco, estoque, sku, setor, corredor, prateleira, descricao
+        SELECT id, nome, categoria, tipo, cor, tamanho, marca, preco, estoque, sku, setor, corredor, prateleira, descricao, imagem, texto_alt
         FROM produtos
         WHERE sku = ?
         """,

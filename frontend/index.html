@@ -1586,15 +1586,23 @@
 
         function getProductMainImage(product) {
             if (!product) return DEFAULT_PRODUCT_IMAGE;
-            if (product.imagem) return resolveBackendUrl(product.imagem);
+            if (product.imagem) {
+                const img = resolveBackendUrl(product.imagem);
+                if (img !== DEFAULT_PRODUCT_IMAGE) return img;
+            }
             if (Array.isArray(product.imagens) && product.imagens.length > 0) {
-                return resolveBackendUrl(product.imagens[0]);
+                const img = resolveBackendUrl(product.imagens[0]);
+                if (img !== DEFAULT_PRODUCT_IMAGE) return img;
             }
             return DEFAULT_PRODUCT_IMAGE;
         }
 
         function resolveBackendUrl(path) {
             if (!path) return DEFAULT_PRODUCT_IMAGE;
+            const p = path.trim().toLowerCase();
+            if (p === "" || p === "opcional" || p === "optional") {
+                return DEFAULT_PRODUCT_IMAGE;
+            }
             if (/^https?:\/\//i.test(path)) return path;
             if (path.startsWith("/")) return `${BACKEND_URL}${path}`;
             return `${BACKEND_URL}/${path}`;

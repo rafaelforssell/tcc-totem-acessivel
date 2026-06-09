@@ -724,4 +724,14 @@ def test_pipeline_size_filtering():
     assert "38" in tokens_calcado
 
 
+def test_pipeline_plural_shirts_search():
+    # Plural check: "camisas" should map to "camisa"
+    tokens = pipeline_service.limpar_tokens_busca(["camisas", "masculinas"])
+    assert "camisa" in tokens
+    
+    # Check that is_pedido_catalogo_por_genero identifies "camisas masculinas" as having a specific type
+    res = pipeline_service.is_pedido_catalogo_por_genero("quais camisas masculinas voce tem?")
+    assert res is False
+
+
 

@@ -41,6 +41,7 @@ REGRAS OBRIGATÓRIAS PARA palavras_chave:
 - Extraia apenas as palavras-chave essenciais do produto (substantivos, adjetivos de cor/tipo/marca) no SINGULAR.
 - NUNCA inclua números ou quantidades (como "dois", "duas", "3").
 - NUNCA inclua verbos gerais em formato infinitivo/conjugado (como "treinar", "correr"). Em vez disso, converta para o substantivo/adjetivo correspondente que possa estar no banco de dados (ex: "treino", "corrida").
+- NUNCA confunda verbos de movimento/ação (como "sair", "ir", "saia daí") com a vestimenta física "saia" (skirt). Não extraia "saia" como palavra-chave a menos que o usuário esteja se referindo explicitamente à peça de roupa saia.
 - NUNCA inclua palavras de pessoa/relacionamento como "namorada", "namorado", "esposa", "marido", "mãe", "pai", "filho", "amiga", "amigo", "prima", "tia" ou pronomes possessivos. Extraia APENAS o produto em si.
 - NUNCA inclua palavras de ocasião, feriados, comemorações ou propósitos gerais (como "aniversario", "festa", "casamento", "trabalho", "academia", "presente", "noite"). Extraia apenas o produto físico em si.
 - Se o usuário estiver fazendo uma afirmação de agrado ou gosto sobre um produto anterior (ex: "gostei do vestido", "achei massa a calça") mas em seguida perguntar sobre outro produto (ex: "você tem cinto?", "tem camiseta?"), NÃO extraia a palavra-chave do produto anterior (ex: "vestido", "calça"). Extraia APENAS o produto novo que está sendo ativamente buscado (ex: "cinto", "camiseta").
@@ -55,7 +56,7 @@ REGRAS DE INTENÇÃO:
 - IR_PARA_MAPA: também quando pedir "ver tudo que falamos no mapa", "mostrar todos no mapa", "mapa de tudo", "ver os lugares".
 - NOVA_BUSCA: Usuário busca um produto ("quero uma camisa", "tem calça?"). NÃO classifique a palavra "mapa" como busca de produto.
 - NOVA_BUSCA: se o usuário disser "short" ou "shorts", use a palavra-chave "bermuda".
-- SOBRE_PRODUTO: Usuário pergunta detalhes (preço, cor, tamanho) de um produto. Se a pergunta for sobre a LOCALIZAÇÃO ("onde fica?"), classifique como IR_PARA_MAPA e não SOBRE_PRODUTO.
+- SOBRE_PRODUTO: Usuário pergunta detalhes (preço, cor, tamanho) de um produto, ou questiona sobre as opções de tamanhos disponíveis (ex: "você tem que tamanho?", "tem tamanho M?", "gostei, você tem meu tamanho?"). Se a pergunta for sobre a LOCALIZAÇÃO ("onde fica?"), classifique como IR_PARA_MAPA e não SOBRE_PRODUTO.
 - OUTROS: Saudações, agradecimentos, perguntas sobre pagamento, boleto, pix, cartão, parcelamento, horário ou temas fora de produto/localização.
 """
 

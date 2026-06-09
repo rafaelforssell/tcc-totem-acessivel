@@ -1172,6 +1172,36 @@
             list.innerHTML = html;
         }
 
+        async function loadAdminProducts(showMessage = true) {
+            const keyInput = document.getElementById('admin-key-input');
+            const adminKey = keyInput?.value?.trim();
+            if (!adminKey) {
+                setAdminStatus('Informe a chave administrativa para carregar os produtos.', true);
+                return;
+            }
+
+            localStorage.setItem('totemAdminKey', adminKey);
+            if (showMessage) setAdminStatus('Carregando produtos...');
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/admin/produtos`, {
+                    headers: { 'X-Admin-Key': adminKey }
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Nao foi possivel carregar os produtos.');
+                }
+
+                adminProducts = Array.isArray(data.produtos) ? data.produtos : [];
+                filterAdminProducts();
+                updateAdminSyncLabel();
+                setAdminStatus(`Produtos carregados com sucesso. Total: ${adminProducts.length}.`);
+            } catch (error) {
+                console.error(error);
+                setAdminStatus(error.message || 'Erro ao carregar produtos.', true);
+            }
+        }
+
         async function saveAdminProduct(productId) {
             const adminKey = (document.getElementById('admin-key-input')?.value || '').trim();
             if (!adminKey) {

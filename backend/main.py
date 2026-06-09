@@ -48,6 +48,14 @@ def _auto_init_postgres():
         """)
         conn.commit()
 
+        # Garante que colunas novas como 'tamanho' existam (caso a tabela já existisse antes)
+        cur.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'produtos'")
+        columns = [row[0] for row in cur.fetchall()]
+        if "tamanho" not in columns:
+            print("[DB] Adicionando coluna 'tamanho' ao PostgreSQL...")
+            cur.execute("ALTER TABLE produtos ADD COLUMN tamanho TEXT")
+            conn.commit()
+
         # Verifica se já tem dados
         cur.execute("SELECT COUNT(*) FROM produtos")
         total = cur.fetchone()[0]

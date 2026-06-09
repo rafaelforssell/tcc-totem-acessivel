@@ -32,31 +32,36 @@ def usando_postgres() -> bool:
 @contextmanager
 def get_conn():
     """Context manager que retorna uma conexão ao banco correto. Cai para SQLite em caso de falha."""
+    conn_pg = None
     if usando_postgres():
         try:
             # Render fornece URLs com "postgres://", psycopg2 exige "postgresql://"
             url = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-            conn = psycopg2.connect(url, connect_timeout=5)
-            try:
-                yield conn
-                conn.commit()
-            except Exception:
-                conn.rollback()
-                raise
-            finally:
-                conn.close()
-            return  # Conexão PostgreSQL bem sucedida
+            conn_pg = psycopg2.connect(url, connect_timeout=5)
         except Exception as e:
             print(f"[DB] Erro de conexão com o PostgreSQL, caindo para SQLite: {e}")
 
-    # Fallback para SQLite
-    conn = sqlite3.connect(SQLITE_PATH)
-    conn.row_factory = sqlite3.Row
-    try:
-        yield conn
-        conn.commit()
-    finally:
-        conn.close()
+    if conn_pg is not None:
+        try:
+            yield conn_pg
+            conn_pg.commit()
+        except Exception:
+            conn_pg.rollback()
+            raise
+        finally:
+            conn_pg.close()
+    else:
+        # Fallback para SQLite
+        conn_lite = sqlite3.connect(SQLITE_PATH)
+        conn_lite.row_factory = sqlite3.Row
+        try:
+            yield conn_lite
+            conn_lite.commit()
+        except Exception:
+            conn_lite.rollback()
+            raise
+        finally:
+            conn_lite.close()
 
 
 def fetchall(query: str, params=()) -> list[dict]:

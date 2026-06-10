@@ -677,6 +677,33 @@ def is_pedido_caixa(texto_baixo):
     return False
 
 
+def is_confirmacao_compra(texto_baixo):
+    texto = normalizar_texto(texto_baixo)
+    termos_compra = [
+        "vou levar", "quero levar", "levar essas", "levar estes", "levar esses",
+        "vou comprar", "quero comprar", "vou pegar", "quero pegar",
+        "vou ficar com", "fico com", "fechado vou levar", "perfeito vou levar"
+    ]
+    return any(termo in texto for termo in termos_compra)
+
+
+def texto_encerramento(idioma="pt"):
+    return (
+        "Obrigado por usar o Kiosk. Estou encerrando esta sessão e o totem será reiniciado em 10 segundos."
+        if idioma == "pt"
+        else "Thank you for using Kiosk. I am ending this session and the kiosk will restart in 10 seconds."
+    )
+
+
+def destino_caixa():
+    return {
+        "id": "caixa",
+        "nome": "Caixas",
+        "corredor": "9",
+        "setor": "Caixas"
+    }
+
+
 def is_pergunta_pagamento(texto_baixo):
     texto = normalizar_texto(texto_baixo)
     termos_pagamento = ["boleto", "pix", "cartao", "credito", "debito", "parcelar", "pagamento", "pagar"]
@@ -974,8 +1001,9 @@ async def pipeline_processar(pergunta, idioma="pt"):
             memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
             return {"resposta": resposta_texto, "resultados": [], "acao": "NENHUM"}
         else:
+            resposta_texto = texto_encerramento(idioma)
             limpar_memoria()
-            return {"resposta": "", "resultados": [], "acao": "ENCERRAR"}
+            return {"resposta": resposta_texto, "resultados": [], "acao": "ENCERRAR"}
 
     # Se o usuário falou algo, reseta as tentativas de silêncio
     memoria["tentativas_silencio"] = 0
@@ -1008,8 +1036,9 @@ async def pipeline_processar(pergunta, idioma="pt"):
     )
 
     if is_encerramento(texto_baixo):
+        resposta_texto = texto_encerramento(idioma)
         limpar_memoria()
-        return {"resposta": "", "resultados": [], "acao": "ENCERRAR"}
+        return {"resposta": resposta_texto, "resultados": [], "acao": "ENCERRAR"}
 
     # Verifica se o usuário está pedindo mais opções / variação do tipo ativo
     if is_pedido_mais_opcoes(texto_baixo) and memoria.get("tipo_ativo"):
@@ -1078,13 +1107,25 @@ async def pipeline_processar(pergunta, idioma="pt"):
         }
 
     # Verifica se o usuário está pedindo para efetuar a compra / ir ao caixa
+    if is_confirmacao_compra(texto_baixo):
+        todos_mencionados = list(memoria.get("produtos_mencionados", {}).values())
+        base_produtos = todos_mencionados if todos_mencionados else produtos_memoria
+        produtos_rota = produtos_por_secao(base_produtos)
+        destinos = produtos_rota + [destino_caixa()]
+        resposta_texto = (
+            "Perfeito. Vou mostrar a rota dos produtos que voce gostou e, no final, o caminho ate o caixa."
+            if idioma == "pt"
+            else "Perfect. I will show the route for the items you liked and then the way to checkout."
+        )
+        memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
+        return {
+            "resposta": resposta_texto,
+            "resultados": destinos,
+            "acao": "ABRIR_ROTAS"
+        }
+
     if is_pedido_caixa(texto_baixo):
-        destino_caixa = [{
-            "id": "caixa",
-            "nome": "Caixas",
-            "corredor": "9",
-            "setor": "Caixas"
-        }]
+        destino_caixa_rota = [destino_caixa()]
         resposta_texto = (
             "Você pode efetuar a compra nos caixas. Mostrando o caminho no mapa."
             if idioma == "pt"
@@ -1093,7 +1134,7 @@ async def pipeline_processar(pergunta, idioma="pt"):
         memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
         return {
             "resposta": resposta_texto,
-            "resultados": destino_caixa,
+            "resultados": destino_caixa_rota,
             "acao": "ABRIR_MAPA"
         }
 
@@ -1262,8 +1303,9 @@ async def pipeline_processar(pergunta, idioma="pt"):
     palavras = analise.get("palavras_chave", [])
 
     if intencao == "ENCERRAR":
+        resposta_texto = texto_encerramento(idioma)
         limpar_memoria()
-        return {"resposta": "", "resultados": [], "acao": "ENCERRAR"}
+        return {"resposta": resposta_texto, "resultados": [], "acao": "ENCERRAR"}
 
     pedido_mapa_explicito = is_pedido_mapa(texto_baixo)
     intencao_mapa_valida = (

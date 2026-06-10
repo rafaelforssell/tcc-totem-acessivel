@@ -2027,22 +2027,38 @@
             }
         }
 
-        function falarTexto(texto) {
+        function tocarAudioBackend(arquivoAudio) {
             return new Promise((resolve) => {
-                if (!("speechSynthesis" in window) || !texto) {
+                if (!arquivoAudio) {
                     resolve();
                     return;
                 }
 
-                window.speechSynthesis.cancel();
-                const fala = new SpeechSynthesisUtterance(texto);
-                fala.lang = currentLang === "en" ? "en-US" : "pt-BR";
-                fala.rate = 0.95;
-                fala.pitch = 1;
-                fala.onend = resolve;
-                fala.onerror = resolve;
-                window.speechSynthesis.speak(fala);
+                const audio = new Audio();
+                audioAtual = audio;
+                audio.preload = "auto";
+                audio.src = `${BACKEND_URL}/${arquivoAudio}`;
+                audio.onended = () => {
+                    audioAtual = null;
+                    resolve();
+                };
+                audio.onerror = () => {
+                    audioAtual = null;
+                    resolve();
+                };
+                audio.addEventListener('canplaythrough', () => audio.play(), { once: true });
+                audio.load();
             });
+        }
+
+        async function tocarBoasVindas() {
+            try {
+                const resposta = await fetch(`${BACKEND_URL}/welcome-audio?idioma=${encodeURIComponent(currentLang)}`);
+                const data = await resposta.json();
+                await tocarAudioBackend(data.audio);
+            } catch (err) {
+                console.warn("Nao foi possivel tocar a boas-vindas:", err);
+            }
         }
 
         function criarSvgResumoRotas(produtos = []) {
@@ -2318,7 +2334,7 @@
                 totemFalando = true;
                 if (statusEl) statusEl.innerText = "Falando";
                 if (indicatorEl) indicatorEl.classList.remove("listening-indicator");
-                await falarTexto(WELCOME_MESSAGES[currentLang] || WELCOME_MESSAGES.pt);
+                await tocarBoasVindas();
                 totemFalando = false;
                 if (statusEl) statusEl.innerText = "Ouvindo";
                 if (indicatorEl) indicatorEl.classList.add("listening-indicator");
@@ -2464,11 +2480,6 @@
 
                     appendMessage(data.transcricao, 'user');
 
-                    if (data.acao === "ENCERRAR") {
-                        voltarDoChat();
-                        return;
-                    }
-
                     if (statusEl) statusEl.innerText = "Falando";
 
                     if (data.resposta) {
@@ -2480,6 +2491,9 @@
                     // Check actions to perform after audio
                     let encerrarAposAudio = false;
                     let abrirMapaAposAudio = false;
+                    if (data.acao === "ENCERRAR") {
+                        encerrarAposAudio = true;
+                    }
                     const produtosPreferidos = temRotaEspecial ? (data.resultados || []) : obterProdutosPreferidosParaMapa(data.resultados || []);
                     let produtosMapaAtual = [];
                     if (data.acao === "ABRIR_MAPA") {

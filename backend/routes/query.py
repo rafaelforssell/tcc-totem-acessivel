@@ -17,6 +17,20 @@ async def query_text(q: str):
     return await pipeline_processar(q)
 
 
+@router.get("/welcome-audio")
+async def welcome_audio(idioma: str = "pt"):
+    resposta_texto = (
+        "Bem-vindo ao Kiosk. O que deseja para hoje?"
+        if idioma == "pt"
+        else "Welcome to Kiosk. What would you like today?"
+    )
+    arquivo_audio = await falar(resposta_texto)
+    return {
+        "resposta": resposta_texto,
+        "audio": arquivo_audio
+    }
+
+
 @router.post("/query-audio")
 async def query_audio(audio: UploadFile = File(...), idioma: str = Form("pt")):
 
@@ -48,19 +62,6 @@ async def query_audio(audio: UploadFile = File(...), idioma: str = Form("pt")):
     print("IA concluída:", round(fim_ia - inicio_ia, 2), "seg")
 
     resposta_texto = resultado["resposta"]
-
-    if resultado.get("acao") == "ENCERRAR":
-        if os.path.exists(caminho):
-            os.remove(caminho)
-        fim_total = time.time()
-        print("TOTAL:", round(fim_total - inicio_total, 2), "seg")
-        return {
-            "transcricao": texto,
-            "resposta": "",
-            "resultados": [],
-            "acao": "ENCERRAR",
-            "audio": ""
-        }
 
     # TTS
     inicio_tts = time.time()

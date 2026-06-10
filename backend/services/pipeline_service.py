@@ -170,6 +170,11 @@ def limpar_tokens_busca(palavras_chave, palavras_validas=None):
         "baladas", "evento", "eventos", "encontro", "encontros", "passeio",
         "passeios", "casual", "casuais",
     }
+    stopwords.update({
+        # Quantidades por extenso. Evita buscas como "camisa tres preta".
+        "zero", "uma", "duas", "dois", "tres", "quatro", "cinco", "seis", "sete",
+        "oito", "nove", "dez", "unidade", "unidades", "peca", "pecas",
+    })
     sinonimos = {
         "short": "bermuda",
         "shorts": "bermuda",
@@ -177,6 +182,10 @@ def limpar_tokens_busca(palavras_chave, palavras_validas=None):
         "bole": "bone",    # typo comum de "boné"
         "tenis": "tenis",  # garante normalizacao
         "bone": "bone",
+        "bones": "bone",
+        "bonezinho": "bone",
+        "oculo": "oculos",
+        "oculos": "oculos",
         "camiseta": "camisa",
         "camisetas": "camisa",
     }
@@ -683,7 +692,9 @@ def is_confirmacao_compra(texto_baixo):
     texto = normalizar_texto(texto_baixo)
     termos_compra = [
         "vou levar", "quero levar", "levar essas", "levar estes", "levar esses",
-        "vou comprar", "quero comprar", "vou pegar", "quero pegar",
+        "vou comprar esses", "vou comprar estas", "vou comprar esses produtos",
+        "quero comprar esses", "quero comprar estas", "quero comprar esses produtos",
+        "vou pegar", "quero pegar",
         "vou ficar com", "fico com", "fechado vou levar", "perfeito vou levar"
     ]
     return any(termo in texto for termo in termos_compra)

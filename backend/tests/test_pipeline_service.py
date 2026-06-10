@@ -1048,3 +1048,46 @@ def test_pipeline_map_matching_priority_from_memory(monkeypatch):
     # Should say "onde estao os 2 produtos." and return 2 corridors
     assert "2 produtos" in resposta["resposta"]
     assert len(resposta["resultados"]) == 2
+
+
+def test_pipeline_remove_quantidade_por_extenso_da_busca():
+    tokens = pipeline_service.limpar_tokens_busca(["camisetas", "tres", "pretas"])
+
+    assert "camisa" in tokens
+    assert "tres" not in tokens
+    assert "preta" in tokens or "pretas" in tokens
+
+
+def test_comprar_produto_novo_nao_e_confirmacao_de_caixa():
+    assert pipeline_service.is_confirmacao_compra("Eu quero comprar um oculos.") is False
+    assert pipeline_service.is_confirmacao_compra("Eu quero comprar esses produtos.") is True
+
+
+def test_pipeline_mapa_produto_citado_tem_prioridade_sobre_memoria(monkeypatch):
+    pipeline_service.limpar_memoria()
+
+    oculos = {
+        "id": 1, "nome": "Oculos de Sol Masculino", "categoria": "Acessorios",
+        "tipo": "Oculos", "cor": "Preto", "preco": 79.9, "estoque": 2,
+        "corredor": "1", "setor": "Acessorios", "descricao": "Oculos de sol",
+        "tamanho": "Unico", "marca": "", "prateleira": "", "sku": "OCU-1",
+        "imagem": "", "texto_alt": "",
+    }
+    bone = {
+        "id": 2, "nome": "Bone Masculino Preto", "categoria": "Acessorios",
+        "tipo": "Bone", "cor": "Preto", "preco": 49.9, "estoque": 3,
+        "corredor": "1", "setor": "Acessorios", "descricao": "Bone masculino",
+        "tamanho": "Unico", "marca": "", "prateleira": "", "sku": "BON-1",
+        "imagem": "", "texto_alt": "",
+    }
+
+    pipeline_service.memoria["ultimos_produtos"] = [oculos]
+    pipeline_service.memoria["produtos_mencionados"] = {1: oculos}
+
+    monkeypatch.setattr(pipeline_service.db_service, "fetchall", lambda *args, **kwargs: [oculos, bone])
+
+    resposta = asyncio.run(pipeline_service.pipeline_processar("Ta, eu quero saber onde e que o bone fica."))
+
+    assert resposta["acao"] == "ABRIR_MAPA"
+    assert resposta["resultados"]
+    assert resposta["resultados"][0]["id"] == 2

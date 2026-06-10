@@ -2386,7 +2386,7 @@
                 selectedProducts = [];
                 produtosNotificacaoAtendente = [];
                 atualizarPainelListaSelecionada();
-                appendMessage(welcomeText, "totem");
+                appendMessage(WELCOME_MESSAGES[currentLang] || WELCOME_MESSAGES.pt, "totem");
                 iniciarSessao();
             }
         }

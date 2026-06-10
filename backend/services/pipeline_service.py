@@ -146,7 +146,7 @@ def limpar_tokens_busca(palavras_chave, palavras_validas=None):
         "outros", "outra", "outras", "opcao", "opcoes", "qual", "quais",
         "perfeito", "legal", "beleza", "certo", "ok", "entendi", "bom", "boa",
         "roupa", "roupas", "algum", "alguns", "alguma", "algumas", "hoje", "noite",
-        "tudo", "bem", "vou", "numa", "num", "para", "pra",
+        "tudo", "bem", "vou", "numa", "num", "para", "pra", "tambem",
         "nao", "sim", "gostei", "gostar", "gostaram", "agradou", "agradaram",
         "agradei", "agora", "entao", "quer", "quero", "querer", "quere", "temos",
         "pode", "poderia", "mostra", "mostrar", "mostre", "ver", "loja",
@@ -187,6 +187,10 @@ def limpar_tokens_busca(palavras_chave, palavras_validas=None):
         "bonezinho": "bone",
         "oculo": "oculos",
         "oculos": "oculos",
+        "bota": "bota",
+        "botas": "bota",
+        "sapatos": "sapato",
+        "calcados": "calcado",
         "camiseta": "camisa",
         "camisetas": "camisa",
     }
@@ -230,6 +234,7 @@ def limpar_tokens_busca(palavras_chave, palavras_validas=None):
 TIPOS_CONHECIDOS = {
     "bone", "vestido", "casaco", "camisa", "calca", "bermuda", "tenis", "sandalia",
     "saia", "oculos", "garrafa", "cinto", "moletom", "touca", "polo", "camiseta",
+    "bota", "sapato", "calcado",
 }
 
 CORES_CONHECIDAS = {
@@ -268,26 +273,29 @@ def extrair_trecho_busca_ativa(texto_baixo):
         r"\bvoce\s+tem\b",
         r"\bvoces\s+tem\b",
         r"\btem\b",
+        r"\beu\s+quero\s+tambem\b",
+        r"\beu\s+quero\b",
+        r"\bquero\s+tambem\b",
+        r"\bquero\b",
+        r"\bqueria\b",
         r"\bprocuro\b",
         r"\bprocurando\b",
     ]
 
-    ultimo_fim = None
+    melhor_trecho = None
     for marcador in marcadores:
         for match in re.finditer(marcador, texto):
-            ultimo_fim = match.end()
+            trecho = texto[match.end():].strip(" .,?!")
+            tokens = limpar_tokens_busca(trecho.split())
+            tem_tipo = any(
+                token in TIPOS_CONHECIDOS
+                or (len(token) > 3 and token.endswith("s") and token[:-1] in TIPOS_CONHECIDOS)
+                for token in tokens
+            )
+            if tem_tipo:
+                melhor_trecho = trecho
 
-    if ultimo_fim is None:
-        return texto_baixo
-
-    trecho = texto[ultimo_fim:].strip(" .,?!")
-    tokens = limpar_tokens_busca(trecho.split())
-    tem_tipo = any(
-        token in TIPOS_CONHECIDOS
-        or (len(token) > 3 and token.endswith("s") and token[:-1] in TIPOS_CONHECIDOS)
-        for token in tokens
-    )
-    return trecho if tem_tipo else texto_baixo
+    return melhor_trecho or texto_baixo
 
 
 def obter_tipo_segmento(tokens):
@@ -364,6 +372,7 @@ def buscar_produtos_por_segmentos(texto_baixo, palavras_validas=None):
                 candidatos_tipo.append(produto)
 
         if not candidatos_tipo:
+            faltas.append({"tipo": tipo, "atributos": atributos})
             continue
 
         escolhidos = ordenar_por_aderencia(candidatos_tipo, tipo, atributos)

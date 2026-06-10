@@ -321,7 +321,11 @@ def test_pipeline_thcau_encerra_conversa(monkeypatch):
 
     resposta = asyncio.run(pipeline_service.pipeline_processar("thcau"))
 
-    assert resposta == {"resposta": "", "resultados": [], "acao": "ENCERRAR"}
+    assert resposta == {
+        "resposta": pipeline_service.texto_encerramento("pt"),
+        "resultados": [],
+        "acao": "ENCERRAR",
+    }
 
 
 def test_pipeline_atendente_fecha_com_boas_compras(monkeypatch):
@@ -500,7 +504,7 @@ def test_pipeline_sim_apos_mapa_nao_adiciona_lista(monkeypatch):
     assert resposta.get("auto_add_lista") is None or resposta.get("auto_add_lista") is False
 
 
-def test_pipeline_encerrar_nao_responde_com_fala(monkeypatch):
+def test_pipeline_encerrar_responde_com_texto_de_encerramento(monkeypatch):
     async def fake_classificar_intencao(pergunta, idioma="pt"):
         return {"intencao": "OUTROS", "palavras_chave": []}
 
@@ -509,7 +513,11 @@ def test_pipeline_encerrar_nao_responde_com_fala(monkeypatch):
 
     resposta = asyncio.run(pipeline_service.pipeline_processar("encerrar"))
 
-    assert resposta == {"resposta": "", "resultados": [], "acao": "ENCERRAR"}
+    assert resposta == {
+        "resposta": pipeline_service.texto_encerramento("pt"),
+        "resultados": [],
+        "acao": "ENCERRAR",
+    }
 
 
 def test_pipeline_silencio_duplo_encerra(monkeypatch):
@@ -523,7 +531,7 @@ def test_pipeline_silencio_duplo_encerra(monkeypatch):
 
     # Segundo silencio
     resposta_2 = asyncio.run(pipeline_service.pipeline_processar("", idioma="pt"))
-    assert resposta_2["resposta"] == ""
+    assert resposta_2["resposta"] == pipeline_service.texto_encerramento("pt")
     assert resposta_2["acao"] == "ENCERRAR"
     # A memoria deve estar limpa e resetada apos encerrar
     assert pipeline_service.memoria.get("tentativas_silencio", 0) == 0
@@ -1156,3 +1164,34 @@ def test_pipeline_nova_busca_depois_de_agradaram_nao_herda_produto_anterior(monk
 
     assert resposta["acao"] == "MOSTRAR_PRODUTOS"
     assert [produto["id"] for produto in resposta["resultados"]] == [21]
+
+
+def test_pipeline_produto_novo_sem_catalogo_nao_sugere_contexto_antigo(monkeypatch):
+    pipeline_service.limpar_memoria()
+
+    vestido = {
+        "id": 30, "nome": "Vestido Vermelho Feminino", "categoria": "Vestidos",
+        "tipo": "Vestido", "cor": "Vermelho", "tamanho": "M", "marca": "",
+        "preco": 189.9, "estoque": 1, "corredor": "7", "setor": "Vestidos",
+        "prateleira": "", "descricao": "Vestido vermelho feminino", "sku": "VES-1",
+        "imagem": "", "texto_alt": "",
+    }
+
+    pipeline_service.memoria["ultimos_produtos"] = [vestido]
+    pipeline_service.memoria["produtos_mencionados"] = {30: vestido}
+    pipeline_service.memoria["tipo_ativo"] = "vestido"
+
+    async def fake_classificar_intencao(pergunta, idioma="pt"):
+        return {"intencao": "NOVA_BUSCA", "palavras_chave": ["vestido", "tambem", "bota"]}
+
+    monkeypatch.setattr(pipeline_service, "classificar_intencao", fake_classificar_intencao)
+    monkeypatch.setattr(pipeline_service.db_service, "fetchall", lambda *args, **kwargs: [vestido])
+
+    resposta = asyncio.run(
+        pipeline_service.pipeline_processar("Gostei. Eu quero tambem uma bota. Voce tem?")
+    )
+
+    assert resposta["acao"] == "NENHUM"
+    assert resposta["resultados"] == []
+    assert "nao encontrei bota" in resposta["resposta"].lower()
+    assert "vestido" not in resposta["resposta"].lower()

@@ -1091,3 +1091,68 @@ def test_pipeline_mapa_produto_citado_tem_prioridade_sobre_memoria(monkeypatch):
     assert resposta["acao"] == "ABRIR_MAPA"
     assert resposta["resultados"]
     assert resposta["resultados"][0]["id"] == 2
+
+
+def test_pipeline_vou_quere_levar_entende_como_compra():
+    pipeline_service.limpar_memoria()
+
+    camisa = {
+        "id": 10, "nome": "Camisa Polo Masculina", "categoria": "Camisas",
+        "tipo": "Camisa", "cor": "Branca", "tamanho": "M", "marca": "",
+        "preco": 119.9, "estoque": 1, "corredor": "5", "setor": "Camisas",
+        "prateleira": "", "descricao": "Camisa polo masculina", "sku": "CAM-1",
+        "imagem": "", "texto_alt": "",
+    }
+    oculos = {
+        "id": 11, "nome": "Oculos de Sol Masculino", "categoria": "Acessorios",
+        "tipo": "Oculos", "cor": "Preto", "tamanho": "Unico", "marca": "",
+        "preco": 79.9, "estoque": 1, "corredor": "1", "setor": "Acessorios",
+        "prateleira": "", "descricao": "Oculos de sol masculino", "sku": "OCU-1",
+        "imagem": "", "texto_alt": "",
+    }
+
+    pipeline_service.memoria["ultimos_produtos"] = [camisa, oculos]
+    pipeline_service.memoria["produtos_mencionados"] = {10: camisa, 11: oculos}
+
+    resposta = asyncio.run(
+        pipeline_service.pipeline_processar("Gostei, vou quere levar a camisa polo e oculos de sol masculino.")
+    )
+
+    assert resposta["acao"] == "ABRIR_ROTAS"
+    assert {produto["id"] for produto in resposta["resultados"]} == {10, 11, "caixa"}
+
+
+def test_pipeline_nova_busca_depois_de_agradaram_nao_herda_produto_anterior(monkeypatch):
+    pipeline_service.limpar_memoria()
+
+    camisa = {
+        "id": 20, "nome": "Camisa Polo Branca Masculina", "categoria": "Camisas",
+        "tipo": "Camisa", "cor": "Branca", "tamanho": "M", "marca": "",
+        "preco": 119.9, "estoque": 1, "corredor": "5", "setor": "Camisas",
+        "prateleira": "", "descricao": "Camisa polo masculina", "sku": "CAM-2",
+        "imagem": "", "texto_alt": "",
+    }
+    oculos = {
+        "id": 21, "nome": "Oculos de Sol Masculino", "categoria": "Acessorios",
+        "tipo": "Oculos", "cor": "Preto", "tamanho": "Unico", "marca": "",
+        "preco": 79.9, "estoque": 1, "corredor": "1", "setor": "Acessorios",
+        "prateleira": "", "descricao": "Oculos de sol masculino", "sku": "OCU-2",
+        "imagem": "", "texto_alt": "",
+    }
+
+    pipeline_service.memoria["ultimos_produtos"] = [camisa]
+    pipeline_service.memoria["produtos_mencionados"] = {20: camisa}
+    pipeline_service.memoria["tipo_ativo"] = "camisa"
+
+    async def fake_classificar_intencao(pergunta, idioma="pt"):
+        return {"intencao": "NOVA_BUSCA", "palavras_chave": ["camisa", "agradaram", "sol"]}
+
+    monkeypatch.setattr(pipeline_service, "classificar_intencao", fake_classificar_intencao)
+    monkeypatch.setattr(pipeline_service.db_service, "fetchall", lambda *args, **kwargs: [camisa, oculos])
+
+    resposta = asyncio.run(
+        pipeline_service.pipeline_processar("As duas me agradaram. Voce tem oculos de sol masculino?")
+    )
+
+    assert resposta["acao"] == "MOSTRAR_PRODUTOS"
+    assert [produto["id"] for produto in resposta["resultados"]] == [21]

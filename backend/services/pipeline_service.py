@@ -147,7 +147,8 @@ def limpar_tokens_busca(palavras_chave, palavras_validas=None):
         "perfeito", "legal", "beleza", "certo", "ok", "entendi", "bom", "boa",
         "roupa", "roupas", "algum", "alguns", "alguma", "algumas", "hoje", "noite",
         "tudo", "bem", "vou", "numa", "num", "para", "pra",
-        "nao", "sim", "gostei", "agora", "entao", "quer", "quero", "temos",
+        "nao", "sim", "gostei", "gostar", "gostaram", "agradou", "agradaram",
+        "agradei", "agora", "entao", "quer", "quero", "querer", "quere", "temos",
         "pode", "poderia", "mostra", "mostrar", "mostre", "ver", "loja",
         "nessa", "nesta", "encontra", "encontrar", "acha", "achar",
         "acho", "que", "dos", "das", "duas", "dois", "ambos", "ambas",
@@ -259,6 +260,34 @@ def extrair_segmentos_busca(texto_baixo, palavras_validas=None):
         if tokens:
             segmentos.append(tokens)
     return segmentos
+
+
+def extrair_trecho_busca_ativa(texto_baixo):
+    texto = normalizar_texto(texto_baixo)
+    marcadores = [
+        r"\bvoce\s+tem\b",
+        r"\bvoces\s+tem\b",
+        r"\btem\b",
+        r"\bprocuro\b",
+        r"\bprocurando\b",
+    ]
+
+    ultimo_fim = None
+    for marcador in marcadores:
+        for match in re.finditer(marcador, texto):
+            ultimo_fim = match.end()
+
+    if ultimo_fim is None:
+        return texto_baixo
+
+    trecho = texto[ultimo_fim:].strip(" .,?!")
+    tokens = limpar_tokens_busca(trecho.split())
+    tem_tipo = any(
+        token in TIPOS_CONHECIDOS
+        or (len(token) > 3 and token.endswith("s") and token[:-1] in TIPOS_CONHECIDOS)
+        for token in tokens
+    )
+    return trecho if tem_tipo else texto_baixo
 
 
 def obter_tipo_segmento(tokens):
@@ -694,6 +723,7 @@ def is_confirmacao_compra(texto_baixo):
         "vou levar", "quero levar", "levar essas", "levar estes", "levar esses",
         "vou comprar esses", "vou comprar estas", "vou comprar esses produtos",
         "quero comprar esses", "quero comprar estas", "quero comprar esses produtos",
+        "vou querer", "vou quere", "quero querer",
         "vou pegar", "quero pegar",
         "vou ficar com", "fico com", "fechado vou levar", "perfeito vou levar"
     ]
@@ -1128,7 +1158,7 @@ async def pipeline_processar(pergunta, idioma="pt"):
         }
 
     # Verifica se o usuário está pedindo para efetuar a compra / ir ao caixa
-    if is_confirmacao_compra(texto_baixo):
+    if is_confirmacao_compra(texto_baixo) and (produtos_memoria or memoria.get("produtos_mencionados")):
         todos_mencionados = list(memoria.get("produtos_mencionados", {}).values())
         base_produtos = todos_mencionados if todos_mencionados else produtos_memoria
         produtos_rota = produtos_por_secao(base_produtos)
@@ -1384,6 +1414,15 @@ async def pipeline_processar(pergunta, idioma="pt"):
     print(f"Intencao: {intencao} | Palavras: {palavras}")
 
     if intencao == "NOVA_BUSCA":
+        texto_busca_ativa = extrair_trecho_busca_ativa(texto_baixo)
+        palavras_ativas = limpar_tokens_busca(extrair_palavras_busca(texto_busca_ativa))
+        if texto_busca_ativa != texto_baixo and any(
+            p in TIPOS_CONHECIDOS or (len(p) > 3 and p.endswith("s") and p[:-1] in TIPOS_CONHECIDOS)
+            for p in palavras_ativas
+        ):
+            texto_baixo = texto_busca_ativa
+            palavras = palavras_ativas
+
         # Context inheritance / Query expansion
         tem_tipo = any(p.lower() in TIPOS_CONHECIDOS or (len(p) > 3 and p.lower().endswith("s") and p.lower()[:-1] in TIPOS_CONHECIDOS) for p in palavras)
         if not tem_tipo and memoria.get("tipo_ativo"):

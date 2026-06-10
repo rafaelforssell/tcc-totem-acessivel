@@ -13,6 +13,7 @@ memoria = {
     "assunto_ativo": None,
     "historico_conversas": [],
     "produtos_mencionados": {},
+    "produtos_escolhidos": [],
     "produtos_pendentes_confirmacao": [],
 }
 
@@ -22,6 +23,7 @@ def limpar_memoria():
     memoria["assunto_ativo"] = None
     memoria["historico_conversas"] = []
     memoria["produtos_mencionados"] = {}
+    memoria["produtos_escolhidos"] = []
     memoria["produtos_pendentes_confirmacao"] = []
     memoria["tentativas_silencio"] = 0
     memoria["genero"] = None
@@ -987,6 +989,8 @@ async def pipeline_processar(pergunta, idioma="pt"):
         memoria["historico_conversas"] = []
     if "produtos_mencionados" not in memoria:
         memoria["produtos_mencionados"] = {}
+    if "produtos_escolhidos" not in memoria:
+        memoria["produtos_escolhidos"] = []
     if "tentativas_silencio" not in memoria:
         memoria["tentativas_silencio"] = 0
 
@@ -1016,6 +1020,12 @@ async def pipeline_processar(pergunta, idioma="pt"):
     if "genero" not in memoria:
         memoria["genero"] = None
     if genero_detectado:
+        if memoria.get("genero") and memoria["genero"] != genero_detectado:
+            memoria["ultimos_produtos"] = []
+            memoria["produtos_mencionados"] = {}
+            memoria["produtos_escolhidos"] = []
+            memoria["produtos_pendentes_confirmacao"] = []
+            memoria["tipo_ativo"] = None
         memoria["genero"] = genero_detectado
         print(f"[Memoria] Genero atualizado para: {genero_detectado}")
     
@@ -1111,6 +1121,7 @@ async def pipeline_processar(pergunta, idioma="pt"):
         todos_mencionados = list(memoria.get("produtos_mencionados", {}).values())
         base_produtos = todos_mencionados if todos_mencionados else produtos_memoria
         produtos_rota = produtos_por_secao(base_produtos)
+        memoria["produtos_escolhidos"] = produtos_rota
         destinos = produtos_rota + [destino_caixa()]
         resposta_texto = (
             "Perfeito. Vou mostrar a rota dos produtos que voce gostou e, no final, o caminho ate o caixa."
@@ -1140,7 +1151,11 @@ async def pipeline_processar(pergunta, idioma="pt"):
 
     # Verifica se o usuário está pedindo um atendente humano
     if is_pedido_atendente(texto_baixo):
-        produtos_alerta = list(memoria["produtos_mencionados"].values())
+        produtos_alerta = (
+            memoria.get("produtos_escolhidos")
+            or memoria.get("ultimos_produtos")
+            or list(memoria["produtos_mencionados"].values())[:1]
+        )
         resposta_texto = (
             "Claro! Estou chamando um atendente para te ajudar. Em instantes alguém virá até você."
             if idioma == "pt"

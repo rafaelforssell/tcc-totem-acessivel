@@ -1291,6 +1291,7 @@
                 }
 
                 adminProducts = Array.isArray(data.produtos) ? data.produtos : [];
+                atualizarSecoesDoMapaPorProdutos(adminProducts);
                 filterAdminProducts();
                 updateAdminSyncLabel();
                 setAdminStatus(`Produtos carregados com sucesso. Total: ${adminProducts.length}.`);
@@ -1746,9 +1747,35 @@
             if (p === "" || p === "opcional" || p === "optional") {
                 return DEFAULT_PRODUCT_IMAGE;
             }
-            if (/^https?:\/\//i.test(path)) return path;
+            if (/^https?:\/\//i.test(path)) {
+                return location.protocol === "https:" ? path.replace(/^http:\/\//i, "https://") : path;
+            }
             if (path.startsWith("/")) return `${BACKEND_URL}${path}`;
             return `${BACKEND_URL}/${path}`;
+        }
+
+        function applyImageFallback(imgEl) {
+            if (!imgEl) return;
+            imgEl.onerror = () => {
+                if (imgEl.src !== DEFAULT_PRODUCT_IMAGE) {
+                    imgEl.src = DEFAULT_PRODUCT_IMAGE;
+                }
+            };
+        }
+
+        function atualizarSecoesDoMapaPorProdutos(produtos = []) {
+            Object.entries(DEFAULT_STORE_SECTION_LABELS).forEach(([number, label]) => {
+                if (STORE_SECTIONS[number]) STORE_SECTIONS[number].label = label;
+            });
+
+            produtos.forEach(produto => {
+                const sectionNumber = parseInt(produto?.corredor);
+                if (!STORE_SECTIONS[sectionNumber]) return;
+                const label = (produto.setor || produto.categoria || "").trim();
+                if (label) STORE_SECTIONS[sectionNumber].label = label;
+            });
+
+            applyStoreLayout();
         }
 
         const STORE_SECTIONS = {
@@ -1762,6 +1789,10 @@
             8: { label: "Provadores", x: 100 },
             9: { label: "Caixas", x: 875 },
         };
+
+        const DEFAULT_STORE_SECTION_LABELS = Object.fromEntries(
+            Object.entries(STORE_SECTIONS).map(([number, section]) => [Number(number), section.label])
+        );
 
         const STORE_LAYOUTS = {
             1: { rect: { x: 180, y: 110, width: 220, height: 72, rx: 18 }, text: { x: 208, y: 153 }, label: { x: 245, y: 154, anchor: "start" }, pin: { x: 180, y: 146 } },
@@ -1798,6 +1829,18 @@
             return `M 125,480 L 125,${target.y} L ${target.x},${target.y}`;
         }
 
+        function buildMultilineLabel(label, x, maxWordsPerLine = 2) {
+            const words = String(label || "").split(/\s+/).filter(Boolean);
+            if (words.length === 0) return "";
+            const lines = [];
+            for (let i = 0; i < words.length; i += maxWordsPerLine) {
+                lines.push(words.slice(i, i + maxWordsPerLine).join(" "));
+            }
+            return lines
+                .map((line, index) => `<tspan x="${x}" dy="${index === 0 ? 0 : 15}">${escapeHtml(line)}</tspan>`)
+                .join("");
+        }
+
         function applyStoreLayout() {
             Object.entries(STORE_LAYOUTS)
                 .filter(([num]) => Number(num) <= 7)
@@ -1827,7 +1870,7 @@
                     labelNode.setAttribute("y", layout.label.y);
                     labelNode.setAttribute("text-anchor", layout.label.anchor);
                     if (layout.label.multiline) {
-                        labelNode.innerHTML = `<tspan x="${layout.label.x}" dy="0">Saias e</tspan><tspan x="${layout.label.x}" dy="15">Vestidos</tspan>`;
+                        labelNode.innerHTML = buildMultilineLabel(STORE_SECTIONS[Number(num)].label, layout.label.x);
                     } else {
                         labelNode.textContent = STORE_SECTIONS[Number(num)].label;
                     }
@@ -1926,6 +1969,7 @@
 
             const imgEl = document.getElementById('product-image');
             if (imgEl) {
+                applyImageFallback(imgEl);
                 imgEl.src = getProductMainImage(data);
             }
         }
@@ -1944,12 +1988,61 @@
 
         let audioCtxGlobal = null;
         let analyserGlobal = null;
+        let audioSourceGlobal = null;
+        let recorderAtual = null;
+        const SILENCE_TIMEOUT_MS = 3000;
+        const WELCOME_MESSAGES = {
+            pt: "Bem-vindo ao Kiosk. O que deseja para hoje?",
+            en: "Welcome to Kiosk. What would you like today?"
+        };
 
         function getAudioContext() {
             if (!audioCtxGlobal || audioCtxGlobal.state === 'closed') {
                 audioCtxGlobal = new AudioContext();
             }
             return audioCtxGlobal;
+        }
+
+        async function prepararMonitoramentoAudio(stream) {
+            const ctx = getAudioContext();
+            if (ctx.state === 'suspended') {
+                await ctx.resume();
+            }
+
+            if (analyserGlobal) return;
+
+            if (audioSourceGlobal) {
+                audioSourceGlobal.disconnect();
+                audioSourceGlobal = null;
+            }
+
+            audioSourceGlobal = ctx.createMediaStreamSource(stream);
+            analyserGlobal = ctx.createAnalyser();
+            audioSourceGlobal.connect(analyserGlobal);
+        }
+
+        function pararGravacaoAtual() {
+            if (recorderAtual && recorderAtual.state !== "inactive") {
+                recorderAtual.stop();
+            }
+        }
+
+        function falarTexto(texto) {
+            return new Promise((resolve) => {
+                if (!("speechSynthesis" in window) || !texto) {
+                    resolve();
+                    return;
+                }
+
+                window.speechSynthesis.cancel();
+                const fala = new SpeechSynthesisUtterance(texto);
+                fala.lang = currentLang === "en" ? "en-US" : "pt-BR";
+                fala.rate = 0.95;
+                fala.pitch = 1;
+                fala.onend = resolve;
+                fala.onerror = resolve;
+                window.speechSynthesis.speak(fala);
+            });
         }
 
         function criarSvgResumoRotas(produtos = []) {
@@ -1962,7 +2055,7 @@
                 routes.push({
                     productName: product.nome || "Produto",
                     sectionNumber,
-                    section: STORE_SECTIONS[sectionNumber],
+                    section: getProductSection(product),
                 });
             });
 
@@ -2108,6 +2201,7 @@
                         img.src = getProductMainImage(p);
                         img.alt = p.nome || "Produto";
                         img.className = "w-full h-24 md:h-32 object-contain mb-2 rounded bg-white p-2 hover:opacity-85 transition-opacity cursor-zoom-in";
+                        applyImageFallback(img);
                         img.onclick = (e) => {
                             e.stopPropagation();
                             openLightbox(lightboxItems, index);
@@ -2141,7 +2235,7 @@
                         mapDiv.innerHTML = createMultiRouteMapCardHtml(results);
                     } else {
                         const p = results[0];
-                        mapDiv.innerHTML = createMapCardHtml(p.nome, p.corredor);
+                        mapDiv.innerHTML = createMapCardHtml(p.nome, p.corredor, p);
                     }
                     bubble.appendChild(mapDiv.firstElementChild);
                 } else if (results && results.length > 0 && acao === "ABRIR_ROTAS") {
@@ -2164,6 +2258,10 @@
             sessaoAtiva = false;
             totemFalando = false;
             sessaoPausada = false;
+            pararGravacaoAtual();
+            if ("speechSynthesis" in window) {
+                window.speechSynthesis.cancel();
+            }
 
             const btnPausar = document.getElementById("btn-pausar");
             if (btnPausar) {
@@ -2191,6 +2289,10 @@
             }
 
             if (audioCtxGlobal && audioCtxGlobal.state !== 'closed') {
+                if (audioSourceGlobal) {
+                    audioSourceGlobal.disconnect();
+                    audioSourceGlobal = null;
+                }
                 audioCtxGlobal.close();
                 audioCtxGlobal = null;
                 analyserGlobal = null;
@@ -2211,14 +2313,20 @@
                 const indicatorEl = document.getElementById("header-mic-indicator");
                 if (indicatorEl) indicatorEl.classList.add("listening-indicator");
 
-                const ctx = getAudioContext();
-                const source = ctx.createMediaStreamSource(streamGlobal);
-                analyserGlobal = ctx.createAnalyser();
-                source.connect(analyserGlobal);
+                await prepararMonitoramentoAudio(streamGlobal);
+
+                totemFalando = true;
+                if (statusEl) statusEl.innerText = "Falando";
+                if (indicatorEl) indicatorEl.classList.remove("listening-indicator");
+                await falarTexto(WELCOME_MESSAGES[currentLang] || WELCOME_MESSAGES.pt);
+                totemFalando = false;
+                if (statusEl) statusEl.innerText = "Ouvindo";
+                if (indicatorEl) indicatorEl.classList.add("listening-indicator");
 
                 conversar();
             } catch (err) {
                 console.error("Erro ao acessar microfone:", err);
+                totemFalando = false;
                 const statusEl = document.getElementById("header-status");
                 if (statusEl) statusEl.innerText = "Erro Mic";
             }
@@ -2290,12 +2398,19 @@
 
         async function conversar() {
             if (!sessaoAtiva || sessaoPausada || retomandoSessao) return;
+            if (!streamGlobal || !streamGlobal.active) return;
 
             const recorder = new MediaRecorder(streamGlobal);
+            recorderAtual = recorder;
             const chunks = [];
 
             recorder.ondataavailable = e => chunks.push(e.data);
             recorder.onstop = async () => {
+                if (recorderAtual === recorder) {
+                    recorderAtual = null;
+                }
+                if (!sessaoAtiva || sessaoPausada) return;
+
                 const blob = new Blob(chunks, { type: 'audio/webm' });
                 if (blob.size < 1000) {
                     if (sessaoAtiva) conversar();
@@ -2320,6 +2435,9 @@
 
                     const data = await resposta.json();
                     if (!sessaoAtiva) return;
+                    if (Array.isArray(data.resultados)) {
+                        atualizarSecoesDoMapaPorProdutos(data.resultados);
+                    }
 
                     if (data.auto_add_lista && Array.isArray(data.resultados)) {
                         data.resultados.forEach(produto => {
@@ -2363,15 +2481,18 @@
                     let encerrarAposAudio = false;
                     let abrirMapaAposAudio = false;
                     const produtosPreferidos = temRotaEspecial ? (data.resultados || []) : obterProdutosPreferidosParaMapa(data.resultados || []);
+                    let produtosMapaAtual = [];
                     if (data.acao === "ABRIR_MAPA") {
                         abrirMapaAposAudio = true;
                         if (data.resultados && data.resultados.length > 0) {
+                            produtosMapaAtual = data.resultados;
                             mesclarProdutosNotificacao(data.resultados);
                             loadProductData(data.resultados[0]);
                         }
                     } else if (data.acao === "ABRIR_ROTAS") {
                         abrirMapaAposAudio = true;
                         if (produtosPreferidos && produtosPreferidos.length > 0) {
+                            produtosMapaAtual = produtosPreferidos;
                             mesclarProdutosNotificacao(produtosPreferidos);
                             loadProductData(produtosPreferidos[0]);
                             updateStoreMap(produtosPreferidos[0].corredor);
@@ -2380,9 +2501,12 @@
 
                     if (data.acao === "CHAMAR_ATENDENTE") {
                         console.log('[Atendente] Ação CHAMAR_ATENDENTE disparada pelo backend!');
-                        const produtosAtendente = formatarListaParaAtendente(
-                            selectedProducts.length > 0 ? selectedProducts : (data.resultados || [])
-                        );
+                        const origemProdutosAtendente =
+                            produtosMapaAtual.length > 0 ? produtosMapaAtual :
+                            data.resultados && data.resultados.length > 0 ? data.resultados :
+                            selectedProducts.length > 0 ? selectedProducts :
+                            produtosNotificacaoAtendente;
+                        const produtosAtendente = formatarListaParaAtendente(origemProdutosAtendente);
                         if (produtosAtendente.length > 0) {
                             produtosNotificacaoAtendente = produtosAtendente;
                         }
@@ -2489,7 +2613,7 @@
 
                 if (volume < 0.02) {
                     if (!silencioInicio) silencioInicio = Date.now();
-                    if (Date.now() - silencioInicio > 5000) {
+                    if (Date.now() - silencioInicio > SILENCE_TIMEOUT_MS) {
                         recorder.stop();
                         return;
                     }
@@ -2633,17 +2757,13 @@
                 if (indicatorEl) indicatorEl.classList.remove("listening-indicator");
 
                 // Parar gravação e áudio atual
+                pararGravacaoAtual();
                 if (audioAtual) {
                     audioAtual.pause();
                     audioAtual.currentTime = 0;
                     audioAtual = null;
                 }
                 
-                // Parar faixas de áudio temporariamente
-                if (streamGlobal) {
-                    streamGlobal.getTracks().forEach(track => track.stop());
-                    streamGlobal = null;
-                }
             } else {
                 // Retomar
                 sessaoPausada = false;
@@ -2659,12 +2779,13 @@
                 if (indicatorEl) indicatorEl.classList.add("listening-indicator");
 
                 // Retomar microfone e gravação
-                navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-                    streamGlobal = stream;
-                    const ctx = getAudioContext();
-                    const source = ctx.createMediaStreamSource(streamGlobal);
-                    analyserGlobal = ctx.createAnalyser();
-                    source.connect(analyserGlobal);
+                const retomarGravacao = async () => {
+                    if (!streamGlobal || !streamGlobal.active) {
+                        streamGlobal = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        analyserGlobal = null;
+                    }
+
+                    await prepararMonitoramentoAudio(streamGlobal);
 
                     if (statusEl) statusEl.innerText = currentLang === 'pt' ? "Pronto" : "Ready";
                     setTimeout(() => {
@@ -2673,7 +2794,9 @@
                         conversar();
                         retomandoSessao = false;
                     }, 700);
-                }).catch(err => {
+                };
+
+                retomarGravacao().catch(err => {
                     console.error("Erro ao retomar microfone:", err);
                     retomandoSessao = false;
                     if (statusEl) statusEl.innerText = "Erro Mic";
@@ -2706,16 +2829,16 @@
                     const fill = activeSections.has(Number(num)) ? '#ffd700' : '#d4d4d8';
                     const label = STORE_SECTIONS[Number(num)].label;
                     if (layout.label.multiline) {
-                        return `<text x="${layout.label.x}" y="${layout.label.y}" fill="${fill}" text-anchor="${layout.label.anchor}"><tspan x="${layout.label.x}" dy="0">Saias e</tspan><tspan x="${layout.label.x}" dy="15">Vestidos</tspan></text>`;
+                        return `<text x="${layout.label.x}" y="${layout.label.y}" fill="${fill}" text-anchor="${layout.label.anchor}">${buildMultilineLabel(label, layout.label.x)}</text>`;
                     }
                     return `<text x="${layout.label.x}" y="${layout.label.y}" fill="${fill}" text-anchor="${layout.label.anchor}">${label}</text>`;
                 }).join("");
         }
 
-        function createMapCardHtml(productName, aisle) {
+        function createMapCardHtml(productName, aisle, product = null) {
             const aisleNum = parseInt(aisle);
             const activeSectionNumber = STORE_SECTIONS[aisleNum] ? aisleNum : 1;
-            const section = STORE_SECTIONS[activeSectionNumber];
+            const section = getProductSection(product || { corredor: activeSectionNumber });
             const activeSections = new Set([activeSectionNumber]);
             const target = STORE_LAYOUTS[activeSectionNumber]?.pin || { x: section.x, y: 220 };
 
@@ -2783,7 +2906,7 @@
                 routes.push({
                     productName: product.nome || "Produto",
                     sectionNumber,
-                    section: STORE_SECTIONS[sectionNumber],
+                    section: getProductSection(product),
                 });
             });
 

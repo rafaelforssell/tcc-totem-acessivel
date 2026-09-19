@@ -2,6 +2,7 @@
 Rotas administrativas para gerenciamento de estoque.
 Protegidas por senha via header X-Admin-Key.
 """
+import hmac
 import os
 
 from dotenv import load_dotenv
@@ -13,13 +14,15 @@ from services.db_service import execute, fetchall
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR, "..", ".env"))
 
-ADMIN_KEY = os.getenv("ADMIN_KEY", "totem-admin-2024")
+ADMIN_KEY = os.getenv("ADMIN_KEY", "").strip()
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
 
 def verificar_chave(x_admin_key: str | None):
-    if x_admin_key != ADMIN_KEY:
+    if not ADMIN_KEY:
+        raise HTTPException(status_code=503, detail="Painel admin desativado: ADMIN_KEY nao configurada.")
+    if not x_admin_key or not hmac.compare_digest(x_admin_key, ADMIN_KEY):
         raise HTTPException(status_code=401, detail="Chave de administrador invalida.")
 
 

@@ -1,10 +1,21 @@
 import asyncio
-import httpx
+import os
 
-BOT_TOKEN = "8974271580:AAH6UrjP9S8c6H4hk20jTd3Yww_sw3mcUFA"
-CHAT_ID = "8917844351"
+import httpx
+from dotenv import load_dotenv
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(BASE_DIR, ".env"))
+
+BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "").strip()
+
 
 async def test():
+    if not BOT_TOKEN or not CHAT_ID:
+        print("Defina TELEGRAM_BOT_TOKEN e TELEGRAM_CHAT_ID no backend/.env")
+        return
+
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = {
         "chat_id": CHAT_ID,
@@ -12,7 +23,6 @@ async def test():
         "parse_mode": "Markdown"
     }
 
-    
     print(f"Enviando mensagem para {CHAT_ID}...")
     try:
         async with httpx.AsyncClient() as client:

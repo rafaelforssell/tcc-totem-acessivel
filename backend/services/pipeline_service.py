@@ -1031,6 +1031,81 @@ def is_pedido_mais_opcoes(texto_baixo):
     return any(t in texto for t in termos_mais)
 
 
+GENEROS_FEMININOS = {"feminino", "feminina", "femininos", "femininas", "fem", "mulher", "mulheres"}
+GENEROS_MASCULINOS = {"masculino", "masculina", "masculinos", "masculinas", "masc", "homem", "homens"}
+ORDINAIS_ESCOLHA = {
+    "primeira": 0, "primeiro": 0, "segunda": 1, "segundo": 1, "terceira": 2, "terceiro": 2,
+}
+
+
+def expressa_preferencia(texto_baixo):
+    """Frases em que o cliente demonstra ter escolhido algo ("gostei da masculina", "vou levar a preta")."""
+    texto = normalizar_texto(texto_baixo)
+    termos = [
+        "gostei", "adorei", "amei", "curti", "prefiro",
+        "vou levar", "quero levar", "vou querer", "vou pegar", "fico com", "vou ficar com",
+    ]
+    return any(termo in texto for termo in termos)
+
+
+def detectar_produtos_escolhidos(texto_baixo, candidatos):
+    """
+    Descobre qual dos produtos recém-exibidos o cliente escolheu, por gênero, cor/tipo, posição
+    ("a segunda", "a última") ou palavras do nome. Só devolve algo quando a frase realmente
+    reduz as opções; se ainda ficar ambíguo, devolve [] e o fluxo normal segue.
+    """
+    if len(candidatos) < 2 or not expressa_preferencia(texto_baixo):
+        return []
+
+    texto = normalizar_texto(texto_baixo)
+    for sinal in (",", ".", "?", "!"):
+        texto = texto.replace(sinal, " ")
+    palavras = texto.split()
+
+    for palavra, indice in ORDINAIS_ESCOLHA.items():
+        if palavra in palavras and indice < len(candidatos):
+            return [candidatos[indice]]
+    if "ultima" in palavras or "ultimo" in palavras:
+        return [candidatos[-1]]
+
+    restantes = list(candidatos)
+    genero = (
+        "fem" if GENEROS_FEMININOS.intersection(palavras)
+        else "mas" if GENEROS_MASCULINOS.intersection(palavras)
+        else None
+    )
+    if genero:
+        do_genero = [p for p in restantes if genero_produto(p) == genero]
+        if do_genero:
+            restantes = do_genero
+
+    tokens = [t for t in limpar_tokens_busca(palavras) if t not in TOKENS_GENERO]
+    if tokens:
+        pontuados = [(sum(1 for t in tokens if token_match(texto_produto(p), t)), p) for p in restantes]
+        melhor = max(pontuacao for pontuacao, _ in pontuados)
+        if melhor > 0:
+            restantes = [p for pontuacao, p in pontuados if pontuacao == melhor]
+
+    return restantes if len(restantes) < len(candidatos) else []
+
+
+def registrar_produtos_escolhidos(produtos):
+    ids_registrados = {p.get("id") for p in memoria["produtos_escolhidos"]}
+    for produto in produtos:
+        if produto.get("id") not in ids_registrados:
+            memoria["produtos_escolhidos"].append(produto)
+            ids_registrados.add(produto.get("id"))
+
+
+def produtos_de_interesse(fallback=None):
+    """O que o cliente escolheu; se ainda não escolheu nada, tudo o que foi citado na conversa."""
+    escolhidos = memoria.get("produtos_escolhidos") or []
+    if escolhidos:
+        return list(escolhidos)
+    mencionados = list(memoria.get("produtos_mencionados", {}).values())
+    return mencionados or list(fallback or [])
+
+
 async def pipeline_processar(pergunta, idioma="pt"):
     print(f"\n--- Nova Requisicao: {pergunta} --- Idioma: {idioma}")
     
@@ -1134,11 +1209,52 @@ async def pipeline_processar(pergunta, idioma="pt"):
             memoria["historico_conversas"].append({"role": "assistant", "content": resposta})
             return {"resposta": resposta, "resultados": sugestoes, "acao": "MOSTRAR_PRODUTOS"}
 
+    # O cliente escolheu um dos produtos exibidos ("gostei da masculina", "a segunda")?
+    # Registra a escolha antes de qualquer outra coisa, para que mapa, caixa e atendente usem só o que ele quer.
+    escolhidos_citados = detectar_produtos_escolhidos(texto_baixo, memoria.get("ultimos_produtos", []))
+    if escolhidos_citados:
+        registrar_produtos_escolhidos(escolhidos_citados)
+        memoria["ultimos_produtos"] = escolhidos_citados
+        memoria["produtos_pendentes_confirmacao"] = []
+        print(f"[Escolha] {[p['nome'] for p in escolhidos_citados]}")
+
+        segue_fluxo_proprio = (
+            is_pedido_provador(texto_baixo) or is_confirmacao_compra(texto_baixo)
+            or is_pedido_caixa(texto_baixo) or is_pedido_atendente(texto_baixo)
+            or is_pergunta_pagamento(texto_baixo)
+        )
+        if not segue_fluxo_proprio:
+            if is_pedido_mapa(texto_baixo):
+                produtos_rota = produtos_por_secao(escolhidos_citados)
+                resposta_texto = montar_resposta_mapa(escolhidos_citados, idioma)
+                memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
+                acao_mapa = "ABRIR_ROTAS" if len(produtos_rota) > 1 else "ABRIR_MAPA"
+                return {"resposta": resposta_texto, "resultados": produtos_rota, "acao": acao_mapa}
+
+            if idioma == "pt":
+                resposta_texto = (
+                    "Perfeito, já adicionei essa opção à sua lista. Gostaria de ver o mapa para saber como chegar até ela, ou podemos encerrar o atendimento?"
+                    if len(escolhidos_citados) == 1
+                    else "Perfeito, já adicionei essas opções à sua lista. Gostaria de ver o mapa para saber como chegar até elas, ou podemos encerrar o atendimento?"
+                )
+            else:
+                resposta_texto = (
+                    "Perfect! I have added this option to your list. Would you like to see the map to locate it, or can we end the session?"
+                    if len(escolhidos_citados) == 1
+                    else "Perfect! I have added these options to your list. Would you like to see the map to locate them, or can we end the session?"
+                )
+            memoria["historico_conversas"].append({"role": "assistant", "content": resposta_texto})
+            return {
+                "resposta": resposta_texto,
+                "resultados": escolhidos_citados,
+                "acao": "MOSTRAR_PRODUTOS",
+                "auto_add_lista": True,
+            }
+
     # Verifica se o usuário está pedindo para ir ao provador
     if is_pedido_provador(texto_baixo):
-        todos_mencionados = list(memoria.get("produtos_mencionados", {}).values())
-        base_produtos = todos_mencionados if todos_mencionados else produtos_memoria
-        
+        base_produtos = produtos_de_interesse(produtos_memoria)
+
         # Cria lista de destinos: produtos + provador + caixa
         destinos = [p for p in base_produtos]
         destinos.append({
@@ -1168,10 +1284,9 @@ async def pipeline_processar(pergunta, idioma="pt"):
 
     # Verifica se o usuário está pedindo para efetuar a compra / ir ao caixa
     if is_confirmacao_compra(texto_baixo) and (produtos_memoria or memoria.get("produtos_mencionados")):
-        todos_mencionados = list(memoria.get("produtos_mencionados", {}).values())
-        base_produtos = todos_mencionados if todos_mencionados else produtos_memoria
+        base_produtos = produtos_de_interesse(produtos_memoria)
         produtos_rota = produtos_por_secao(base_produtos)
-        memoria["produtos_escolhidos"] = produtos_rota
+        memoria["produtos_escolhidos"] = list(base_produtos)
         destinos = produtos_rota + [destino_caixa()]
         resposta_texto = (
             "Perfeito. Vou mostrar a rota dos produtos que voce gostou e, no final, o caminho ate o caixa."
@@ -1231,8 +1346,7 @@ async def pipeline_processar(pergunta, idioma="pt"):
 
     if confirmacao_mapa_pendente:
         memoria["produtos_pendentes_confirmacao"] = []
-        todos_mencionados = list(memoria["produtos_mencionados"].values())
-        pool_mapa = todos_mencionados if todos_mencionados else produtos_memoria
+        pool_mapa = produtos_de_interesse(produtos_memoria)
         produtos_rota = produtos_por_secao(pool_mapa)
         if len(produtos_rota) > 1:
             resposta_texto = (
@@ -1253,6 +1367,7 @@ async def pipeline_processar(pergunta, idioma="pt"):
         return {"resposta": resposta_texto, "resultados": [produto_mapa], "acao": "ABRIR_MAPA"}
 
     if produtos_pendentes and is_confirmacao_lista(texto_baixo):
+        registrar_produtos_escolhidos(produtos_pendentes)
         if is_pedido_mapa(texto_baixo):
             memoria["produtos_pendentes_confirmacao"] = []
         else:

@@ -3,10 +3,17 @@ Servico de notificacoes via Telegram para alertar o atendente do totem.
 """
 import base64
 import os
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 import httpx
 from dotenv import load_dotenv
+
+try:
+    from zoneinfo import ZoneInfo
+    FUSO_LOJA = ZoneInfo("America/Sao_Paulo")
+except Exception:
+    # Sem base de fusos instalada. O Brasil não tem horário de verão desde 2019, então UTC-3 é fixo.
+    FUSO_LOJA = timezone(timedelta(hours=-3))
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -54,7 +61,7 @@ async def enviar_alerta_atendente(
         return {"ok": False, "erro": "Telegram nao configurado"}
 
     telegram_api = _build_telegram_api(telegram_bot_token)
-    now_text = datetime.now().strftime("%H:%M:%S")
+    now_text = datetime.now(FUSO_LOJA).strftime("%H:%M:%S")
     totem_id_safe = str(totem_id).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     produtos = produtos or []
 

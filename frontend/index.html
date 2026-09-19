@@ -1822,27 +1822,71 @@
             9: { pin: { x: 875, y: 500 } },
         };
 
-        function getSectionRoutePath(sectionNumber) {
-            const target = STORE_LAYOUTS[sectionNumber]?.pin || STORE_LAYOUTS[1].pin;
-            if (sectionNumber === 8) {
-                // Provadores: sobe pelo corredor esquerdo (x=125) até y=95, depois vira à esquerda para x=100
-                return `M 125,480 L 125,95 L 100,95`;
+        // Onde o cliente está na loja: 0 = entrada; 1-9 = último destino mostrado no mapa.
+        // Volta para a entrada quando a sessão começa ou termina.
+        let posicaoUsuario = 0;
+
+        // Os pontos do mapa ficam presos a três corredores:
+        // L = vertical em x=125, C = vertical em x=500 e B = horizontal em y=480.
+        function getMapLocation(id) {
+            if (id === 0) return { corridor: "L", pos: 480, pin: { x: 125, y: 480 } };
+            const num = STORE_LAYOUTS[id] ? id : 1;
+            const pin = STORE_LAYOUTS[num].pin;
+            if (num <= 3 || num === 8) return { corridor: "L", pos: pin.y, pin };
+            if (num <= 7) return { corridor: "C", pos: pin.y, pin };
+            return { corridor: "B", pos: pin.x, pin };
+        }
+
+        function getCorridorPoint(loc) {
+            if (loc.corridor === "L") return { x: 125, y: loc.pos };
+            if (loc.corridor === "C") return { x: 500, y: loc.pos };
+            return { x: loc.pos, y: 480 };
+        }
+
+        function getBottomCorridorPoint(loc) {
+            if (loc.corridor === "L") return { x: 125, y: 480 };
+            if (loc.corridor === "C") return { x: 500, y: 480 };
+            return { x: loc.pos, y: 480 };
+        }
+
+        // Se o cliente já está no destino, mostra a rota desde a entrada em vez de uma rota vazia.
+        function getEffectiveOrigin(originId, sectionNumber) {
+            return originId === sectionNumber ? 0 : originId;
+        }
+
+        function registrarPosicaoUsuario(aisle) {
+            const num = parseInt(aisle);
+            posicaoUsuario = STORE_SECTIONS[num] ? num : 1;
+        }
+
+        function getSectionRoutePath(sectionNumber, originId = 0) {
+            const from = getMapLocation(getEffectiveOrigin(originId, sectionNumber));
+            const to = getMapLocation(sectionNumber);
+            // Sai do ponto atual, entra no corredor, anda por ele (pela base, se trocar de corredor) e sai no destino
+            const points = [from.pin, getCorridorPoint(from)];
+            if (from.corridor === to.corridor) {
+                points.push(getCorridorPoint(to));
+            } else {
+                points.push(getBottomCorridorPoint(from), getBottomCorridorPoint(to), getCorridorPoint(to));
             }
-            if (sectionNumber === 9) {
-                // Caixas: vai pela base inferior (y=480) até x=875, depois desce até y=500
-                return `M 125,480 L 875,480 L 875,500`;
-            }
-            if (sectionNumber === 1 || sectionNumber === 2 || sectionNumber === 3) {
-                // Esquerda: sobe pelo corredor da esquerda (x=125) e vira à direita para o pin
-                return `M 125,480 L 125,${target.y} L ${target.x},${target.y}`;
-            } else if (sectionNumber === 4 || sectionNumber === 5 || sectionNumber === 6) {
-                // Direita: vai pelo corredor inferior até o centro (x=500), sobe e vira à direita para o pin (x=600)
-                return `M 125,480 L 500,480 L 500,${target.y} L ${target.x},${target.y}`;
-            } else if (sectionNumber === 7) {
-                // Topo central: vai pelo corredor inferior até o centro (x=500) e sobe direto
-                return `M 125,480 L 500,480 L 500,${target.y}`;
-            }
-            return `M 125,480 L 125,${target.y} L ${target.x},${target.y}`;
+            points.push(to.pin);
+            return points
+                .filter((p, i) => i === 0 || p.x !== points[i - 1].x || p.y !== points[i - 1].y)
+                .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x},${p.y}`)
+                .join(" ");
+        }
+
+        // Marcador "VOCÊ": na entrada ou sobre o último destino, com o texto em um espaço livre do mapa
+        function buildUserMarkerSvg(originId) {
+            const { pin } = getMapLocation(originId);
+            let label = { x: pin.x, y: pin.y - 25, anchor: "middle" };
+            if (originId >= 1 && originId <= 6) label = { x: pin.x - 16, y: pin.y - 14, anchor: "end" };
+            else if (originId === 7) label = { x: pin.x + 18, y: pin.y + 22, anchor: "start" };
+            else if (originId === 8) label = { x: pin.x, y: pin.y + 30, anchor: "middle" };
+            else if (originId === 9) label = { x: pin.x, y: pin.y - 26, anchor: "middle" };
+            return `
+                <circle cx="${pin.x}" cy="${pin.y}" r="12" fill="#3b82f6" class="animate-pulse" />
+                <text x="${label.x}" y="${label.y}" fill="#3b82f6" font-size="14" font-weight="bold" text-anchor="${label.anchor}">VOCÊ</text>`;
         }
 
         function buildMultilineLabel(label, x, maxWordsPerLine = 2) {
@@ -2268,6 +2312,7 @@
                     } else {
                         const p = results[0];
                         mapDiv.innerHTML = createMapCardHtml(p.nome, p.corredor, p);
+                        registrarPosicaoUsuario(p.corredor);
                     }
                     bubble.appendChild(mapDiv.firstElementChild);
                 } else if (results && results.length > 0 && acao === "ABRIR_ROTAS") {
@@ -2287,6 +2332,7 @@
         }
 
         function encerrarSessao() {
+            posicaoUsuario = 0;
             sessaoAtiva = false;
             totemFalando = false;
             sessaoPausada = false;
@@ -2365,6 +2411,7 @@
         }
 
         function iniciarSessaoEIrParaChat() {
+            posicaoUsuario = 0;
             navigateTo('screen2');
             
             // Chamar API para limpar a memória no backend
@@ -2868,6 +2915,7 @@
             const section = getProductSection(product || { corredor: activeSectionNumber });
             const activeSections = new Set([activeSectionNumber]);
             const target = STORE_LAYOUTS[activeSectionNumber]?.pin || { x: section.x, y: 220 };
+            const origin = getEffectiveOrigin(posicaoUsuario, activeSectionNumber);
 
             return `
                 <div class="bg-zinc-900 border-2 border-zinc-800 rounded-2xl p-4 mt-4 w-full flex flex-col gap-4">
@@ -2897,8 +2945,7 @@
                             <!-- Entrada -->
                             <rect x="50" y="500" width="150" height="80" rx="8" fill="#1a1a1a" stroke="#444" stroke-width="2" />
                             <text x="125" y="545" fill="#888" font-size="20" font-family="sans-serif" font-weight="bold" text-anchor="middle">ENTRADA</text>
-                            <circle cx="125" cy="480" r="12" fill="#3b82f6" class="animate-pulse" />
-                            <text x="125" y="455" fill="#3b82f6" font-size="14" font-weight="bold" text-anchor="middle">VOCÊ</text>
+                            ${buildUserMarkerSvg(origin)}
 
                             <!-- Seções 1 a 7 -->
                             <g>${buildInlineSectionRects(activeSections)}</g>
@@ -2908,7 +2955,7 @@
                             <g font-size="13" font-family="sans-serif" font-weight="bold">${buildInlineSectionLabels(activeSections)}</g>
 
                             <!-- Path -->
-                            <path d="${getSectionRoutePath(activeSectionNumber)}" fill="none" stroke="#FFD700" stroke-dasharray="15,10" stroke-width="6">
+                            <path d="${getSectionRoutePath(activeSectionNumber, origin)}" fill="none" stroke="#FFD700" stroke-dasharray="15,10" stroke-width="6">
                                 <animate attributeName="stroke-dashoffset" from="100" to="0" dur="2s" repeatCount="indefinite" />
                             </path>
 
@@ -2943,7 +2990,7 @@
                 const pin = STORE_LAYOUTS[route.sectionNumber]?.pin || { x: route.section.x, y: 220 };
                 const labelY = Math.max(40, pin.y - 28 - index * 16);
                 return `
-                    <path d="${getSectionRoutePath(route.sectionNumber)}" fill="none" stroke="#FFD700" stroke-dasharray="15,10" stroke-width="5" opacity="${Math.max(0.45, 1 - index * 0.12)}">
+                    <path d="${getSectionRoutePath(route.sectionNumber, posicaoUsuario)}" fill="none" stroke="#FFD700" stroke-dasharray="15,10" stroke-width="5" opacity="${Math.max(0.45, 1 - index * 0.12)}">
                         <animate attributeName="stroke-dashoffset" from="100" to="0" dur="2s" repeatCount="indefinite" />
                     </path>
                     <g transform="translate(${pin.x}, ${pin.y})">
@@ -2987,8 +3034,7 @@
                             <text x="875" y="545" fill="#888" font-size="20" font-family="sans-serif" font-weight="bold" text-anchor="middle">CAIXAS</text>
                             <rect x="50" y="500" width="150" height="80" rx="8" fill="#1a1a1a" stroke="#444" stroke-width="2" />
                             <text x="125" y="545" fill="#888" font-size="20" font-family="sans-serif" font-weight="bold" text-anchor="middle">ENTRADA</text>
-                            <circle cx="125" cy="480" r="12" fill="#3b82f6" class="animate-pulse" />
-                            <text x="125" y="455" fill="#3b82f6" font-size="14" font-weight="bold" text-anchor="middle">VOCÊ</text>
+                            ${buildUserMarkerSvg(posicaoUsuario)}
                             <g>${buildInlineSectionRects(activeSections)}</g>
                             <g font-size="24" font-family="sans-serif" font-weight="bold" text-anchor="middle">${buildInlineSectionNumbers(activeSections)}</g>
                             <g font-size="13" font-family="sans-serif" font-weight="bold">${buildInlineSectionLabels(activeSections)}</g>

@@ -7,7 +7,9 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ENV_PATH = os.path.join(BASE_DIR, "..", ".env")
 load_dotenv(ENV_PATH)
 
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GROQ_API_KEY = (os.getenv("GROQ_API_KEY") or "").strip()
+# O llama-3.3-70b-versatile foi descontinuado na Groq; GROQ_LLM_MODEL permite trocar sem mexer no codigo
+GROQ_LLM_MODEL = (os.getenv("GROQ_LLM_MODEL") or "openai/gpt-oss-120b").strip()
 
 
 def obter_config_llm():
@@ -19,9 +21,17 @@ def obter_config_llm():
                 "Authorization": f"Bearer {GROQ_API_KEY}",
                 "Content-Type": "application/json"
             },
-            "model": "llama-3.3-70b-versatile"
+            "model": GROQ_LLM_MODEL
         }
     return None
+
+
+def aplicar_parametros_modelo(payload):
+    # Modelos de raciocinio (gpt-oss) gastam tokens pensando antes de responder;
+    # esforco baixo mantem a latencia de conversa e deixa espaco para a resposta
+    if payload["model"].startswith("openai/gpt-oss"):
+        payload["reasoning_effort"] = "low"
+    return payload
 
 
 async def classificar_intencao(pergunta, idioma="pt"):
@@ -75,7 +85,7 @@ REGRAS DE INTENÇÃO:
 
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.post(config["url"], headers=config["headers"], json=payload, timeout=20.0)
+            response = await client.post(config["url"], headers=config["headers"], json=aplicar_parametros_modelo(payload), timeout=20.0)
             response.raise_for_status()
             data = response.json()
             content = data["choices"][0]["message"]["content"]
@@ -174,7 +184,7 @@ REGRAS OBRIGATÓRIAS:
 
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.post(config["url"], headers=config["headers"], json=payload, timeout=20.0)
+            response = await client.post(config["url"], headers=config["headers"], json=aplicar_parametros_modelo(payload), timeout=20.0)
             response.raise_for_status()
             data = response.json()
             return data["choices"][0]["message"]["content"]

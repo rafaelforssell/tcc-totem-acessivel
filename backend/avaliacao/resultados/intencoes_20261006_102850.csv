@@ -1,0 +1,76 @@
+﻿frase;esperada;obtida;acertou;fonte;latencia_s;palavras_chave
+quero uma camisa preta;NOVA_BUSCA;NOVA_BUSCA;True;llm;0.5272;camisa preto
+tem calça jeans feminina?;NOVA_BUSCA;NOVA_BUSCA;True;llm;0.5113;calca jeans feminino
+vocês vendem boné?;NOVA_BUSCA;NOVA_BUSCA;True;llm;1.5154;bone
+procuro um vestido vermelho pra festa;NOVA_BUSCA;NOVA_BUSCA;True;llm;1.2584;vestido vermelho
+me mostra tênis masculino;NOVA_BUSCA;NOVA_BUSCA;True;llm;0.4206;tenis masculino
+queria um short pra academia;NOVA_BUSCA;NOVA_BUSCA;True;llm;1.0346;bermuda
+tem alguma saia jeans?;NOVA_BUSCA;NOVA_BUSCA;True;llm;3.057;saia jeans
+preciso de um casaco pro frio;NOVA_BUSCA;NOVA_BUSCA;True;llm;0.5462;casaco
+quero ver óculos de sol;NOVA_BUSCA;NOVA_BUSCA;True;llm;0.6623;oculo sol
+tem sandália preta tamanho 37?;NOVA_BUSCA;SOBRE_PRODUTO;False;llm;0.4603;sandalia preto
+gostei do vestido. você tem cinto?;NOVA_BUSCA;NOVA_BUSCA;True;llm;0.39;cinto
+duas camisetas pra treinar;NOVA_BUSCA;NOVA_BUSCA;True;llm;0.4698;camiseta treino
+tem moletom cinza?;NOVA_BUSCA;NOVA_BUSCA;True;llm;0.5762;moletom cinza
+quero uma garrafa;NOVA_BUSCA;NOVA_BUSCA;True;llm;0.4956;garrafa
+e polo branca vocês têm?;NOVA_BUSCA;NOVA_BUSCA;True;llm;0.6847;polo branco
+quanto custa essa camisa?;SOBRE_PRODUTO;SOBRE_PRODUTO;True;llm;0.3937;camisa
+tem essa em tamanho M?;SOBRE_PRODUTO;SOBRE_PRODUTO;True;llm;0.5596;
+qual o preço da calça?;SOBRE_PRODUTO;SOBRE_PRODUTO;True;llm;0.447;calca
+ela é de algodão?;SOBRE_PRODUTO;SOBRE_PRODUTO;True;llm;0.4916;
+quais tamanhos tem desse tênis?;SOBRE_PRODUTO;SOBRE_PRODUTO;True;llm;0.4698;tenis
+tem em outra cor?;SOBRE_PRODUTO;SOBRE_PRODUTO;True;llm;0.5865;
+gostei. tem o meu tamanho? eu uso G;SOBRE_PRODUTO;SOBRE_PRODUTO;True;llm;0.6207;
+qual a marca desse boné?;SOBRE_PRODUTO;SOBRE_PRODUTO;True;llm;0.581;bone
+esse casaco é quente?;SOBRE_PRODUTO;SOBRE_PRODUTO;True;llm;0.4723;casaco
+tem ainda no estoque?;SOBRE_PRODUTO;SOBRE_PRODUTO;True;llm;1.3391;
+me fala mais sobre esse vestido;SOBRE_PRODUTO;SOBRE_PRODUTO;True;llm;0.5417;vestido
+a sandália é confortável?;SOBRE_PRODUTO;SOBRE_PRODUTO;True;llm;0.7912;sandalia
+essa bermuda tem bolso?;SOBRE_PRODUTO;SOBRE_PRODUTO;True;llm;0.523;bermuda
+qual é a diferença entre as duas?;SOBRE_PRODUTO;OUTROS;False;llm;0.4006;
+o óculos tem proteção UV?;SOBRE_PRODUTO;SOBRE_PRODUTO;True;llm;0.8589;oculo
+onde fica?;IR_PARA_MAPA;IR_PARA_MAPA;True;llm;0.4534;
+me mostra o mapa;IR_PARA_MAPA;IR_PARA_MAPA;True;llm;0.9477;
+como eu chego lá?;IR_PARA_MAPA;IR_PARA_MAPA;True;llm;0.783;
+qual o corredor da camisa?;IR_PARA_MAPA;IR_PARA_MAPA;True;llm;0.3936;
+onde é que tá a calça?;IR_PARA_MAPA;IR_PARA_MAPA;True;llm;0.3647;calca
+eu quero o mapa;IR_PARA_MAPA;IR_PARA_MAPA;True;llm;0.4011;
+me leva até o tênis;IR_PARA_MAPA;IR_PARA_MAPA;True;llm;0.6865;tenis
+mostra todos no mapa;IR_PARA_MAPA;IR_PARA_MAPA;True;llm;0.4857;
+onde eu encontro o boné?;IR_PARA_MAPA;IR_PARA_MAPA;True;llm;1.1598;bone
+me mostre o caminho;IR_PARA_MAPA;IR_PARA_MAPA;True;llm;0.3619;
+em que parte da loja fica o vestido?;IR_PARA_MAPA;IR_PARA_MAPA;True;llm;0.4914;vestido
+quero ver tudo que falamos no mapa;IR_PARA_MAPA;IR_PARA_MAPA;True;llm;0.4376;
+onde ficam os casacos?;IR_PARA_MAPA;IR_PARA_MAPA;True;llm;0.4062;
+cadê a sessão de bermudas?;IR_PARA_MAPA;IR_PARA_MAPA;True;llm;0.5117;
+mostra a localização da sandália;IR_PARA_MAPA;IR_PARA_MAPA;True;llm;0.445;sandalia
+tchau;ENCERRAR;ENCERRAR;True;llm;0.8567;
+obrigado era só isso;ENCERRAR;ENCERRAR;True;llm;0.3643;
+valeu tchau;ENCERRAR;ENCERRAR;True;llm;0.3566;
+não obrigado;ENCERRAR;ENCERRAR;True;llm;0.4218;
+pode encerrar;ENCERRAR;ENCERRAR;True;llm;0.4651;
+até logo;ENCERRAR;ENCERRAR;True;llm;0.3952;
+já terminei obrigada;ENCERRAR;ENCERRAR;True;llm;0.4974;
+não preciso de mais nada;ENCERRAR;ENCERRAR;True;llm;0.4761;
+brigado pela ajuda tchau;ENCERRAR;ENCERRAR;True;llm;0.4268;
+só isso mesmo valeu;ENCERRAR;ENCERRAR;True;llm;0.538;
+finalizar atendimento;ENCERRAR;ENCERRAR;True;llm;1.8862;
+tudo certo obrigado até mais;ENCERRAR;ENCERRAR;True;llm;0.4127;
+pode fechar;ENCERRAR;ENCERRAR;True;llm;0.4396;
+não quero mais nada;ENCERRAR;ENCERRAR;True;llm;0.4934;
+falou obrigado;ENCERRAR;ENCERRAR;True;llm;0.3627;
+posso pagar no pix?;OUTROS;OUTROS;True;llm;0.9321;
+parcela no cartão?;OUTROS;OUTROS;True;llm;0.3472;
+qual o horário da loja?;OUTROS;OUTROS;True;llm;0.4424;
+oi tudo bem?;OUTROS;OUTROS;True;llm;0.935;
+que horas são?;OUTROS;OUTROS;True;llm;1.211;
+vai chover hoje?;OUTROS;OUTROS;True;llm;0.3867;
+quem ganhou o jogo ontem?;OUTROS;OUTROS;True;llm;0.5038;
+aceita boleto?;OUTROS;OUTROS;True;llm;0.3553;
+tem estacionamento?;OUTROS;OUTROS;True;llm;0.5725;
+qual a senha do wifi?;OUTROS;OUTROS;True;llm;1.3059;
+me conta uma piada;OUTROS;OUTROS;True;llm;0.4117;
+bom dia;OUTROS;OUTROS;True;llm;1.4045;
+vocês entregam em casa?;OUTROS;OUTROS;True;llm;0.6461;
+qual a capital da frança?;OUTROS;OUTROS;True;llm;0.4171;
+tem banheiro aqui?;OUTROS;OUTROS;True;llm;0.5133;

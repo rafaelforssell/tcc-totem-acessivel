@@ -58,7 +58,7 @@ ___________________________________________
 
 ## RESUMO
 
-O autoatendimento comercial por meio de totens interativos tornou-se padrão em estabelecimentos modernos. Contudo, a imensa maioria dessas soluções carece de recursos adequados de acessibilidade física, visual e cognitiva, segregando indivíduos com deficiência ou dificuldades de interação digital. Este projeto propõe o desenvolvimento de um Totem de Autoatendimento Acessível integrado com inteligência artificial conversacional e mapeamento indoor dinâmico. A solução baseia-se em um fluxo conversacional multimodal e inclusivo, combinando reconhecimento de fala (STT), síntese de voz (TTS) e processamento de linguagem natural (LLN) via modelo Llama 3.3 hospedado na infraestrutura de alta velocidade da Groq. O sistema foi desenvolvido com arquitetura descentralizada: um front-end em HTML5/JavaScript com suporte a alto contraste, controle de pausa ativa de sessão, e um lightbox responsivo com carrossel para ampliação e zoom de imagens de produtos; e um back-end robusto construído com a biblioteca FastAPI em Python, integrado a um banco de dados relacional SQLite contendo inventário e mapeamento de setores. Para assegurar a inteligibilidade, a IA mantém a memória conversacional de longo prazo de turnos e produtos pesquisados na sessão, fornecendo descrições detalhadas antes de sugerir orientações espaciais. Quando requisitado, uma rota indoor dinâmica é traçada de forma nativa e piscante em um mapa SVG acoplado diretamente na tela de chat. A proposta promove inclusão social alinhada à Lei Brasileira de Inclusão (LBI), otimiza o atendimento comercial e mitiga barreiras de navegação física e lógica de forma autônoma e humanizada.
+O autoatendimento comercial por meio de totens interativos tornou-se padrão em estabelecimentos modernos. Contudo, a imensa maioria dessas soluções carece de recursos adequados de acessibilidade física, visual e cognitiva, segregando indivíduos com deficiência ou dificuldades de interação digital. Este projeto propõe o desenvolvimento de um Totem de Autoatendimento Acessível integrado com inteligência artificial conversacional e mapeamento indoor dinâmico. A solução baseia-se em um fluxo conversacional multimodal e inclusivo, combinando reconhecimento de fala (STT), síntese de voz (TTS) e processamento de linguagem natural (PLN) via modelo de linguagem gpt-oss-120b hospedado na infraestrutura de alta velocidade da Groq. O sistema foi desenvolvido com arquitetura descentralizada: um front-end em HTML5/JavaScript com suporte a alto contraste, controle de pausa ativa de sessão, e um lightbox responsivo com carrossel para ampliação e zoom de imagens de produtos; e um back-end robusto construído com a biblioteca FastAPI em Python, integrado a um banco de dados relacional PostgreSQL em produção (com SQLite para desenvolvimento local) contendo inventário e mapeamento de setores. Para assegurar a inteligibilidade, a IA mantém a memória conversacional de longo prazo de turnos e produtos pesquisados na sessão, fornecendo descrições detalhadas antes de sugerir orientações espaciais. Quando requisitado, uma rota indoor dinâmica é traçada de forma nativa e piscante em um mapa SVG acoplado diretamente na tela de chat. A proposta promove inclusão social alinhada à Lei Brasileira de Inclusão (LBI), otimiza o atendimento comercial e mitiga barreiras de navegação física e lógica de forma autônoma e humanizada.
 
 **Palavras-chave**: Acessibilidade; Totem de Autoatendimento; Inteligência Artificial Conversacional; Mapeamento Indoor; Inclusão Digital; LBI.
 
@@ -72,7 +72,7 @@ O autoatendimento comercial por meio de totens interativos tornou-se padrão em 
 * **Figura 4** - Botão Dinâmico de Pausa/Retomada e Indicadores de Captura de Voz
 * **Figura 5** - Visualização de Produtos com Zoom (Modal Lightbox)
 * **Figura 6** - Rota Indoor no Mapa SVG Integrado no Fluxo de Chat
-* **Figura 7** - Detalhamento da Estrutura de Tabelas do Banco de Dados SQLite
+* **Figura 7** - Detalhamento da Estrutura de Tabelas do Banco de Dados
 
 ---
 
@@ -83,12 +83,12 @@ O autoatendimento comercial por meio de totens interativos tornou-se padrão em 
    1.2 Interface por Voz e Processamento de Áudio (STT e TTS)  
    1.3 Modelos de Linguagem de Larga Escala (LLMs) e API Groq  
    1.4 Mapeamento Indoor e SVG Dinâmico  
-   1.5 Bancos de Dados Relacionais Locais (SQLite)  
+   1.5 Bancos de Dados Relacionais (PostgreSQL e SQLite)  
 2. **Objetivo**  
 3. **Metodologia**  
 4. **Desenvolvimento**  
    4.1 Arquitetura do Sistema e Estrutura de Diretórios  
-   4.2 Estruturação da Camada de Dados (SQLite)  
+   4.2 Estruturação da Camada de Dados  
    4.3 Lógica de Controle Conversacional no Back-end (FastAPI)  
    4.3.1 Processamento do Pipeline de Voz e Texto  
    4.3.2 Lógica de Memória Conversacional e Persistência de Turnos  
@@ -127,15 +127,15 @@ Para eliminar a barreira física das telas, o projeto utiliza processamento de �
 
 ### 1.3 Modelos de Linguagem de Larga Escala (LLMs) e API Groq
 
-Os sistemas de conversação tradicionais baseados em árvores rígidas de decisão frequentemente geram frustração no usuário devido à incapacidade de compreender variações na fala. Este trabalho utiliza o modelo de linguagem avançado Llama 3.3 (70 bilhões de parâmetros) integrado via API Groq. O uso do hardware especializado de processadores LPU (Language Processing Units) da Groq garante tempos de inferência inferiores a 1 segundo, patamar essencial para viabilizar conversas fluidas por voz em tempo real.
+Os sistemas de conversação tradicionais baseados em árvores rígidas de decisão frequentemente geram frustração no usuário devido à incapacidade de compreender variações na fala. Este trabalho utiliza o modelo de linguagem de pesos abertos gpt-oss-120b (cerca de 120 bilhões de parâmetros) integrado via API Groq. O uso do hardware especializado de processadores LPU (Language Processing Units) da Groq permite tempos de inferência da ordem de meio segundo (seção 5.4), patamar essencial para viabilizar conversas fluidas por voz em tempo real.
 
 ### 1.4 Mapeamento Indoor e SVG Dinâmico
 
 Uma das maiores dificuldades de clientes em grandes estabelecimentos comerciais é a orientação espacial (navegação indoor). Diferente do ambiente externo, sistemas baseados em GPS não funcionam com precisão dentro de edifícios. A solução adotada consiste na renderização dinâmica de mapas SVG (Scalable Vector Graphics) diretamente na tela. O SVG permite desenhar trajetos matematicamente escaláveis e destacar corredores específicos sem perda de performance ou resolução gráfica.
 
-### 1.5 Bancos de Dados Relacionais Locais (SQLite)
+### 1.5 Bancos de Dados Relacionais (PostgreSQL e SQLite)
 
-O sistema de inventário é suportado por um banco de dados relacional leve e autocontido SQLite. Isso possibilita consultas estruturadas de alta velocidade com baixo consumo de memória, permitindo extrair dados sobre nome do produto, categoria, tipo, cor, tamanho, marca, preço, estoque disponível e a exata localização física (setor, corredor e prateleira) para alimentar o pipeline de contexto da inteligência artificial.
+O sistema de inventário é suportado por um banco de dados relacional. Em produção, utiliza-se o PostgreSQL hospedado no Render, que mantém os dados persistentes entre reinicializações e atualizações do servidor, inclusive as alterações feitas pelo painel administrativo. Para desenvolvimento local e testes automatizados, o mesmo esquema é mantido em um arquivo SQLite, leve e autocontido. Essa abordagem possibilita consultas estruturadas de alta velocidade com baixo consumo de memória, permitindo extrair dados sobre nome do produto, categoria, tipo, cor, tamanho, marca, preço, estoque disponível e a exata localização física (setor, corredor e prateleira) para alimentar o pipeline de contexto da inteligência artificial.
 
 ---
 
@@ -148,10 +148,10 @@ Desenvolver, implementar e validar um sistema integrado de Totem de Autoatendime
 ## 3. Metodologia
 
 A construção do sistema seguiu uma abordagem modular com foco em desenvolvimento robusto de ponta a ponta:
-1. **Modelagem de Dados**: Estruturação de um banco de dados em SQLite para catalogar o estoque da loja de roupas de demonstração, incluindo campos detalhados de mapeamento físico.
+1. **Modelagem de Dados**: Estruturação de um banco de dados relacional (SQLite no desenvolvimento e PostgreSQL em produção) para catalogar o estoque da loja de roupas de demonstração, incluindo campos detalhados de mapeamento físico.
 2. **Desenvolvimento do Back-end**: Implementação de uma API assíncrona com FastAPI em Python, estruturando rotas de chat, áudio e reset de memória.
 3. **Desenvolvimento do Front-end**: Criação de uma Single Page Application baseada em Vanilla JavaScript e Tailwind CSS com capturador de áudio integrado (MediaRecorder), detetor de silêncio para parada automática, carrossel de imagens com zoom, controle de pausa e renderização SVG.
-4. **Integração de IA**: Parametrização do modelo Llama 3.3 via Groq com prompts de sistema estritos, garantindo o sigilo de localizações diretas na primeira resposta e mantendo a integridade histórica dos turnos.
+4. **Integração de IA**: Parametrização do modelo gpt-oss-120b via Groq com prompts de sistema estritos, garantindo o sigilo de localizações diretas na primeira resposta e mantendo a integridade histórica dos turnos.
 5. **Implantação Continuada (CI/CD)**: Versionamento do código-fonte com Git, hospedagem do banco e back-end em FastAPI no Render com deploys automáticos, e front-end configurado para execução local ou em painéis touch de alta responsividade.
 
 ---
@@ -179,15 +179,20 @@ tcc-totem-acessivel/
 │   ├── main.py                 # Arquivo inicial de configuração FastAPI
 │   └── requirements.txt        # Dependências Python
 ├── database/
-│   ├── produtos.db             # Arquivo do banco relacional SQLite
+│   ├── produtos.db             # Banco SQLite (desenvolvimento e carga inicial)
 │   └── create_db.py            # Script de inicialização e seed de dados
 └── frontend/
     └── index.html              # Interface do usuário (HTML, CSS e JS)
 ```
 
-### 4.2 Estruturação da Camada de Dados (SQLite)
+### 4.2 Estruturação da Camada de Dados
 
-O banco de dados SQLite (`produtos.db`) conta com a tabela `produtos` estruturada com os seguintes campos:
+O módulo `db_service.py` seleciona o banco em tempo de execução:
+- **Produção (Render)**: quando a variável de ambiente `DATABASE_URL` está definida, o back-end conecta-se ao PostgreSQL. Na primeira inicialização, se a tabela estiver vazia, os produtos são copiados automaticamente do arquivo SQLite do repositório, que funciona como carga inicial.
+- **Desenvolvimento e testes**: sem `DATABASE_URL`, utiliza-se diretamente o arquivo SQLite `database/produtos.db`.
+- **Contingência**: se a conexão com o PostgreSQL falhar, o serviço recorre ao SQLite local para continuar respondendo, com os dados da carga inicial.
+
+Nos dois bancos, a tabela `produtos` é estruturada com os seguintes campos:
 - `id` (INTEGER, Primary Key): Identificador exclusivo do item.
 - `nome` (TEXT): Nome do produto (ex: "Camisa Dry Fit").
 - `categoria` (TEXT): Classificação ampla (ex: "Roupa").
@@ -235,12 +240,12 @@ Toda interação executada na sessão adiciona o turno correspondente em `histor
 - `{"role": "user", "content": pergunta}`
 - `{"role": "assistant", "content": resposta}`
 
-Adicionalmente, qualquer produto encontrado nas buscas do SQLite é armazenado de forma exclusiva (usando seu ID exclusivo como chave) no dicionário `produtos_mencionados`. 
+Adicionalmente, qualquer produto encontrado nas buscas ao banco de dados é armazenado de forma exclusiva (usando seu ID exclusivo como chave) no dicionário `produtos_mencionados`. 
 
-Na chamada de resposta da IA em `llm_service.py`, a lista de `produtos_mencionados` é formatada e injetada diretamente no bloco de sistema do prompt como um contexto persistente. Adicionalmente, as últimas 10 mensagens em `historico_conversas` são anexadas ao payload do chat completion da Groq. Isso garante que o modelo Llama 3.3 saiba de forma exata todos os produtos conversados, permitindo que ao final de um longo diálogo, caso solicitado pelo usuário, uma lista perfeita seja construída com precisão absoluta.
+Na chamada de resposta da IA em `llm_service.py`, a lista de `produtos_mencionados` é formatada e injetada diretamente no bloco de sistema do prompt como um contexto persistente. Adicionalmente, as últimas 10 mensagens em `historico_conversas` são anexadas ao payload do chat completion da Groq. Isso garante que o modelo de linguagem saiba de forma exata todos os produtos conversados, permitindo que ao final de um longo diálogo, caso solicitado pelo usuário, uma lista perfeita seja construída com precisão absoluta.
 
 #### 4.3.3 Algoritmo de Extração de Palavras-Chave e Stemming Cognitivo
-O totem acessível utiliza a inteligência do Llama 3.3 para classificar intenções e extrair palavras-chave sem a rigidez de expressões regulares. No arquivo `llm_service.py`, a função `classificar_intencao` recebe a pergunta do usuário e classifica-a entre:
+O totem acessível utiliza o modelo de linguagem para classificar intenções e extrair palavras-chave sem a rigidez de expressões regulares. No arquivo `llm_service.py`, a função `classificar_intencao` recebe a pergunta do usuário e classifica-a entre:
 - `NOVA_BUSCA`, `SOBRE_PRODUTO`, `IR_PARA_MAPA`, `ENCERRAR`, `OUTROS`
 
 A fim de mitigar problemas de busca causados por plurais, conjugações verbais ou inclusão de números/quantidades (por exemplo, quando o usuário diz *"Eu gostaria de duas camisas para treinar"*), incluímos regras estritas no system prompt da IA de intenções:
@@ -248,7 +253,7 @@ A fim de mitigar problemas de busca causados por plurais, conjugações verbais 
 2. Filtrar e **remover qualquer numeral** ou quantidade (como "dois", "duas", "3").
 3. Converter verbos de ação genéricos para substantivos correspondentes (ex: "treinar" vira "treino", "correr" vira "corrida").
 
-Essa normalização de alto nível faz com que a busca relacional no SQLite via `LIKE` funcione perfeitamente, unificando os termos de busca com os dados estruturados do estoque.
+Essa normalização de alto nível faz com que a busca relacional via `LIKE` funcione perfeitamente, unificando os termos de busca com os dados estruturados do estoque.
 
 #### 4.3.4 Configuração dos Modelos de IA e Mecanismos de Fallback
 A Tabela 1 resume a configuração final dos modelos utilizados no projeto.
@@ -258,14 +263,17 @@ A Tabela 1 resume a configuração final dos modelos utilizados no projeto.
 | Etapa | Modelo / serviço | Parâmetros |
 |---|---|---|
 | STT (transcrição) | `whisper-large-v3-turbo` via API Groq | idioma `pt`, timeout de 30 s |
-| Classificação de intenção | `llama-3.3-70b-versatile` via API Groq | temperatura 0,0; `max_tokens` 512; saída em JSON (`response_format: json_object`); timeout de 20 s |
-| Geração da resposta | `llama-3.3-70b-versatile` via API Groq | temperatura 0,0; `max_tokens` 1000; últimas 10 mensagens do histórico; timeout de 20 s |
+| Classificação de intenção | `openai/gpt-oss-120b` via API Groq | temperatura 0,0; esforço de raciocínio baixo (`reasoning_effort: low`); `max_tokens` 512; saída em JSON (`response_format: json_object`); timeout de 20 s |
+| Geração da resposta | `openai/gpt-oss-120b` via API Groq | temperatura 0,0; esforço de raciocínio baixo; `max_tokens` 1000; últimas 10 mensagens do histórico; timeout de 20 s |
 | TTS (síntese de voz) | Edge-TTS, voz `pt-BR-FranciscaNeural` | saída em MP3 |
 
-A temperatura 0,0 foi adotada nas duas chamadas ao LLM para tornar as respostas determinísticas e reduzir a chance de o modelo inventar informações que não estejam no banco de dados.
+A temperatura 0,0 foi adotada nas duas chamadas ao LLM para tornar as respostas determinísticas e reduzir a chance de o modelo inventar informações que não estejam no banco de dados. Por ser um modelo de raciocínio, o gpt-oss-120b gera uma etapa interna de "pensamento" antes da resposta; o esforço de raciocínio baixo mantém a latência adequada a uma conversa por voz e reserva o limite de tokens para a resposta em si.
+
+O projeto foi desenvolvido inicialmente com o modelo Llama 3.3 70B (`llama-3.3-70b-versatile`). Durante a validação, constatou-se que esse modelo havia sido descontinuado pela Groq: todas as chamadas passaram a retornar erro HTTP 404 e o totem operava apenas com o fallback por regras, sem que isso fosse perceptível ao usuário. O modelo foi então substituído pelo gpt-oss-120b, o de maior capacidade disponível na plataforma, e passou a ser configurável pela variável de ambiente `GROQ_LLM_MODEL`, de modo que uma nova descontinuação possa ser contornada sem alteração de código.
 
 Para manter o totem operante quando a API não responde (falha de rede, indisponibilidade ou limite de requisições, HTTP 429), foram implementados os seguintes mecanismos de contingência:
 - **LLM**: a classificação de intenção passa a ser feita por regras locais de palavras-chave (despedidas, pedidos de mapa e extração de termos de busca), e a resposta é montada a partir de modelos de frase com os dados do produto. Não há um segundo modelo de linguagem.
+- **Limite de uso**: no plano gratuito da Groq, o gpt-oss-120b aceita 8.000 tokens por minuto. Como uma rodada de conversa (classificação e resposta) consome cerca de 3.000 a 4.000 tokens, interações mais rápidas que duas ou três por minuto recebem erro HTTP 429 e são atendidas pelo fallback por regras. Em uma implantação real, recomenda-se um plano pago ou a redução do prompt de classificação.
 - **STT**: há suporte opcional a transcrição local com o modelo Whisper `tiny` (pacote `openai-whisper`). Como esse pacote não faz parte das dependências de implantação, o fallback de transcrição está disponível apenas no ambiente de desenvolvimento em que ele tiver sido instalado; no servidor em nuvem, uma falha da API resulta em transcrição vazia, e o totem pede que o usuário repita.
 
 ### 4.4 Lógica de Interface e Interação no Front-end
@@ -331,7 +339,7 @@ Por lidar com a voz de clientes e com um painel de gestão de estoque, o back-en
 |---|---|
 | Front-end | Hospedado no Netlify (https://totem-acessiveltcc.netlify.app) |
 | Back-end | Python 3.10, FastAPI 0.136.1, hospedado no Render (nuvem) |
-| Banco de dados | **[PREENCHER: SQLite local ou PostgreSQL no Render]** |
+| Banco de dados | PostgreSQL hospedado no Render |
 | Navegador | Google Chrome 154.0.8037.98 |
 | Sistema operacional | Windows 11 Home Single Language, 64 bits |
 | Hardware | Processador AMD Ryzen 5 5600, 16 GB de RAM |
@@ -343,7 +351,7 @@ Por gravar o áudio no formato WebM por meio da API `MediaRecorder`, o front-end
 ### 5.2 Testes Funcionais
 
 Os testes sistemáticos de integração do Totem Acessível comprovaram a robustez das soluções implementadas:
-1. **Teste de Normalização**: A frase em áudio *"Quero duas camisetas de treino"* foi transcrevida com sucesso. O LLM extraiu apenas `["camisa", "treino"]` como palavras-chave, localizando perfeitamente as opções de **Camisa Dry Fit** no SQLite.
+1. **Teste de Normalização**: A frase em áudio *"Quero duas camisetas de treino"* foi transcrevida com sucesso. O LLM extraiu apenas `["camisa", "treino"]` como palavras-chave, localizando perfeitamente as opções de **Camisa Dry Fit** no banco de dados.
 2. **Teste de Conversação e Detalhes**: Em conformidade com o novo fluxo de detalhes, ao buscar a camisa de treino, a IA apresentou primeiro todos os detalhes (tecido dry fit respirável da Nike, cor preta, tamanho GG e valor de R$ 79,90) e finalizou perguntando se o usuário gostou da opção. Ao responder *"sim"*, o mapa com a rota destacando o **Corredor 2** foi renderizado perfeitamente no fluxo da conversa.
 3. **Teste de Memória Conversacional**: Buscamos consecutivamente 5 produtos diferentes na mesma sessão. No final, ao perguntarmos *"Quais foram os produtos que conversamos hoje?"*, a IA respondeu com sucesso gerando a listagem ordenada de todos os 5 produtos apresentados anteriormente.
 4. **Teste de Terminação e Cancelamento**: Clicar em "Encerrar" no meio do processamento da IA cancelou a reprodução de áudio em tempo de execução, garantindo que o sistema ficasse mudo imediatamente ao retornar à tela inicial.
@@ -366,7 +374,7 @@ Para avaliar o classificador de intenções além de exemplos isolados, foi mont
 
 O script `avaliar_intencoes.py` envia cada frase ao classificador, compara a intenção obtida com a esperada e registra se a resposta veio do modelo de linguagem ou do fallback por regras, de forma que falhas da API não sejam contabilizadas como acertos ou erros do modelo.
 
-Para a avaliação por voz, 30 dessas frases (6 por intenção, listadas em `backend/avaliacao/audios/referencias.csv`) foram gravadas **[PREENCHER: por quantas pessoas e em que ambiente]** e enviadas ao totem pelo script `avaliar_voz.py`, que utiliza a mesma rota `/query-audio` do front-end.
+Para a avaliação por voz, 30 dessas frases (6 por intenção, listadas em `backend/avaliacao/audios/referencias.csv`) foram sintetizadas com duas vozes neurais distintas da voz do totem (`pt-BR-AntonioNeural`, masculina, e `pt-BR-ThalitaMultilingualNeural`, feminina), totalizando 60 áudios, gerados pelo script `gerar_audios_sinteticos.py`. Os áudios foram enviados ao back-end publicado no Render pelo script `avaliar_voz.py`, que utiliza a mesma rota `/query-audio` do front-end. Por serem sintéticos, os áudios não contêm ruído ambiente, sotaques nem hesitações, o que torna o WER obtido uma estimativa otimista em relação à fala real.
 
 ### 5.4 Métricas Quantitativas
 
@@ -376,26 +384,39 @@ Para a avaliação por voz, 30 dessas frases (6 por intenção, listadas em `bac
 
 **Tabela 4 – Acurácia do classificador de intenções (n = 75)**
 
+Todas as 75 respostas foram produzidas pelo gpt-oss-120b; nenhuma caiu no fallback por regras. Uma execução preliminar, com intervalo de 2,5 s entre as frases, teve 32 respostas atendidas pelo fallback por ter excedido o limite de 8.000 tokens por minuto da API (erro HTTP 429) e foi descartada; a bateria foi repetida com intervalo de 11 s. A latência do classificador foi de 0,50 s (p50) e 1,36 s (p95).
+
 | Intenção | Acertos | Acurácia |
 |---|---|---|
-| Nova busca | **[PREENCHER]**/15 | **[PREENCHER]** % |
-| Pergunta sobre produto | **[PREENCHER]**/15 | **[PREENCHER]** % |
-| Solicitação de mapa | **[PREENCHER]**/15 | **[PREENCHER]** % |
-| Encerramento | **[PREENCHER]**/15 | **[PREENCHER]** % |
-| Fora do escopo | **[PREENCHER]**/15 | **[PREENCHER]** % |
-| **Geral** | **[PREENCHER]**/75 | **[PREENCHER]** % |
+| Nova busca | 14/15 | 93,3 % |
+| Pergunta sobre produto | 14/15 | 93,3 % |
+| Solicitação de mapa | 15/15 | 100,0 % |
+| Encerramento | 15/15 | 100,0 % |
+| Fora do escopo | 15/15 | 100,0 % |
+| **Geral** | **73/75** | **97,3 %** |
 
-**Tabela 5 – Latência e WER da interação por voz (n = [PREENCHER] áudios)**
+Na interação por voz, o cliente recebe apenas a resposta final. Para discriminar a origem de cada resposta, cada transcrição foi reprocessada no pipeline com o modelo simulado, contando quantas chamadas ao LLM ela exige, e o resultado foi cruzado com o tempo da etapa de IA medido no servidor (script `origem_respostas_voz.py`). Dos 60 áudios, **41 foram respondidos com o gpt-oss-120b**, 19 foram resolvidos por regras determinísticas do próprio pipeline e **nenhum caiu no fallback por erro da API**. As regras do pipeline são intencionais: despedidas, perguntas sobre pagamento e pedidos de localização de um produto citado na própria frase são atendidos sem consultar o modelo, o que reduz a latência e o consumo da API. A separação entre os grupos é nítida: a etapa de IA levou no máximo 0,007 s nas frases resolvidas por regra e no mínimo 0,297 s nas que consultaram o modelo.
 
-| Métrica | p50 | p95 |
-|---|---|---|
-| Ponta a ponta (cliente) | **[PREENCHER]** s | **[PREENCHER]** s |
-| STT | **[PREENCHER]** s | **[PREENCHER]** s |
-| IA (pipeline + LLM) | **[PREENCHER]** s | **[PREENCHER]** s |
-| TTS | **[PREENCHER]** s | **[PREENCHER]** s |
-| **WER geral** | **[PREENCHER]** % | |
+**Tabela 5 – Latência da interação por voz (back-end no Render)**
 
-**[PREENCHER: análise dos resultados — intenções com mais erros, principais confusões da matriz, etapa mais lenta e exemplos de erros de transcrição.]**
+| Etapa | Com gpt-oss-120b (n = 41) p50 | p95 | Todas (n = 60) p50 | p95 |
+|---|---|---|---|---|
+| Ponta a ponta (cliente) | 1,99 s | 5,53 s | 1,66 s | 3,92 s |
+| STT | 0,29 s | 0,74 s | 0,29 s | 0,91 s |
+| IA (pipeline + LLM) | 0,74 s | 3,67 s | 0,52 s | 3,02 s |
+| TTS | 0,47 s | 0,79 s | 0,45 s | 0,79 s |
+
+Nas 19 respostas resolvidas por regra, a latência ponta a ponta foi de 1,06 s (p50) e 2,04 s (p95).
+
+**WER da transcrição (n = 60): 7,59 %** (17 erros em 224 palavras). O WER independe da origem da resposta, pois a transcrição ocorre antes do pipeline.
+
+**Análise dos resultados**
+
+*Classificação de intenções.* O classificador acertou 73 das 75 frases (97,3 %). Os dois erros ocorreram em fronteiras semânticas compreensíveis: "tem sandália preta tamanho 37?" foi interpretada como pergunta sobre produto, por mencionar um tamanho, quando a expectativa era uma nova busca; e "qual é a diferença entre as duas?", sem produto anterior no contexto da frase isolada, foi classificada como fora do escopo. As intenções de mapa, encerramento e fora do escopo foram reconhecidas sem erros, inclusive em formas coloquiais como "cadê a sessão de bermudas?" e "só isso mesmo valeu".
+
+*Transcrição.* O WER geral foi de 7,59 %, com 48 das 60 frases (80 %) transcritas sem nenhum erro; o desempenho foi semelhante entre a voz masculina (7,14 %) e a feminina (8,04 %). Parte relevante dos erros não altera o sentido da frase: o Whisper tende a normalizar a fala coloquial para a forma padrão ("pra" → "para a", "tá" → "está", "o mapa" → "um mapa"). Os erros com impacto real foram poucos e concentrados em palavras curtas ou estrangeiras: "Pix" transcrito como "PITS", "tamanho M" como "tamanho n" e "tchau" como "ciao".
+
+*Latência.* Considerando apenas as interações que consultaram o gpt-oss-120b, o tempo de resposta mediano, medido no cliente, foi de 1,99 s, com 95 % delas respondidas em até 5,53 s. Na mediana, a etapa de IA levou 0,74 s, seguida do TTS (0,47 s) e do STT (0,29 s). A etapa de IA concentra a variabilidade (p95 de 3,67 s): parte das frases exige uma única chamada ao modelo (classificação), enquanto outras exigem duas (classificação e geração da resposta), sujeitas à fila da API. O maior tempo observado foi de 10,2 s, um caso isolado. Esses valores foram obtidos com o back-end já em execução; a primeira requisição após um período de inatividade no plano gratuito do Render pode levar dezenas de segundos adicionais para "despertar" o servidor.
 
 ---
 

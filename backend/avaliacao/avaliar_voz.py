@@ -37,6 +37,12 @@ sys.path.insert(0, AVALIACAO_DIR)
 from metricas import distancia_palavras, normalizar_para_wer, percentil  # noqa: E402
 
 
+CAMPOS = [
+    "arquivo", "referencia", "transcricao", "erros_palavras", "palavras_referencia", "wer",
+    "latencia_cliente_s", "stt_s", "ia_s", "tts_s", "total_servidor_s", "acao", "resposta",
+]
+
+
 def ler_referencias(pasta):
     caminho = os.path.join(pasta, "referencias.csv")
     with open(caminho, encoding="utf-8") as f:
@@ -81,6 +87,14 @@ def main():
     resultados = []
     erros_total = palavras_total = 0
 
+    # O CSV e gravado a cada audio, para nao perder resultados se a execucao for interrompida
+    pasta = os.path.join(AVALIACAO_DIR, "resultados")
+    os.makedirs(pasta, exist_ok=True)
+    saida = os.path.join(pasta, f"voz_{datetime.now():%Y%m%d_%H%M%S}.csv")
+    arquivo_csv = open(saida, "w", newline="", encoding="utf-8-sig")
+    writer = csv.DictWriter(arquivo_csv, fieldnames=CAMPOS, delimiter=";")
+    writer.writeheader()
+
     for i, (arquivo, referencia) in enumerate(referencias, 1):
         caminho = os.path.join(args.audios, arquivo)
         if not os.path.exists(caminho):
@@ -111,10 +125,14 @@ def main():
             "acao": dados.get("acao"),
             "resposta": dados.get("resposta"),
         })
+        writer.writerow(resultados[-1])
+        arquivo_csv.flush()
         if args.intervalo and i < len(referencias):
             time.sleep(args.intervalo)
 
+    arquivo_csv.close()
     if not resultados:
+        os.remove(saida)
         print("\nNenhum audio encontrado. Grave os arquivos listados em referencias.csv.")
         return
 
@@ -129,13 +147,6 @@ def main():
     resumo_latencia("IA (pipeline + LLM)", [r["ia_s"] for r in resultados])
     resumo_latencia("TTS", [r["tts_s"] for r in resultados])
 
-    pasta = os.path.join(AVALIACAO_DIR, "resultados")
-    os.makedirs(pasta, exist_ok=True)
-    saida = os.path.join(pasta, f"voz_{datetime.now():%Y%m%d_%H%M%S}.csv")
-    with open(saida, "w", newline="", encoding="utf-8-sig") as f:
-        writer = csv.DictWriter(f, fieldnames=list(resultados[0]), delimiter=";")
-        writer.writeheader()
-        writer.writerows(resultados)
     print(f"\nDetalhes salvos em {saida}")
 
 

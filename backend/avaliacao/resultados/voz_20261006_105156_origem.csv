@@ -1,0 +1,61 @@
+﻿arquivo;origem;ia_s;chamadas_classificacao;chamadas_resposta;referencia
+antonio_frase01.mp3;llm;0.687;1;0;quero uma camisa preta
+antonio_frase02.mp3;llm;0.718;1;0;tem calça jeans feminina?
+antonio_frase03.mp3;llm;1.554;1;1;vocês vendem boné?
+antonio_frase04.mp3;llm;0.795;1;0;procuro um vestido vermelho pra festa
+antonio_frase05.mp3;llm;0.358;1;1;me mostra tênis masculino
+antonio_frase06.mp3;llm;0.415;1;0;queria um short pra academia
+antonio_frase07.mp3;llm;0.565;1;0;quanto custa essa camisa?
+antonio_frase08.mp3;llm;1.29;1;1;tem essa em tamanho M?
+antonio_frase09.mp3;llm;1.994;1;0;qual o preço da calça?
+antonio_frase10.mp3;llm;1.052;1;0;ela é de algodão?
+antonio_frase11.mp3;llm;0.789;1;0;quais tamanhos tem desse tênis?
+antonio_frase12.mp3;llm;0.586;1;0;tem em outra cor?
+antonio_frase13.mp3;llm;0.475;1;0;onde fica?
+antonio_frase14.mp3;llm;0.412;1;0;me mostra o mapa
+antonio_frase15.mp3;llm;0.625;1;0;como eu chego lá?
+antonio_frase16.mp3;regra_do_pipeline;0.007;0;0;qual o corredor da camisa?
+antonio_frase17.mp3;regra_do_pipeline;0.005;0;0;onde é que tá a calça?
+antonio_frase18.mp3;llm;0.297;1;0;eu quero o mapa
+antonio_frase19.mp3;llm;2.409;1;0;tchau
+antonio_frase20.mp3;regra_do_pipeline;0.0;0;0;obrigado era só isso
+antonio_frase21.mp3;regra_do_pipeline;0.0;0;0;valeu tchau
+antonio_frase22.mp3;regra_do_pipeline;0.0;0;0;não obrigado
+antonio_frase23.mp3;regra_do_pipeline;0.0;0;0;pode encerrar
+antonio_frase24.mp3;regra_do_pipeline;0.0;0;0;até logo
+antonio_frase25.mp3;regra_do_pipeline;0.0;0;0;posso pagar no pix?
+antonio_frase26.mp3;regra_do_pipeline;0.0;0;0;parcela no cartão?
+antonio_frase27.mp3;llm;3.666;1;1;qual o horário da loja?
+antonio_frase28.mp3;llm;0.635;1;1;oi tudo bem?
+antonio_frase29.mp3;llm;0.834;1;1;que horas são?
+antonio_frase30.mp3;llm;4.606;1;1;vai chover hoje?
+thalita_frase01.mp3;llm;0.745;1;0;quero uma camisa preta
+thalita_frase02.mp3;llm;1.396;1;0;tem calça jeans feminina?
+thalita_frase03.mp3;llm;0.921;1;1;vocês vendem boné?
+thalita_frase04.mp3;llm;0.371;1;0;procuro um vestido vermelho pra festa
+thalita_frase05.mp3;llm;1.014;1;1;me mostra tênis masculino
+thalita_frase06.mp3;llm;0.314;1;0;queria um short pra academia
+thalita_frase07.mp3;llm;0.545;1;0;quanto custa essa camisa?
+thalita_frase08.mp3;llm;1.635;1;1;tem essa em tamanho M?
+thalita_frase09.mp3;llm;0.482;1;0;qual o preço da calça?
+thalita_frase10.mp3;llm;1.206;1;0;ela é de algodão?
+thalita_frase11.mp3;llm;0.644;1;0;quais tamanhos tem desse tênis?
+thalita_frase12.mp3;llm;0.537;1;0;tem em outra cor?
+thalita_frase13.mp3;llm;0.458;1;0;onde fica?
+thalita_frase14.mp3;llm;2.32;1;0;me mostra o mapa
+thalita_frase15.mp3;llm;0.498;1;0;como eu chego lá?
+thalita_frase16.mp3;regra_do_pipeline;0.007;0;0;qual o corredor da camisa?
+thalita_frase17.mp3;regra_do_pipeline;0.007;0;0;onde é que tá a calça?
+thalita_frase18.mp3;llm;0.332;1;0;eu quero o mapa
+thalita_frase19.mp3;regra_do_pipeline;0.0;0;0;tchau
+thalita_frase20.mp3;regra_do_pipeline;0.0;0;0;obrigado era só isso
+thalita_frase21.mp3;regra_do_pipeline;0.0;0;0;valeu tchau
+thalita_frase22.mp3;regra_do_pipeline;0.0;0;0;não obrigado
+thalita_frase23.mp3;regra_do_pipeline;0.0;0;0;pode encerrar
+thalita_frase24.mp3;regra_do_pipeline;0.0;0;0;até logo
+thalita_frase25.mp3;regra_do_pipeline;0.0;0;0;posso pagar no pix?
+thalita_frase26.mp3;regra_do_pipeline;0.0;0;0;parcela no cartão?
+thalita_frase27.mp3;llm;1.575;1;1;qual o horário da loja?
+thalita_frase28.mp3;llm;2.989;1;1;oi tudo bem?
+thalita_frase29.mp3;llm;8.95;1;1;que horas são?
+thalita_frase30.mp3;llm;1.59;1;1;vai chover hoje?

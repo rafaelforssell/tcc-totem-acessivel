@@ -93,13 +93,19 @@ O autoatendimento comercial por meio de totens interativos tornou-se padrão em 
    4.3.1 Processamento do Pipeline de Voz e Texto  
    4.3.2 Lógica de Memória Conversacional e Persistência de Turnos  
    4.3.3 Algoritmo de Extração de Palavras-Chave e Stemming Cognitivo  
+   4.3.4 Configuração dos Modelos de IA e Mecanismos de Fallback  
    4.4 Lógica de Interface e Interação no Front-end  
    4.4.1 Fluxo de Captura de Áudio, Detecção de Silêncio e MediaRecorder  
    4.4.2 Lógica de Pausa Ativa de Sessão e Privacidade  
    4.4.3 Renderização Dinâmica de Rota Indoor sobre SVG no Chat  
    4.4.4 Modal Lightbox para Ampliação e Carrossel de Imagens  
    4.4.5 Suporte a Alto Contraste e Acessibilidade Visual  
+   4.5 Segurança e Privacidade  
 5. **Resultados e Testes**  
+   5.1 Ambiente de Validação  
+   5.2 Testes Funcionais  
+   5.3 Bateria de Testes Conversacionais  
+   5.4 Métricas Quantitativas  
 6. **Conclusão**  
 7. **Referências**  
 
@@ -159,7 +165,8 @@ O projeto foi organizado de forma modular, separando responsabilidades de proces
 ```text
 tcc-totem-acessivel/
 ├── backend/
-│   ├── audios/                 # Diretório temporário de cache de voz
+│   ├── audios/                 # Áudios temporários (apagados automaticamente)
+│   ├── avaliacao/              # Scripts e frases da bateria de testes e métricas
 │   ├── routes/
 │   │   ├── produtos.py         # Endpoints para gerenciamento do estoque
 │   │   └── query.py            # Endpoints de pipeline de texto e áudio
@@ -201,19 +208,28 @@ O banco de dados SQLite (`produtos.db`) conta com a tabela `produtos` estruturad
 O arquivo `backend/routes/query.py` implementa a rota principal `/query-audio`. Quando recebe o arquivo de áudio WebM gravado pelo microfone do Totem, o pipeline executa em três etapas síncronas:
 1. **STT (Transcrição)**: O arquivo de áudio temporário é processado e convertido em texto em português brasileiro.
 2. **Pipeline NLP**: O texto transcrito é enviado para `pipeline_processar()`.
-3. **TTS (Síntese)**: A resposta textual gerada pela IA é enviada para o serviço de áudio Edge-TTS, que gera um arquivo MP3 sob demanda que é retornado em formato de cache e tocado imediatamente no front-end.
+3. **TTS (Síntese)**: A resposta textual gerada pela IA é enviada para o serviço de áudio Edge-TTS, que gera um arquivo MP3 sob demanda, tocado imediatamente no front-end e removido do servidor após o período de retenção (seção 4.5).
+
+Cada etapa tem seu tempo medido individualmente, e a rota devolve esses valores (`tempos`: STT, IA, TTS e total), permitindo o cálculo das métricas de latência apresentadas na seção 5.4.
 
 #### 4.3.2 Lógica de Memória Conversacional e Persistência de Turnos
-O maior diferencial de inteligência e acessibilidade do Totem é o objeto `memoria` controlado no `pipeline_service.py`. A estrutura do objeto é declarada como:
+O maior diferencial de inteligência e acessibilidade do Totem é o objeto `memoria` controlado no `pipeline_service.py`. Cada sessão de atendimento possui sua própria memória, com a seguinte estrutura:
 
 ```python
-memoria = {
-    "ultimos_produtos": [],
-    "assunto_ativo": None,
-    "historico_conversas": [],
-    "produtos_mencionados": {},
+{
+    "ultimos_produtos": [],                # produtos da última resposta
+    "assunto_ativo": None,                 # assunto corrente da conversa
+    "historico_conversas": [],             # turnos usuário/assistente
+    "produtos_mencionados": {},            # todos os produtos citados, por ID
+    "produtos_escolhidos": [],             # produtos que o cliente confirmou querer
+    "produtos_pendentes_confirmacao": [],  # opções aguardando "gostei"/"sim"
+    "tentativas_silencio": 0,              # silêncios seguidos (encerra no 2º)
+    "genero": None,                        # público (masculino/feminino) inferido
+    "tipo_ativo": None,                    # tipo de peça herdado entre turnos
 }
 ```
+
+A memória é isolada por sessão: o front-end gera um identificador aleatório por aba do navegador (`X-Session-Id`) e o envia em cada requisição, de modo que dois totens ligados ao mesmo servidor não compartilham conversas. As sessões ficam em memória RAM, expiram após 30 minutos de inatividade e são limitadas a 200 simultâneas; o comando de reinício (`/reset`) limpa apenas a sessão de quem o chamou.
 
 Toda interação executada na sessão adiciona o turno correspondente em `historico_conversas`:
 - `{"role": "user", "content": pergunta}`
@@ -233,6 +249,24 @@ A fim de mitigar problemas de busca causados por plurais, conjugações verbais 
 3. Converter verbos de ação genéricos para substantivos correspondentes (ex: "treinar" vira "treino", "correr" vira "corrida").
 
 Essa normalização de alto nível faz com que a busca relacional no SQLite via `LIKE` funcione perfeitamente, unificando os termos de busca com os dados estruturados do estoque.
+
+#### 4.3.4 Configuração dos Modelos de IA e Mecanismos de Fallback
+A Tabela 1 resume a configuração final dos modelos utilizados no projeto.
+
+**Tabela 1 – Configuração dos modelos de IA**
+
+| Etapa | Modelo / serviço | Parâmetros |
+|---|---|---|
+| STT (transcrição) | `whisper-large-v3-turbo` via API Groq | idioma `pt`, timeout de 30 s |
+| Classificação de intenção | `llama-3.3-70b-versatile` via API Groq | temperatura 0,0; `max_tokens` 512; saída em JSON (`response_format: json_object`); timeout de 20 s |
+| Geração da resposta | `llama-3.3-70b-versatile` via API Groq | temperatura 0,0; `max_tokens` 1000; últimas 10 mensagens do histórico; timeout de 20 s |
+| TTS (síntese de voz) | Edge-TTS, voz `pt-BR-FranciscaNeural` | saída em MP3 |
+
+A temperatura 0,0 foi adotada nas duas chamadas ao LLM para tornar as respostas determinísticas e reduzir a chance de o modelo inventar informações que não estejam no banco de dados.
+
+Para manter o totem operante quando a API não responde (falha de rede, indisponibilidade ou limite de requisições, HTTP 429), foram implementados os seguintes mecanismos de contingência:
+- **LLM**: a classificação de intenção passa a ser feita por regras locais de palavras-chave (despedidas, pedidos de mapa e extração de termos de busca), e a resposta é montada a partir de modelos de frase com os dados do produto. Não há um segundo modelo de linguagem.
+- **STT**: há suporte opcional a transcrição local com o modelo Whisper `tiny` (pacote `openai-whisper`). Como esse pacote não faz parte das dependências de implantação, o fallback de transcrição está disponível apenas no ambiente de desenvolvimento em que ele tiver sido instalado; no servidor em nuvem, uma falha da API resulta em transcrição vazia, e o totem pede que o usuário repita.
 
 ### 4.4 Lógica de Interface e Interação no Front-end
 
@@ -272,15 +306,96 @@ Para assegurar a total acessibilidade de usuários com baixa visão ou daltonism
 - O clique no botão aplica a classe `.high-contrast` na raiz da página (`<html>`), que força fundos inteiramente pretos e textos com cores puras e alto contraste (branco e amarelo puro).
 - O estado é persistido no `localStorage` do navegador para manter o perfil visual do usuário em acessos posteriores.
 
+### 4.5 Segurança e Privacidade
+
+Por lidar com a voz de clientes e com um painel de gestão de estoque, o back-end adota as seguintes medidas:
+
+- **Chaves e segredos**: nenhuma chave fica no código-fonte. As credenciais (Groq, Telegram, banco de dados e painel administrativo) são lidas de variáveis de ambiente, e o arquivo `.env` não é versionado.
+- **Painel administrativo**: as rotas de gestão exigem o cabeçalho `X-Admin-Key`. Não existe chave padrão: sem a variável `ADMIN_KEY`, o painel permanece desativado (HTTP 503). A comparação da chave é feita em tempo constante (`hmac.compare_digest`), evitando ataques de temporização.
+- **CORS**: a API só aceita chamadas do front-end publicado (`https://totem-acessiveltcc.netlify.app`) e, para desenvolvimento, do `localhost`; outros domínios podem ser definidos pela variável `CORS_ORIGINS`. A API não usa cookies, portanto as requisições entre origens são aceitas sem credenciais, e apenas os métodos e cabeçalhos usados pelo front-end são liberados.
+- **Rota de saúde (`/health`)**: informa apenas o estado do serviço, do banco e a quantidade de produtos. Não revela quais integrações estão configuradas, e detalhes de erros do banco ficam somente no log do servidor.
+- **Retenção de áudio**: o áudio gravado do cliente é apagado logo após o processamento, inclusive quando alguma etapa falha. Os áudios de resposta gerados pelo TTS são removidos automaticamente após 10 minutos (configurável por `AUDIO_RETENCAO_SEGUNDOS`), e nenhum áudio é versionado no repositório.
+- **Memória conversacional**: mantida apenas em RAM, isolada por sessão e descartada após 30 minutos de inatividade, ao encerrar o atendimento ou ao reiniciar o servidor. Nenhuma conversa é gravada em disco.
+
+**Limitações conhecidas**: a chave do painel administrativo é guardada no `localStorage` do navegador do operador; as sessões em RAM não são compartilhadas entre múltiplas instâncias do servidor; e o identificador de sessão não é autenticado, sendo adequado a um totem em ambiente controlado, mas não a um serviço público aberto.
+
 ---
 
 ## 5. Resultados e Testes
+
+### 5.1 Ambiente de Validação
+
+**Tabela 2 – Ambiente utilizado nos testes**
+
+| Item | Configuração |
+|---|---|
+| Front-end | Hospedado no Netlify (https://totem-acessiveltcc.netlify.app) |
+| Back-end | Python 3.10, FastAPI 0.136.1, hospedado no Render (nuvem) |
+| Banco de dados | **[PREENCHER: SQLite local ou PostgreSQL no Render]** |
+| Navegador | Google Chrome 154.0.8037.98 |
+| Sistema operacional | Windows 11 Home Single Language, 64 bits |
+| Hardware | Processador AMD Ryzen 5 5600, 16 GB de RAM |
+| Microfone | Kaidi KMF4-C |
+| Conexão | Wi-Fi |
+
+Por gravar o áudio no formato WebM por meio da API `MediaRecorder`, o front-end é compatível com navegadores baseados em Chromium (Chrome e Edge) e com o Firefox; o Safari não grava nesse formato.
+
+### 5.2 Testes Funcionais
 
 Os testes sistemáticos de integração do Totem Acessível comprovaram a robustez das soluções implementadas:
 1. **Teste de Normalização**: A frase em áudio *"Quero duas camisetas de treino"* foi transcrevida com sucesso. O LLM extraiu apenas `["camisa", "treino"]` como palavras-chave, localizando perfeitamente as opções de **Camisa Dry Fit** no SQLite.
 2. **Teste de Conversação e Detalhes**: Em conformidade com o novo fluxo de detalhes, ao buscar a camisa de treino, a IA apresentou primeiro todos os detalhes (tecido dry fit respirável da Nike, cor preta, tamanho GG e valor de R$ 79,90) e finalizou perguntando se o usuário gostou da opção. Ao responder *"sim"*, o mapa com a rota destacando o **Corredor 2** foi renderizado perfeitamente no fluxo da conversa.
 3. **Teste de Memória Conversacional**: Buscamos consecutivamente 5 produtos diferentes na mesma sessão. No final, ao perguntarmos *"Quais foram os produtos que conversamos hoje?"*, a IA respondeu com sucesso gerando a listagem ordenada de todos os 5 produtos apresentados anteriormente.
 4. **Teste de Terminação e Cancelamento**: Clicar em "Encerrar" no meio do processamento da IA cancelou a reprodução de áudio em tempo de execução, garantindo que o sistema ficasse mudo imediatamente ao retornar à tela inicial.
+
+Além dos testes manuais, o back-end conta com uma suíte automatizada (`pytest`) que cobre o pipeline conversacional, a busca de produtos, o painel administrativo e as medidas de segurança da seção 4.5 (isolamento de sessões, remoção de áudios e conteúdo da rota `/health`).
+
+### 5.3 Bateria de Testes Conversacionais
+
+Para avaliar o classificador de intenções além de exemplos isolados, foi montado um conjunto de 75 frases em português (arquivo `backend/avaliacao/frases_intencoes.csv`), 15 por intenção, incluindo linguagem coloquial, gírias e frases incompletas:
+
+**Tabela 3 – Exemplos da bateria de testes**
+
+| Intenção | Exemplos |
+|---|---|
+| Nova busca (`NOVA_BUSCA`) | "tem calça jeans feminina?", "queria um short pra academia", "gostei do vestido. você tem cinto?" |
+| Pergunta sobre produto (`SOBRE_PRODUTO`) | "quanto custa essa camisa?", "tem essa em tamanho M?", "ela é de algodão?" |
+| Solicitação de mapa (`IR_PARA_MAPA`) | "onde fica?", "como eu chego lá?", "mostra todos no mapa" |
+| Encerramento (`ENCERRAR`) | "valeu tchau", "não preciso de mais nada", "só isso mesmo valeu" |
+| Fora do escopo (`OUTROS`) | "posso pagar no pix?", "vai chover hoje?", "qual a senha do wifi?" |
+
+O script `avaliar_intencoes.py` envia cada frase ao classificador, compara a intenção obtida com a esperada e registra se a resposta veio do modelo de linguagem ou do fallback por regras, de forma que falhas da API não sejam contabilizadas como acertos ou erros do modelo.
+
+Para a avaliação por voz, 30 dessas frases (6 por intenção, listadas em `backend/avaliacao/audios/referencias.csv`) foram gravadas **[PREENCHER: por quantas pessoas e em que ambiente]** e enviadas ao totem pelo script `avaliar_voz.py`, que utiliza a mesma rota `/query-audio` do front-end.
+
+### 5.4 Métricas Quantitativas
+
+- **Acurácia por intenção**: proporção de frases de cada intenção classificadas corretamente.
+- **Latência p50 e p95**: mediana e percentil 95 do tempo de resposta, medidos no cliente (ponta a ponta) e por etapa no servidor.
+- **WER (Word Error Rate)**: (substituições + deleções + inserções) ÷ número de palavras da referência, calculado após converter o texto para minúsculas e remover acentos e pontuação.
+
+**Tabela 4 – Acurácia do classificador de intenções (n = 75)**
+
+| Intenção | Acertos | Acurácia |
+|---|---|---|
+| Nova busca | **[PREENCHER]**/15 | **[PREENCHER]** % |
+| Pergunta sobre produto | **[PREENCHER]**/15 | **[PREENCHER]** % |
+| Solicitação de mapa | **[PREENCHER]**/15 | **[PREENCHER]** % |
+| Encerramento | **[PREENCHER]**/15 | **[PREENCHER]** % |
+| Fora do escopo | **[PREENCHER]**/15 | **[PREENCHER]** % |
+| **Geral** | **[PREENCHER]**/75 | **[PREENCHER]** % |
+
+**Tabela 5 – Latência e WER da interação por voz (n = [PREENCHER] áudios)**
+
+| Métrica | p50 | p95 |
+|---|---|---|
+| Ponta a ponta (cliente) | **[PREENCHER]** s | **[PREENCHER]** s |
+| STT | **[PREENCHER]** s | **[PREENCHER]** s |
+| IA (pipeline + LLM) | **[PREENCHER]** s | **[PREENCHER]** s |
+| TTS | **[PREENCHER]** s | **[PREENCHER]** s |
+| **WER geral** | **[PREENCHER]** % | |
+
+**[PREENCHER: análise dos resultados — intenções com mais erros, principais confusões da matriz, etapa mais lenta e exemplos de erros de transcrição.]**
 
 ---
 

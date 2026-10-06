@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, Form
+from fastapi import APIRouter, UploadFile, File, Form, Header
 from services.pipeline_service import pipeline_processar
 from services.stt_service import transcrever_audio
 from services.tts_service import falar
@@ -13,8 +13,8 @@ os.makedirs(AUDIO_DIR, exist_ok=True)
 
 
 @router.get("/query-text")
-async def query_text(q: str):
-    return await pipeline_processar(q)
+async def query_text(q: str, idioma: str = "pt", x_session_id: str | None = Header(default=None)):
+    return await pipeline_processar(q, idioma, sessao_id=x_session_id)
 
 
 @router.get("/welcome-audio")
@@ -32,7 +32,11 @@ async def welcome_audio(idioma: str = "pt"):
 
 
 @router.post("/query-audio")
-async def query_audio(audio: UploadFile = File(...), idioma: str = Form("pt")):
+async def query_audio(
+    audio: UploadFile = File(...),
+    idioma: str = Form("pt"),
+    x_session_id: str | None = Header(default=None),
+):
 
     inicio_total = time.time()
 
@@ -44,35 +48,37 @@ async def query_audio(audio: UploadFile = File(...), idioma: str = Form("pt")):
 
     print("Áudio recebido")
 
-    # STT
-    inicio_stt = time.time()
-    texto = await transcrever_audio(caminho)
-    fim_stt = time.time()
+    try:
 
-    print("STT concluído:", round(fim_stt - inicio_stt, 2), "seg")
-    
-    if texto is None:
-        texto = ""
+        # STT
+        inicio_stt = time.time()
+        texto = await transcrever_audio(caminho)
+        fim_stt = time.time()
 
-    # IA / Pipeline
-    inicio_ia = time.time()
-    resultado = await pipeline_processar(texto, idioma)
-    fim_ia = time.time()
+        print("STT concluído:", round(fim_stt - inicio_stt, 2), "seg")
 
-    print("IA concluída:", round(fim_ia - inicio_ia, 2), "seg")
+        if texto is None:
+            texto = ""
 
-    resposta_texto = resultado["resposta"]
+        # IA / Pipeline
+        inicio_ia = time.time()
+        resultado = await pipeline_processar(texto, idioma, sessao_id=x_session_id)
+        fim_ia = time.time()
 
-    # TTS
-    inicio_tts = time.time()
-    arquivo_audio = await falar(resposta_texto)
-    fim_tts = time.time()
+        print("IA concluída:", round(fim_ia - inicio_ia, 2), "seg")
 
-    print("TTS concluído:", round(fim_tts - inicio_tts, 2), "seg")
+        resposta_texto = resultado["resposta"]
 
-    # Remove arquivo temporário enviado
-    if os.path.exists(caminho):
-        os.remove(caminho)
+        # TTS
+        inicio_tts = time.time()
+        arquivo_audio = await falar(resposta_texto)
+        fim_tts = time.time()
+
+        print("TTS concluído:", round(fim_tts - inicio_tts, 2), "seg")
+    finally:
+        # O audio do usuario e apagado sempre, inclusive quando STT/IA/TTS falham
+        if os.path.exists(caminho):
+            os.remove(caminho)
 
     fim_total = time.time()
 
@@ -84,5 +90,11 @@ async def query_audio(audio: UploadFile = File(...), idioma: str = Form("pt")):
         "resultados": resultado.get("resultados", []),
         "acao": resultado.get("acao", "NENHUM"),
         "auto_add_lista": resultado.get("auto_add_lista", False),
-        "audio": arquivo_audio
+        "audio": arquivo_audio,
+        "tempos": {
+            "stt_s": round(fim_stt - inicio_stt, 3),
+            "ia_s": round(fim_ia - inicio_ia, 3),
+            "tts_s": round(fim_tts - inicio_tts, 3),
+            "total_s": round(fim_total - inicio_total, 3),
+        },
     }

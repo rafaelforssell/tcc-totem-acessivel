@@ -1,6 +1,9 @@
 import os
 import re
+import time
 import unicodedata
+from collections.abc import MutableMapping
+from contextvars import ContextVar
 
 from services.llm_service import classificar_intencao, perguntar_llm
 from services import db_service
@@ -8,26 +11,90 @@ from services import db_service
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-memoria = {
-    "ultimos_produtos": [],
-    "assunto_ativo": None,
-    "historico_conversas": [],
-    "produtos_mencionados": {},
-    "produtos_escolhidos": [],
-    "produtos_pendentes_confirmacao": [],
-}
+# Memoria conversacional isolada por sessao (uma por totem/aba do navegador).
+# Sessoes ociosas expiram e ha um teto de sessoes para nao crescer sem limite.
+SESSAO_PADRAO = "padrao"
+SESSAO_TTL_SEGUNDOS = 30 * 60
+MAX_SESSOES = 200
+
+_sessoes = {}
+_sessao_atual = ContextVar("sessao_atual", default=SESSAO_PADRAO)
 
 
-def limpar_memoria():
-    memoria["ultimos_produtos"] = []
-    memoria["assunto_ativo"] = None
-    memoria["historico_conversas"] = []
-    memoria["produtos_mencionados"] = {}
-    memoria["produtos_escolhidos"] = []
-    memoria["produtos_pendentes_confirmacao"] = []
-    memoria["tentativas_silencio"] = 0
-    memoria["genero"] = None
-    memoria["tipo_ativo"] = None
+def _memoria_inicial():
+    return {
+        "ultimos_produtos": [],
+        "assunto_ativo": None,
+        "historico_conversas": [],
+        "produtos_mencionados": {},
+        "produtos_escolhidos": [],
+        "produtos_pendentes_confirmacao": [],
+        "tentativas_silencio": 0,
+        "genero": None,
+        "tipo_ativo": None,
+    }
+
+
+def _expirar_sessoes():
+    agora = time.time()
+    for sid, sessao in list(_sessoes.items()):
+        if agora - sessao["ultimo_acesso"] > SESSAO_TTL_SEGUNDOS:
+            del _sessoes[sid]
+    while len(_sessoes) >= MAX_SESSOES:
+        mais_antiga = min(_sessoes, key=lambda sid: _sessoes[sid]["ultimo_acesso"])
+        del _sessoes[mais_antiga]
+
+
+def _dados_sessao():
+    sid = _sessao_atual.get()
+    sessao = _sessoes.get(sid)
+    if sessao is None:
+        _expirar_sessoes()
+        sessao = {"dados": _memoria_inicial(), "ultimo_acesso": time.time()}
+        _sessoes[sid] = sessao
+    sessao["ultimo_acesso"] = time.time()
+    return sessao["dados"]
+
+
+class _MemoriaSessao(MutableMapping):
+    """Dicionario que sempre aponta para a memoria da sessao atual."""
+
+    def __getitem__(self, chave):
+        return _dados_sessao()[chave]
+
+    def __setitem__(self, chave, valor):
+        _dados_sessao()[chave] = valor
+
+    def __delitem__(self, chave):
+        del _dados_sessao()[chave]
+
+    def __iter__(self):
+        return iter(_dados_sessao())
+
+    def __len__(self):
+        return len(_dados_sessao())
+
+
+memoria = _MemoriaSessao()
+
+
+def normalizar_sessao_id(sessao_id):
+    sessao_id = (sessao_id or "").strip()
+    if not sessao_id or len(sessao_id) > 64 or not re.fullmatch(r"[A-Za-z0-9_-]+", sessao_id):
+        return SESSAO_PADRAO
+    return sessao_id
+
+
+def usar_sessao(sessao_id):
+    """Define a sessao da requisicao atual (vale so para o contexto async corrente)."""
+    _sessao_atual.set(normalizar_sessao_id(sessao_id))
+
+
+def limpar_memoria(sessao_id=None):
+    if sessao_id is not None:
+        usar_sessao(sessao_id)
+    _dados_sessao().clear()
+    _dados_sessao().update(_memoria_inicial())
 
 
 def conectar_bd():
@@ -1106,7 +1173,9 @@ def produtos_de_interesse(fallback=None):
     return mencionados or list(fallback or [])
 
 
-async def pipeline_processar(pergunta, idioma="pt"):
+async def pipeline_processar(pergunta, idioma="pt", sessao_id=None):
+    if sessao_id is not None:
+        usar_sessao(sessao_id)
     print(f"\n--- Nova Requisicao: {pergunta} --- Idioma: {idioma}")
     
     # Garante a inicialização do histórico e variáveis

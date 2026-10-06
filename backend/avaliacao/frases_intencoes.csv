@@ -1,0 +1,76 @@
+frase,intencao_esperada
+quero uma camisa preta,NOVA_BUSCA
+tem calça jeans feminina?,NOVA_BUSCA
+vocês vendem boné?,NOVA_BUSCA
+procuro um vestido vermelho pra festa,NOVA_BUSCA
+me mostra tênis masculino,NOVA_BUSCA
+queria um short pra academia,NOVA_BUSCA
+tem alguma saia jeans?,NOVA_BUSCA
+preciso de um casaco pro frio,NOVA_BUSCA
+quero ver óculos de sol,NOVA_BUSCA
+tem sandália preta tamanho 37?,NOVA_BUSCA
+gostei do vestido. você tem cinto?,NOVA_BUSCA
+duas camisetas pra treinar,NOVA_BUSCA
+tem moletom cinza?,NOVA_BUSCA
+quero uma garrafa,NOVA_BUSCA
+e polo branca vocês têm?,NOVA_BUSCA
+quanto custa essa camisa?,SOBRE_PRODUTO
+tem essa em tamanho M?,SOBRE_PRODUTO
+qual o preço da calça?,SOBRE_PRODUTO
+ela é de algodão?,SOBRE_PRODUTO
+quais tamanhos tem desse tênis?,SOBRE_PRODUTO
+tem em outra cor?,SOBRE_PRODUTO
+gostei. tem o meu tamanho? eu uso G,SOBRE_PRODUTO
+qual a marca desse boné?,SOBRE_PRODUTO
+esse casaco é quente?,SOBRE_PRODUTO
+tem ainda no estoque?,SOBRE_PRODUTO
+me fala mais sobre esse vestido,SOBRE_PRODUTO
+a sandália é confortável?,SOBRE_PRODUTO
+essa bermuda tem bolso?,SOBRE_PRODUTO
+qual é a diferença entre as duas?,SOBRE_PRODUTO
+o óculos tem proteção UV?,SOBRE_PRODUTO
+onde fica?,IR_PARA_MAPA
+me mostra o mapa,IR_PARA_MAPA
+como eu chego lá?,IR_PARA_MAPA
+qual o corredor da camisa?,IR_PARA_MAPA
+onde é que tá a calça?,IR_PARA_MAPA
+eu quero o mapa,IR_PARA_MAPA
+me leva até o tênis,IR_PARA_MAPA
+mostra todos no mapa,IR_PARA_MAPA
+onde eu encontro o boné?,IR_PARA_MAPA
+me mostre o caminho,IR_PARA_MAPA
+em que parte da loja fica o vestido?,IR_PARA_MAPA
+quero ver tudo que falamos no mapa,IR_PARA_MAPA
+onde ficam os casacos?,IR_PARA_MAPA
+cadê a sessão de bermudas?,IR_PARA_MAPA
+mostra a localização da sandália,IR_PARA_MAPA
+tchau,ENCERRAR
+obrigado era só isso,ENCERRAR
+valeu tchau,ENCERRAR
+não obrigado,ENCERRAR
+pode encerrar,ENCERRAR
+até logo,ENCERRAR
+já terminei obrigada,ENCERRAR
+não preciso de mais nada,ENCERRAR
+brigado pela ajuda tchau,ENCERRAR
+só isso mesmo valeu,ENCERRAR
+finalizar atendimento,ENCERRAR
+tudo certo obrigado até mais,ENCERRAR
+pode fechar,ENCERRAR
+não quero mais nada,ENCERRAR
+falou obrigado,ENCERRAR
+posso pagar no pix?,OUTROS
+parcela no cartão?,OUTROS
+qual o horário da loja?,OUTROS
+oi tudo bem?,OUTROS
+que horas são?,OUTROS
+vai chover hoje?,OUTROS
+quem ganhou o jogo ontem?,OUTROS
+aceita boleto?,OUTROS
+tem estacionamento?,OUTROS
+qual a senha do wifi?,OUTROS
+me conta uma piada,OUTROS
+bom dia,OUTROS
+vocês entregam em casa?,OUTROS
+qual a capital da frança?,OUTROS
+tem banheiro aqui?,OUTROS

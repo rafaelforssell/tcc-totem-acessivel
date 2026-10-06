@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 import os
 import sqlite3
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -113,12 +113,18 @@ app = FastAPI(title="Totem Acessivel API", lifespan=lifespan)
 app.mount("/audios", StaticFiles(directory=AUDIO_DIR), name="audios")
 app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
 
+# Origens autorizadas: o frontend publicado e, para desenvolvimento, qualquer porta do localhost.
+# CORS_ORIGINS (lista separada por virgula) substitui o dominio padrao, se definida.
+FRONTEND_PADRAO = "https://totem-acessiveltcc.netlify.app"
+CORS_ORIGINS = [o.strip() for o in (os.getenv("CORS_ORIGINS") or FRONTEND_PADRAO).split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # suficiente para a demonstracao academica
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=CORS_ORIGINS,
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+    allow_headers=["Content-Type", "X-Admin-Key", "X-Session-Id"],
 )
 
 app.include_router(query.router)
@@ -133,9 +139,10 @@ def home():
 
 
 @app.post("/reset")
-def reset_session():
+def reset_session(x_session_id: str | None = Header(default=None)):
     from services.pipeline_service import limpar_memoria
-    limpar_memoria()
+    # Limpa apenas a sessao de quem chamou, nunca a de outros totens
+    limpar_memoria(x_session_id or "")
     return {"status": "success", "mensagem": "Memória limpa"}
 
 
@@ -145,23 +152,16 @@ def health():
     try:
         total_produtos = contar_produtos_db()
     except Exception as exc:
-        raise HTTPException(
-            status_code=503,
-            detail={"status": "erro", "db": "indisponivel", "erro": str(exc)},
-        )
+        # O detalhe do erro fica so no log do servidor, nunca na resposta publica
+        print(f"[HEALTH] Falha ao acessar o banco: {exc}")
+        raise HTTPException(status_code=503, detail={"status": "erro", "db": "indisponivel"})
 
     return {
         "status": "ok",
         "db": "ok",
         "produtos": total_produtos,
-        "groq_key_configured": bool(os.getenv("GROQ_API_KEY")),
-        "telegram_token_configured": bool(os.getenv("TELEGRAM_BOT_TOKEN")),
-        "telegram_chat_configured": bool(os.getenv("TELEGRAM_CHAT_ID")),
-        "admin_key_configured": bool(os.getenv("ADMIN_KEY")),
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
-
-
 
 
 @app.get("/perguntar-ia")

@@ -13,11 +13,17 @@ __pycache__/
 .pytest_cache/
 .uv-cache/
 
-# Arquivos de áudio gerados
-backend/audios/*.mp3
-backend/audios/*.wav
+# Arquivos de áudio gerados (entradas do microfone e respostas do TTS)
+backend/audios/
+/audios/
+backend/*.wav
 backend/*.log
 
 # IDE
 .vscode/
 .idea/
+
+# Gravacoes de voz usadas na avaliacao (dados pessoais: nao versionar)
+backend/avaliacao/audios/*
+!backend/avaliacao/audios/referencias.csv
+backend/avaliacao/audios_sinteticos/

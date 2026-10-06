@@ -27,7 +27,7 @@ def obter_config_llm():
 async def classificar_intencao(pergunta, idioma="pt"):
     config = obter_config_llm()
     if not config:
-        return {"intencao": "OUTROS", "palavras_chave": []}
+        return {"intencao": "OUTROS", "palavras_chave": [], "fonte": "sem_chave"}
 
     prompt_sistema = """
 Você é o classificador de intenções de um totem de loja de roupas.
@@ -80,7 +80,9 @@ REGRAS DE INTENÇÃO:
             data = response.json()
             content = data["choices"][0]["message"]["content"]
             content = content.replace('```json', '').replace('```', '').strip()
-            return json.loads(content)
+            analise = json.loads(content)
+            analise["fonte"] = "llm"
+            return analise
     except Exception as e:
         print("Erro no classificar_intencao:", e)
         # Fallback local baseado em regras simples se a API falhar ou der Rate Limit (429)
@@ -88,11 +90,11 @@ REGRAS DE INTENÇÃO:
         
         # Se for encerramento
         if any(term in texto for term in ["tchau", "obrigado", "obrigada", "valeu", "encerrar", "ate logo"]):
-            return {"intencao": "ENCERRAR", "palavras_chave": []}
+            return {"intencao": "ENCERRAR", "palavras_chave": [], "fonte": "regras"}
             
         # Se for pedido de mapa ou localização
         if any(term in texto for term in ["mapa", "onde fica", "onde e", "caminho", "corredor", "localizacao"]):
-            return {"intencao": "IR_PARA_MAPA", "palavras_chave": []}
+            return {"intencao": "IR_PARA_MAPA", "palavras_chave": [], "fonte": "regras"}
             
         # Extrai palavras e remove stopwords para busca
         TAMANHOS_CONHECIDOS = {
@@ -110,9 +112,9 @@ REGRAS DE INTENÇÃO:
         if palavras_chave:
             # Mapeamento simples de sinônimo "short" -> "bermuda" para o banco
             palavras_final = ["bermuda" if p in ["short", "shorts"] else p for p in palavras_chave]
-            return {"intencao": "NOVA_BUSCA", "palavras_chave": palavras_final}
+            return {"intencao": "NOVA_BUSCA", "palavras_chave": palavras_final, "fonte": "regras"}
             
-        return {"intencao": "OUTROS", "palavras_chave": []}
+        return {"intencao": "OUTROS", "palavras_chave": [], "fonte": "regras"}
 
 
 
